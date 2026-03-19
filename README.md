@@ -1,5 +1,25 @@
 <p align="center">
 <h1 align="center"><strong>FLUX: Accelerating Cross-Embodiment Generative Navigation Policies via Rectified Flow and Static-to-Dynamic Learning</strong></h1>
+
+  <!-- Badges -->
+  <p align="center">
+    <a href="https://zeying-gong.github.io/projects/flux/">
+      <img src="https://img.shields.io/badge/Web-Flux-deepgreen.svg" alt="Flux Project Web Badge">
+    </a>
+    <a href="https://www.youtube.com/watch?v=cY6tFvKgTjo">
+      <img src="https://img.shields.io/badge/Video-Youtube-red.svg" alt="YouTube Video Badge">
+    </a>
+    <a href="https://arxiv.org/abs/2603.12806">
+      <img src="https://img.shields.io/badge/cs.ai-arxiv:2603.12806-42ba94.svg" alt="arXiv Paper Badge">
+    </a>
+    <a href="https://github.com/isaac-sim/IsaacSim">
+      <img src="https://img.shields.io/static/v1?label=supports&message=IsaacSim&color=informational" alt="IsaacSim Badge">
+    </a>
+    <a href="https://github.com/Zeying-Gong/habitat-lab/blob/main/LICENSE">
+      <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License Badge">
+    </a>
+  </p>
+
   <p align="center">
     <a href='https://zeying-gong.github.io/' target='_blank'>Zeying Gong</a><sup>1*</sup>&emsp;
     <a href='' target='_blank'>Yangyi Zhong</a><sup>1*</sup>&emsp;
@@ -9,27 +29,20 @@
     <a href='https://ldkong.com/' target='_blank'>Lingdong Kong</a><sup>3</sup>&emsp; 
     <a href='https://rongli.tech/' target='_blank'>Rong Li</a><sup>1</sup>&emsp;
     <a href='www.linkedin.com/in/jiadi-you-2362a6354' target='_blank'>Jiadi You</a><sup>1</sup>&emsp;
-	<a href='https://junweiliang.me/' target='_blank'>Junwei Liang</a><sup>1,2,&#9993;</sup>&emsp;
+	<a href='https://junweiliang.me/' target='_blank'>Junwei Liang</a><sup>1,2,&#9993;</sup>&emsp;·
     <br>
-    <sup>1</sup>The Hong Kong University of Science and Technology (Guangzhou)&emsp; 
-    <sup>2</sup>The Hong Kong University of Science and Technology&emsp; <br>
-    <sup>3</sup>National University of Singapore&emsp;
+    <sup>1</sup>HKUST(GZ)&emsp; 
+    <sup>2</sup>HKUST&emsp;
+    <sup>3</sup>NUS&emsp;
     <br>
     * Equal Contribution
   </p>
 </p>
 
-<div id="top" align="center">
-
-[![Project](https://img.shields.io/badge/Project-%239c403d?style=flat&logoColor=%23FA7F6F)](https://zeying-gong.github.io/projects/flux/)
-[![arXiv](https://img.shields.io/badge/Arxiv-%233b6291?style=flat&logoColor=%23FA7F6F)](https://arxiv.org/abs/2603.12806)
-[![Video](https://img.shields.io/badge/Video-%23c97937?style=flat&logoColor=%23FA7F6F)](https://www.youtube.com/watch?v=cY6tFvKgTjo)
-</div>
-
 # 🏡 Introduction
-FLUX is the first flow-based unified navigation policy that achieves state-of-the-art performance across six fundamental navigation tasks. By linearizing probability flow, FLUX replaces iterative denoising with straight-line trajectories, improving per-step inference efficiency by 47% over prior flow-based methods and 29% over diffusion-based ones. Our static-to-dynamic training curriculum enables efficient, socially-aware navigation, which transfers zero-shot across three heterogeneous platforms (wheeled, quadrupedal, and humanoid) in the real world without any platform-specific fine-tuning.
+We propose **FLUX**, the first **FL**ow-based **U**nified policy for **X**-platform (Cross-Embodiment) navigation. FLUX leverages a static-to-dynamic curriculum and linearizes probability flow for efficient, straight-line trajectory generation. This enables state-of-the-art performance and zero-shot sim-to-real transfer across wheeled, quadrupedal, and humanoid robots without fine-tuning.
 <div style="text-align: center;">
-    <img src="./assets/images/compressed/v2_teaser_02.png" alt="FLUX Teaser" width=100% >
+    <img src="./assets/images/compressed/v2_teaser_02.png" alt="FLUX Teaser" width=80% >
 </div>
 
 ### 🛠️ Installation
