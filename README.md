@@ -61,10 +61,19 @@ conda activate flux
 pip install -r requirements.txt
 ```
 
+### 📥 Pre-trained Weights
+Download the pre-trained FLUX weights from [Hugging Face](https://huggingface.co/zgong313/FLUX).
+
+```bash
+mkdir checkpoints
+# Download via huggingface-cli
+huggingface-cli download zgong313/FLUX flux_v1.ckpt --local-dir checkpoints --local-dir-use-symlinks False
+```
+
 ### 🤖 Run FLUX Model
 Run the following line to start the FLUX server:
 ```bash
-python baselines/flux/server.py --port 8888 --checkpoint ./checkpoints/flux_checkpoint.ckpt 
+python baselines/flux/server.py --port 9999 --checkpoint checkpoints/flux_v1.ckpt
 ```
 
 <!-- ### 📈 Training with GRPO
@@ -73,7 +82,7 @@ FLUX supports online reinforcement learning fine-tuning using **Group Relative P
 ```bash
 # Start GRPO training across multiple tasks and scenes
 isaacsim-python baselines/flux/train_grpo.py \
-    --checkpoint baselines/flux_wo_rl/checkpoints/checkpoint-11710navdp.ckpt \
+    --checkpoint checkpoints/flux_v1.ckpt \
     --scene_dirs assets/dyn_scenes/cluttered_easy assets/dyn_scenes/isaacsim_scene \
     --tasks dynpointgoal dynnogoal socialnav \
     --num_episodes 3000 \
@@ -86,8 +95,8 @@ isaacsim-python baselines/flux/train_grpo.py \
 ### 💻 Running Baseline as Server
 For each pre-built baseline methods, each contains a server.py file, just simply run server python script with parsing the server port as well as the checkpoint path. Taking NavDP as an example:
 ```bash
-# please first download the checkpoint from the above link
-cd baselines/flux/
+# please first download the NavDP checkpoint
+cd baselines/navdp/
 python navdp_server.py --port 8888 --checkpoint ./checkpoints/navdp_checkpoint.ckpt 
 ```
 
