@@ -1,6 +1,6 @@
 """
-NavDP 导航模型 HTTP 服务器
-用来给go2提供导航推理的 Flask API 接口
+FLUX 导航模型 HTTP 服务器
+用来给机器人提供导航推理的 Flask API 接口
 """
 
 import argparse
@@ -28,15 +28,15 @@ output_dir = ''
 
 
 # ============ 全局变量 ============
-navdp_fps_writer = None  # 视频写入器，用于保存可视化结果
-# navdp_depth_fps_writer = None  # 视频写入器，用于保存可视化结果
-# navdp_trajvis_writer_1 = None  # 视频写入器，用于保存可视化结果
-# navdp_trajvis_writer_2 = None  # 视频写入器，用于保存可视化结果
+_flux_fps_writer = None  # 视频写入器，用于保存可视化结果
+_flux_depth_fps_writer = None
+_flux_trajvis_writer_1 = None
+_flux_trajvis_writer_2 = None
 vis_manager = VisualizationManager(history_size=5)
 goal_position = [7,0.2,0]
 first = True
 
-navdp_fps_rgbd_writer = None 
+_flux_fps_rgbd_writer = None 
 
 
 
@@ -157,7 +157,7 @@ def visualize_images(original_image, depth_normalized, batch_size=1):
     
 @app.route("/eval_dual", methods=['POST'])
 def eval_dual():
-    global idx, output_dir, start_time, navdp_fps_writer, navdp_depth_fps_writer, vis_manager,goal_position, first
+    global idx, output_dir, start_time, _flux_fps_writer, _flux_depth_fps_writer, vis_manager,goal_position, first
     
     # ===== 接收输入数据 =====
     image_file = request.files['image']  # RGB 图像文件
@@ -289,8 +289,8 @@ def eval_dual():
     # 保存为 PNG 图像
     image.save('./output_image.png')
     
-    navdp_fps_writer.append_data(all_vis)
-    navdp_fps_rgbd_writer.append_data(rgbd)
+    _flux_fps_writer.append_data(all_vis)
+    _flux_fps_rgbd_writer.append_data(rgbd)
     # navdp_depth_fps_writer.append_data(trajectory_depth_mask)
     
     # print("vis_resized",vis_resized.shape)
@@ -341,8 +341,8 @@ if __name__ == '__main__':
     
     format_time = datetime.fromtimestamp(time.time())
     format_time = format_time.strftime("%Y-%m-%d %H:%M:%S")
-    navdp_fps_writer = imageio.get_writer("{}_fps_nongoal.mp4".format(format_time), fps=3)
-    navdp_fps_rgbd_writer = imageio.get_writer("{}_fps_rgbd_nongoal.mp4".format(format_time), fps=3)
+    _flux_fps_writer = imageio.get_writer("{}_flux_fps.mp4".format(format_time), fps=3)
+    _flux_fps_rgbd_writer = imageio.get_writer("{}_flux_fps_rgbd.mp4".format(format_time), fps=3)
     # navdp_depth_fps_writer = imageio.get_writer("{}_depth_fps_nongoal.mp4".format(format_time), fps=7)
     # navdp_trajvis_writer_1 = imageio.get_writer("{}_singletraj_fps_nongoal.mp4".format(format_time), fps=7)
     # navdp_trajvis_writer_2 = imageio.get_writer("{}_alltraj_fps_nongoal.mp4".format(format_time), fps=7)
@@ -355,8 +355,8 @@ if __name__ == '__main__':
     agent.reset(1, -3.0) 
 
     app.run(host='0.0.0.0', port=5801)
-    navdp_fps_writer.close()
-    navdp_fps_rgbd_writer.close()
+    _flux_fps_writer.close()
+    _flux_fps_rgbd_writer.close()
     # navdp_depth_fps_writer.close()
     # navdp_trajvis_writer_1.close()
     # navdp_trajvis_writer_2.close()

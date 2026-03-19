@@ -40,9 +40,9 @@
 </p>
 
 # 🏡 Introduction
-We propose **FLUX**, the first **FL**ow-based **U**nified policy for **X**-platform (Cross-Embodiment) navigation. FLUX leverages a static-to-dynamic curriculum and linearizes probability flow for efficient, straight-line trajectory generation. This enables state-of-the-art performance and zero-shot sim-to-real transfer across wheeled, quadrupedal, and humanoid robots without fine-tuning.
+We propose **FLUX**, the first **FL**ow-based **U**nified policy for **X**-platform (Cross-Embodiment) navigation. FLUX leverages a static-to-dynamic curriculum and linearizes probability flow for efficient, straight-line trajectory generation. This enables state-of-the-art performance and zero-shot sim-to-real transfer across wheeled, quadrupedal, and humanoid robots without any fine-tuning.
 <div style="text-align: center;">
-    <img src="./assets/images/compressed/v2_teaser_02.png" alt="FLUX Teaser" width=80% >
+    <img src="./assets/images/compressed/v2_teaser_02.png" alt="FLUX Teaser" width=100% >
 </div>
 
 ### 🛠️ Installation
@@ -64,8 +64,23 @@ pip install -r requirements.txt
 ### 🤖 Run FLUX Model
 Run the following line to start the FLUX server:
 ```bash
-python flux_server.py --port 8888 --checkpoint ./checkpoints/flux_checkpoint.ckpt 
+python baselines/flux/server.py --port 8888 --checkpoint ./checkpoints/flux_checkpoint.ckpt 
 ```
+
+<!-- ### 📈 Training with GRPO
+FLUX supports online reinforcement learning fine-tuning using **Group Relative Policy Optimization (GRPO)** to enhance performance in dynamic environments.
+
+```bash
+# Start GRPO training across multiple tasks and scenes
+isaacsim-python baselines/flux/train_grpo.py \
+    --checkpoint baselines/flux_wo_rl/checkpoints/checkpoint-11710navdp.ckpt \
+    --scene_dirs assets/dyn_scenes/cluttered_easy assets/dyn_scenes/isaacsim_scene \
+    --tasks dynpointgoal dynnogoal socialnav \
+    --num_episodes 3000 \
+    --save_dir baselines/flux/checkpoints_rl \
+    --gpu_id 0 --train_gpu_id 0 \
+    --lr 3e-5 --update_interval 32 --save_interval 100
+``` -->
 
 
 ### 💻 Running Baseline as Server

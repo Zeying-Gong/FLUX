@@ -15,7 +15,7 @@ assets/scenes/
 
 # 排除 IsaacLab（嵌套git仓库）
 IsaacLab/
-
+baselines/flux_wo_rl/
 # 排除评估结果目录
 pointgoal_*/
 imagegoal_*/

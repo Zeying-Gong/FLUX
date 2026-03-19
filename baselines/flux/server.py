@@ -1,8 +1,8 @@
 """
-cfm_rf_rl/server.py
+flux/server.py
 
-推理服务器 —— 与 cfm_rf_server.py 接口完全一致，
-加载 RL 微调后的权重（cfm_rf_rl/policy_network.py 的 CFM_RL_Policy）。
+推理服务器 —— 与 NavDP 接口完全一致，
+加载 RL 微调后的权重（flux/policy_network.py 的 CFM_RL_Policy）。
 
 用法：
     python server.py --port 8892 --checkpoint ./checkpoints_rl/rl_final.ckpt [--cfm-steps 5]
@@ -30,9 +30,9 @@ if _THIS_DIR not in sys.path:
 from policy_network import CFM_RL_Policy
 
 # ---- 参数 ----
-parser = argparse.ArgumentParser(description="cfm_rf_rl inference server")
-parser.add_argument("--port", type=int, default=8892, help="服务器端口（默认 8892，避免与 cfm_rf 的 8891 冲突）")
-parser.add_argument("--checkpoint", type=str, required=True, help="RL 微调后的 checkpoint 路径")
+parser = argparse.ArgumentParser(description="flux inference server")
+parser.add_argument("--port", type=int, default=8892, help="服务器端口（默认 8892）")
+parser.add_argument("--checkpoint", type=str, default="checkpoints/flux_v1.ckpt", help="RL 微调后的 checkpoint 路径")
 parser.add_argument("--cfm-steps", type=int, default=5, help="ODE 积分步数")
 parser.add_argument("--normalization-config", type=str, default=None, help="归一化配置文件路径")
 parser.add_argument("--device", type=str, default="cuda:0", help="推理设备")
@@ -72,7 +72,7 @@ def _build_policy():
     if isinstance(ckpt, dict) and "state_dict" in ckpt:
         ckpt = ckpt["state_dict"]
     incompatible = _policy.load_state_dict(ckpt, strict=False)
-    print(f"[cfm_rf_rl server] Loaded: {args.checkpoint}")
+    print(f"[flux server] Loaded: {args.checkpoint}")
     print(f"  missing={len(incompatible.missing_keys)}, "
           f"unexpected={len(incompatible.unexpected_keys)}")
     _policy.to(args.device)
@@ -148,7 +148,7 @@ def _decode_image_depth(image_file, depth_file, batch_size: int):
 
 
 # ------------------------------------------------------------------
-# Flask 路由（与 cfm_rf_server.py 完全一致）
+# Flask 路由（与 NavDP server 完全一致）
 # ------------------------------------------------------------------
 
 @app.route("/navigator_reset", methods=["POST"])
@@ -171,9 +171,9 @@ def navigator_reset():
         except Exception:
             pass
     fmt = datetime.datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d_%H-%M-%S")
-    _fps_writer = imageio.get_writer(f"{fmt}_fps_rfrl_pointgoal.mp4", fps=7)
+    _fps_writer = imageio.get_writer(f"{fmt}_fps_flux_pointgoal.mp4", fps=7)
 
-    return jsonify({"algo": "cfm_rf_rl"})
+    return jsonify({"algo": "flux"})
 
 
 @app.route("/navigator_reset_env", methods=["POST"])
@@ -181,7 +181,7 @@ def navigator_reset_env():
     env_id = int(request.get_json().get("env_id"))
     if _memory_queues is not None and env_id < len(_memory_queues):
         _memory_queues[env_id] = []
-    return jsonify({"algo": "cfm_rf_rl"})
+    return jsonify({"algo": "flux"})
 
 
 @app.route("/pointgoal_step", methods=["POST"])
@@ -301,6 +301,6 @@ def nogoal_step():
     })
 
 if __name__ == "__main__":
-    print(f"[cfm_rf_rl server] Starting on port {args.port}, device={args.device}")
-    print(f"[cfm_rf_rl server] Checkpoint: {args.checkpoint}")
+    print(f"[flux server] Starting on port {args.port}, device={args.device}")
+    print(f"[flux server] Checkpoint: {args.checkpoint}")
     app.run(host="127.0.0.1", port=args.port)

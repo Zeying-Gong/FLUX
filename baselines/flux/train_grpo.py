@@ -1,5 +1,5 @@
 """
-cfm_rf_rl/train_grpo.py  —  多场景 + 三任务联合 GRPO 训练
+flux/train_grpo.py  —  多场景 + 三任务联合 GRPO 训练
 
 支持的任务：
   dynpointgoal  单人动态点目标导航   (goal = 行人相对坐标, pointgoal 接口)
@@ -10,17 +10,17 @@ cfm_rf_rl/train_grpo.py  —  多场景 + 三任务联合 GRPO 训练
        每个 episode 结束后，按轮换策略切换 (scene_dir × sub_scene × task)。
 
 用法示例：
-    isaacsim-python baselines/cfm_rf_rl/train_grpo.py \
-        --checkpoint baselines/cfm_rf/checkpoints/checkpoint-11710navdp.ckpt \
+    isaacsim-python baselines/flux/train_grpo.py \
+        --checkpoint baselines/flux_wo_rl/checkpoints/checkpoint-11710navdp.ckpt \
         --scene_dirs assets/dyn_scenes/cluttered_easy assets/dyn_scenes/isaacsim_scene \
         --tasks dynpointgoal dynnogoal socialnav \
         --num_episodes 3000 \
-        --save_dir baselines/cfm_rf_rl/checkpoints_rl \
+        --save_dir baselines/flux/checkpoints_rl \
         --gpu_id 1 --train_gpu_id 1 \
         --lr 3e-5 --update_interval 32 --save_interval 100
 
 单场景单任务（兼容旧用法）：
-    isaacsim-python baselines/cfm_rf_rl/train_grpo.py \
+    isaacsim-python baselines/flux/train_grpo.py \
         --checkpoint ... \
         --scene_dirs assets/dyn_scenes/cluttered_easy \
         --scene_index 0 \
@@ -55,8 +55,8 @@ parser.add_argument("--tasks", type=str, nargs="+",
                     help="联合训练的任务列表，多个任务按 episode 轮换")
 # RL 训练
 parser.add_argument("--checkpoint", type=str,
-                    default="baselines/cfm_rf/checkpoints/checkpoint-11710navdp.ckpt")
-parser.add_argument("--save_dir", type=str, default="baselines/cfm_rf_rl/checkpoints_rl")
+                    default="baselines/flux_wo_rl/checkpoints/checkpoint-11710navdp.ckpt")
+parser.add_argument("--save_dir", type=str, default="baselines/flux/checkpoints_rl")
 parser.add_argument("--save_interval", type=int, default=300)
 parser.add_argument("--lr", type=float, default=3e-5)
 parser.add_argument("--update_interval", type=int, default=16)
@@ -99,7 +99,7 @@ from wheeled_robots.controllers.differential_controller import DifferentialContr
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, _REPO_ROOT)
-sys.path.insert(0, os.path.join(_REPO_ROOT, "baselines", "cfm_rf_rl"))
+sys.path.insert(0, os.path.join(_REPO_ROOT, "baselines", "flux"))
 
 from utils_tasks.basic_utils import (
     PlanningInput, PlanningOutput, find_usd_path, write_metrics,

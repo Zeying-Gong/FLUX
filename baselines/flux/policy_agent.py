@@ -1,23 +1,5 @@
 """
-cfm_rf_rl/policy_agent.py
-
 GRPO (Group Relative Policy Optimization) 训练 Agent。
-
-核心思路：
-- 每步 Isaac Sim 产生真实的 step 奖励
-- 16 条轨迹形成一个 group，组内做相对优势估计
-- 用优势加权的 critic loss 反向传播，微调 decoder 后4层 + critic/action head
-- 每 update_interval 步做一次梯度更新
-
-用法：
-    from cfm_rf_rl.policy_agent import GRPO_Agent
-    agent = GRPO_Agent(checkpoint_path, intrinsic, batch_size=1)
-    agent.reset(batch_size, stop_threshold)
-    
-    # 每步
-    traj, all_traj, all_values = agent.step_pointgoal(goal, image, depth)
-    agent.record_reward(reward, done)
-    agent.maybe_update()
 """
 
 from __future__ import annotations
@@ -93,7 +75,7 @@ class GRPO_Agent:
     """
     GRPO 训练 Agent，供主训练脚本调用。
 
-    接口设计与 cfm_rf 的 CFM_Agent 保持一致（step_pointgoal 返回相同格式），
+    接口设计与 FLUX base 的 CFM_Agent 保持一致（step_pointgoal 返回相同格式），
     方便在 eval 脚本中替换。
     """
 
@@ -212,7 +194,7 @@ class GRPO_Agent:
             self.memory_queue[i] = []
 
     # ------------------------------------------------------------------
-    # 图像预处理（与 cfm_rf 完全相同）
+    # 图像预处理（与 FLUX base 完全相同）
     # ------------------------------------------------------------------
 
     def process_image(self, images: np.ndarray) -> np.ndarray:
@@ -421,7 +403,7 @@ class GRPO_Agent:
 
     # ------------------------------------------------------------------
     # 推理接口：step_pointgoal
-    # 与 cfm_rf 的 CFM_Agent 返回格式完全相同，可直接替换
+    # 与 FLUX base 的 CFM_Agent 返回格式完全相同，可直接替换
     # ------------------------------------------------------------------
 
     def step_pointgoal(
