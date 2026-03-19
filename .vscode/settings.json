@@ -1,0 +1,10 @@
+{
+  "python.defaultInterpreterPath": "/home/yangyiz/miniconda3/envs/navdp/bin/python",
+  "python.pythonPath": "/home/yangyiz/miniconda3/envs/navdp/bin/python",
+  "python.terminal.activateEnvironment": true,
+  "python.terminal.activateEnvInCurrentTerminal": true,
+  "python.analysis.extraPaths": [],
+  "python.autoComplete.extraPaths": [],
+  "python.languageServer": "Pylance",
+  "python.condaPath": "/home/yangyiz/miniconda3/bin/conda"
+}

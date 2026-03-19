@@ -1,0 +1,28 @@
+*.ply
+__pycache__
+*.pth
+*.ckpt
+*.pt
+*.mp4
+*.jpg
+assets/scenes/Materials/*
+assets/scenes/SkyTexture/*
+assets/scenes/embodiedscan/*
+# 排除 assets 中的 scenes
+assets/n1_eval_scenes/
+assets/scenes/
+
+# 排除 IsaacLab（嵌套git仓库）
+IsaacLab/
+
+# 排除评估结果目录
+pointgoal_*/
+imagegoal_*/
+startgoal_*/
+nogoal_*/
+
+# 排除测试图片
+frame_test.png
+
+# 排除权重
+checkpoints/
