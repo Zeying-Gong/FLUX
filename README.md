@@ -99,7 +99,7 @@ isaacsim-python baselines/flux/train_grpo.py \
 ``` -->
 
 
-### 💻 Running Baseline as Server
+### 💻 Running Baselines as Server
 For each pre-built baseline methods, each contains a server.py file, just simply run server python script with parsing the server port as well as the checkpoint path. Taking NavDP as an example:
 ```bash
 # please first download the NavDP checkpoint
@@ -107,16 +107,24 @@ cd baselines/navdp/
 python navdp_server.py --port 9999 --checkpoint ./checkpoints/navdp_checkpoint.ckpt 
 ```
 
-### 🕹️ Running Teleoperation
-```bash
-# Teleoperation commands
-python teleop_pointgoal_wheeled.py
-```
+For other baselines, please refer to [NavDP](https://github.com/InternRobotics/NavDP)'s repository or the corresponding README.md file.
 
 ### 📊 Running Evaluation
 ```bash
 # Evaluation commands
 python eval_pointgoal_wheeled.py --port {PORT} --scene_dir {ASSET_SCENE}
+```
+Notes: Please parse the port to match the server port (default is 9999), and always parse the absolute path for the scene_dir. For **internscenes**, please parse scene_scale as 0.01, and 1.0 for **cluttered scenes**.
+
+### 🕹️ Running Teleoperation
+```bash
+# Teleoperation commands
+# if the running server support no-goal task
+python teleop_nogoal_wheeled.py
+# if the running server support point-goal task
+python teleop_pointgoal_wheeled.py
+# if the running server support image-goal task
+python teleop_imagegoal_wheeled.py 
 ```
 
 # 🔗 Citation

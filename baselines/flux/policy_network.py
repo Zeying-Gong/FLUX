@@ -27,8 +27,6 @@ from policy_backbone import (
 class CFM_Policy(nn.Module):
     """
     Linear-path RF 推理版策略网络。
-    架构与原始 NavDP / CFM 版本完全相同（RGBD + 目标编码器 +
-    Transformer Decoder + Action/Critic Head），推理时用 RF ODE Euler 积分。
     """
 
     def __init__(
