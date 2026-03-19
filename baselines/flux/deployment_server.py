@@ -160,6 +160,10 @@ def eval_dual():
         debug_bottom = np.concatenate((traj_depth_mask, vis_all), axis=1)
         debug_full = np.concatenate((debug_top, debug_bottom), axis=0)
         
+        # Save to disk for real-time debugging (overwrites each step)
+        # Note: This may slightly increase latency but is useful for monitoring.
+        Image.fromarray(debug_full).save('./output_image.png')
+        
         # Async-like logging (appends to video buffer)
         if _flux_fps_writer: _flux_fps_writer.append_data(debug_full)
         if _flux_fps_rgbd_writer: _flux_fps_rgbd_writer.append_data(rgbd_frame)
