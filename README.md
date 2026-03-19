@@ -62,7 +62,7 @@ pip install -r requirements.txt
 ```
 
 ### 📥 Pre-trained Weights
-Download the pre-trained FLUX weights from [Hugging Face](https://huggingface.co/zgong313/FLUX).
+Download the pre-trained FLUX weights from [Hugging Face](https://huggingface.co/zgong313/FLUX/tree/main).
 
 ```bash
 mkdir checkpoints
@@ -73,7 +73,14 @@ huggingface-cli download zgong313/FLUX flux_v1.ckpt --local-dir checkpoints --lo
 ### 🤖 Run FLUX Model
 Run the following line to start the FLUX server:
 ```bash
+# Terminal 1: Start the server
 python baselines/flux/server.py --port 9999 --checkpoint checkpoints/flux_v1.ckpt
+```
+
+To verify if the server is running correctly, you can use the provided test script in a new terminal:
+```bash
+# Terminal 2: Run verification script
+python test_flask_server.py
 ```
 
 <!-- ### 📈 Training with GRPO
@@ -97,7 +104,7 @@ For each pre-built baseline methods, each contains a server.py file, just simply
 ```bash
 # please first download the NavDP checkpoint
 cd baselines/navdp/
-python navdp_server.py --port 8888 --checkpoint ./checkpoints/navdp_checkpoint.ckpt 
+python navdp_server.py --port 9999 --checkpoint ./checkpoints/navdp_checkpoint.ckpt 
 ```
 
 ### 🕹️ Running Teleoperation
