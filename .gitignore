@@ -27,3 +27,6 @@ frame_test.png
 
 # 排除权重
 checkpoints/
+
+# 排除不开源的训练脚本
+baselines/flux/train_grpo.py
