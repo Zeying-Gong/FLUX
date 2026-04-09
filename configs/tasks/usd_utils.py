@@ -1,7 +1,7 @@
-from omni.isaac.core.utils.prims import get_prim_at_path
+from isaacsim.core.utils.prims import get_prim_at_path
 from pxr import UsdLux, Gf
-from omni.isaac.core.prims import XFormPrim
-from omni.isaac.core.utils.prims import create_prim
+from isaacsim.core.prims import XFormPrim
+from isaacsim.core.utils.prims import create_prim
 import torch
 # 辅助函数：设置实体不可见
 def hide_entity(prim_path: str):

@@ -30,7 +30,7 @@
 """
 import numpy as np
 from .base_controller import BaseController
-from omni.isaac.core.utils.types import ArticulationAction
+from isaacsim.core.utils.types import ArticulationAction
 import torch
 
 class DifferentialController(BaseController):

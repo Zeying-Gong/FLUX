@@ -1,9 +1,9 @@
 import argparse
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="A script to run a car control simulation")
 parser.add_argument(
-    "--scene_dir", type=str, default="./asset_scenes/cluttered_easy")
+    "--scene_dir", type=str, default="/workspace/FLUX/assets/scenes/cluttered_easy")
 parser.add_argument(
     "--scene_index", type=int, default=0)
 parser.add_argument(
@@ -15,7 +15,11 @@ parser.add_argument(
 parser.add_argument(
     "--port", type=int, default=8888)
 args_cli = parser.parse_args()
-app_launcher = AppLauncher(headless=False, enable_cameras=True)
+CUSTOM_APP_PATH = "/workspace/isaaclab/apps/isaaclab.python.rendering_dyn.kit" 
+
+app_launcher = AppLauncher(headless=False, enable_cameras=True,
+                            experience=CUSTOM_APP_PATH,
+                            )
 simulation_app = app_launcher.app
 
 import omni
@@ -36,9 +40,9 @@ from queue import Queue
 from typing import Optional, List, Tuple
 from pynput import keyboard  # Replace keyboard with pynput.keyboard
 from scipy.spatial.transform import Rotation as R
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import SceneEntityCfg
+from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 from wheeled_robots.controllers.differential_controller import DifferentialController
 
 from utils_tasks.basic_utils import PlanningInput, PlanningOutput,draw_box_with_text, find_usd_path,adjust_usd_scale
@@ -143,7 +147,7 @@ def main():
     env_config.scene = scene_config
     env_config.events.reset_pose.params = {"init_point_path": init_path,
                                            'height_offset': 0.1,
-                                           'robot_visible': False,
+                                           'robot_visible': True, # False
                                            'light_enabled': False}
     env = ManagerBasedRLEnv(env_config)
     env = RslRlVecEnvWrapper(env)
@@ -164,7 +168,8 @@ def main():
     trajectory_length = np.zeros((scene_config.num_envs))
     save_dir = "./teleop_pointgoal_%s_%s/%s/"%(algo,args_cli.scene_dir.split("/")[-1],scene_path.split("/")[-2])
     os.makedirs(save_dir, exist_ok=True)
-    euclidean = np.sqrt(np.square(infos['observations']['goal_pose'].cpu().numpy()[:,0:2]).sum(axis=-1))
+    euclidean = np.sqrt(np.square(obs['goal_pose'].cpu().numpy()[:,0:2]).sum(axis=-1))
+    # euclidean = np.sqrt(np.square(obs['goal_pose'].cpu().numpy()[:,0:2]).sum(axis=-1))
     fps_writer = [imageio.get_writer(save_dir + "fps_%d.mp4"%i, fps=10) for i in range(scene_config.num_envs)]
     
     # Initialize dones
@@ -207,9 +212,9 @@ def main():
     # Main simulation loop
     while simulation_app.is_running():
         # Move CUDA operations to CPU before sharing
-        goals = infos['observations']['goal_pose'].cpu().numpy()[:,0:2]
-        images = infos['observations']['rgb'].cpu().numpy()[:,:,:,0:3]
-        depths = infos['observations']['depth'].cpu().numpy()[:,:,:]
+        goals = obs['goal_pose'].cpu().numpy()[:,0:2]
+        images = obs['rgb'].cpu().numpy()[:,:,:,0:3]
+        depths = obs['depth'].cpu().numpy()[:,:,:]
         # get all camera poses
         camera_pos = env.unwrapped.scene.sensors['camera_sensor'].data.pos_w.cpu().numpy()
         camera_rot_quat = env.unwrapped.scene.sensors['camera_sensor'].data.quat_w_world.cpu().numpy()
@@ -288,7 +293,7 @@ def main():
         desired_joint_velocities = env.unwrapped.scene.articulations['robot'].data.joint_vel_target[0, :4].cpu().numpy()
 
         print(f"actual joint vel:{actual_joint_velocities}  desired joint vel:{desired_joint_velocities}")
-        trajectory_length += (infos['observations']['policy'][0,0] * env.unwrapped.step_dt).cpu().numpy()
+        trajectory_length += (obs['policy'][0,0] * env.unwrapped.step_dt).cpu().numpy()
         
         # Print control status
         print(f"Linear vel: {linear_vel:.3f}, Angular vel: {angular_vel:.3f}, Actual vel: {robot_vel:.3f} {robot_ang_vel:.2f}")
@@ -299,7 +304,7 @@ def main():
             episode_num += 1
             navigator_reset(env_id=i,port=args_cli.port)
             fps_writer[i].close()
-            euclidean[i] = np.sqrt(np.square(infos['observations']['goal_pose'].cpu().numpy()[:,0:2]).sum(axis=-1))[i]
+            euclidean[i] = np.sqrt(np.square(obs['goal_pose'].cpu().numpy()[:,0:2]).sum(axis=-1))[i]
             fps_writer[i] = imageio.get_writer(save_dir + "fps_%d.mp4"%episode_num, fps=10)
             trajectory_length[i] = 0.0
         
@@ -308,7 +313,7 @@ def main():
                 episode_num += 1
                 navigator_reset(env_id=i,port=args_cli.port)
                 fps_writer[i].close()
-                euclidean[i] = np.sqrt(np.square(infos['observations']['goal_pose'].cpu().numpy()[:,0:2]).sum(axis=-1))[i]
+                euclidean[i] = np.sqrt(np.square(obs['goal_pose'].cpu().numpy()[:,0:2]).sum(axis=-1))[i]
                 fps_writer[i] = imageio.get_writer(save_dir + "fps_%d.mp4"%episode_num, fps=10)
                 trajectory_length[i] = 0.0
 

@@ -1,5 +1,5 @@
 import argparse
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="A script to run a car control simulation")
 parser.add_argument(
@@ -36,9 +36,9 @@ from queue import Queue
 from typing import Optional, List, Tuple
 from pynput import keyboard  # Replace keyboard with pynput.keyboard
 from scipy.spatial.transform import Rotation as R
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import SceneEntityCfg
+from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 from wheeled_robots.controllers.differential_controller import DifferentialController
 
 from utils_tasks.basic_utils import PlanningInput, PlanningOutput,find_usd_path,adjust_usd_scale

@@ -1,13 +1,13 @@
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.actuators import ImplicitActuatorCfg
-from omni.isaac.lab.assets.articulation import ArticulationCfg
-from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
-from omni.isaac.lab.sensors import ContactSensorCfg, patterns, CameraCfg, RayCasterCfg, OffsetCfg
+import isaaclab.sim as sim_utils
+from isaaclab.actuators import ImplicitActuatorCfg
+from isaaclab.assets.articulation import ArticulationCfg
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+from isaaclab.sensors import ContactSensorCfg, patterns, CameraCfg, RayCasterCfg, OffsetCfg
 
 DINGO_CFG = ArticulationCfg(
     prim_path = "{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
-        usd_path="./assets/robots/dingo.usd",
+        usd_path="/workspace/FLUX/assets/robots/dingo.usd",
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(enabled_self_collisions=False),
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(

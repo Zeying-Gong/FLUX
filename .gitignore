@@ -28,5 +28,11 @@ frame_test.png
 # 排除权重
 checkpoints/
 
-# 排除不开源的训练脚本
-baselines/flux/train_grpo.py
+
+workspace.code-workspace
+docker-compose.override.yaml
+# 还不确定的文件
+v2_generate_social_nav_dataset_from_usd.py
+v2_generate_social_nav_dataset.py
+train_grpo.py
+temp/

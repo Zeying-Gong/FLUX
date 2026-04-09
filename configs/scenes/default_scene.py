@@ -1,11 +1,11 @@
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.terrains import TerrainImporterCfg
-from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.assets import ArticulationCfg,AssetBaseCfg
-from omni.isaac.lab.sensors import ContactSensorCfg, CameraCfg, RayCasterCfg
+from isaaclab.utils import configclass
+from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.scene import InteractiveSceneCfg, DynamicSceneCfg
+from isaaclab.assets import ArticulationCfg,AssetBaseCfg
+from isaaclab.sensors import ContactSensorCfg, CameraCfg, RayCasterCfg
 from dataclasses import MISSING
-from omni.isaac.lab.sim.spawners import materials
-import omni.isaac.lab.sim as sim_utils
+from isaaclab.sim.spawners import materials
+import isaaclab.sim as sim_utils
 
 GOAL_CFG = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Goal",\
     spawn = sim_utils.SphereCfg(visual_material=materials.PreviewSurfaceCfg(diffuse_color=(1.0,0.0,0.0)),visible=False,radius=0.25),
@@ -74,8 +74,78 @@ class HumanoidImageNavSceneCfg(PointNavSceneCfg):
 class HumanoidExplorationSceneCfg(ExplorationSceneCfg):
     height_sensor: RayCasterCfg = MISSING
     
+@configclass
+class SocialNavSceneCfg(DynamicSceneCfg):
+    """Scene configuration for social navigation with dynamic pedestrians.
     
+    This scene includes:
+    - Terrain (USD scene)
+    - Robot (wheeled/quadruped/humanoid)
+    - Contact sensors
+    - Camera sensors
+    - Goal marker
+    - Dynamic pedestrians from episode JSON
+    """
+    terrain: TerrainImporterCfg = MISSING
+    robot: ArticulationCfg = MISSING
+    contact_sensor: ContactSensorCfg = MISSING
+    camera_sensor: CameraCfg = MISSING
+    goal: AssetBaseCfg = MISSING
     
+    def __post_init__(self):
+        """Post initialization to set default values for people simulation."""
+        # Enable people simulation by default for social nav
+        if not hasattr(self, 'people_simulation'):
+            self.people_simulation = True
+    
+@configclass
+class DynPointGoalSceneCfg(DynamicSceneCfg):
+    """动态点导航场景 - 目标是单个移动行人
+    
+    This scene includes:
+    - Terrain (USD scene)
+    - Robot (wheeled/quadruped/humanoid)
+    - Contact sensors
+    - Camera sensors
+    - Goal marker (for visualization)
+    - Dynamic pedestrians from episode JSON
+    - Target character is selected by episode_id % 15
+    """
+    terrain: TerrainImporterCfg = MISSING
+    robot: ArticulationCfg = MISSING
+    contact_sensor: ContactSensorCfg = MISSING
+    camera_sensor: CameraCfg = MISSING
+    goal: AssetBaseCfg = MISSING
+
+    def __post_init__(self):
+        """Post initialization to set default values for people simulation."""
+        if not hasattr(self, 'people_simulation'):
+            self.people_simulation = True
+        self.enable_dynamic_target = True
+
+@configclass
+class DynExploreSceneCfg(DynamicSceneCfg):
+    """动态探索场景 - 在有人环境下自由探索
+    
+    This scene includes:
+    - Terrain (USD scene)
+    - Robot (wheeled/quadruped/humanoid)
+    - Contact sensors
+    - Camera sensors (standard + metric for occupancy mapping)
+    - Dynamic pedestrians from episode JSON
+    - No goal marker (exploration task)
+    """
+    terrain: TerrainImporterCfg = MISSING
+    robot: ArticulationCfg = MISSING
+    contact_sensor: ContactSensorCfg = MISSING
+    camera_sensor: CameraCfg = MISSING
+    metric_sensor: CameraCfg = MISSING  # For occupancy mapping
+
+    def __post_init__(self):
+        """Post initialization to set default values for people simulation."""
+        if not hasattr(self, 'people_simulation'):
+            self.people_simulation = True
+        # self.enable_exploration = True  # ← 启用探索模式
 
 
     

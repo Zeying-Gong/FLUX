@@ -4,7 +4,7 @@ from PIL import Image
 import io
 import json
 
-PORT = 9999
+PORT = 8888
 # 服务器配置
 SERVER_URL = f"http://localhost:{PORT}"
 

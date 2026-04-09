@@ -8,7 +8,7 @@
 #
 from abc import ABC, abstractmethod
 
-from omni.isaac.core.utils.types import ArticulationAction
+from isaacsim.core.utils.types import ArticulationAction
 
 
 class BaseController(ABC):
