@@ -1,5 +1,5 @@
 <p align="center">
-<h1 align="center"><strong>FLUX: Accelerating Cross-Embodiment Generative Navigation Policies via Rectified Flow and Static-to-Dynamic Learning</strong></h1>
+<h1 align="center"><strong>FLUX：通过整流流与静到动学习加速跨具身生成式导航策略</strong></h1>
 
   <!-- Badges -->
   <p align="center">
@@ -39,57 +39,65 @@
   </p>
 </p>
 
-**Languages:** [English](README.md) | [中文](readme_zh.md)
+**语言：** [English](README.md) | [中文](readme_zh.md)
 
-# 🏡 Introduction
-We propose **FLUX**, the first **FL**ow-based **U**nified policy for **X**-platform (Cross-Embodiment) navigation. FLUX leverages a static-to-dynamic curriculum and linearizes probability flow for efficient, straight-line trajectory generation. This enables state-of-the-art performance and zero-shot sim-to-real transfer across wheeled, quadrupedal, and humanoid robots without any fine-tuning.
+# 🏡 简介
+
+我们提出 **FLUX**，首个基于 **流（Flow）** 的 **跨具身（X-platform）** 统一导航策略。FLUX 采用静到动课程并将概率流线性化，以高效生成近似直线的轨迹，从而在轮式、四足与人形机器人上取得领先表现，并可在零样本 sim-to-real 迁移下工作、无需微调。
+
 <div style="text-align: center;">
     <img src="./assets/images/compressed/v2_teaser_02.png" alt="FLUX Teaser" width=100% >
 </div>
 
-### 🛠️ Installation
-Please follow the instructions to config the environment for FLUX.
+### 🛠️ 安装
 
-Step 0: Clone this repository
+请按下列步骤配置 FLUX 运行环境。
+
+**步骤 0：** 克隆本仓库
+
 ```bash
 git clone https://github.com/Zeying-Gong/FLUX.git
 cd FLUX/
 ```
 
-Step 1: Create conda environment and install the dependency
+**步骤 1：** 创建 conda 环境并安装依赖
+
 ```bash
 conda create -n flux python=3.10
 conda activate flux
 pip install -r requirements.txt
 ```
 
-### 📥 Pre-trained Weights
-Download the pre-trained FLUX weights from [Hugging Face](https://huggingface.co/zgong313/FLUX/tree/main).
+### 📥 预训练权重
+
+从 [Hugging Face](https://huggingface.co/zgong313/FLUX/tree/main) 下载 FLUX 预训练权重。
 
 ```bash
 mkdir checkpoints
-# Download via huggingface-cli
+# 使用 huggingface-cli 下载
 huggingface-cli download zgong313/FLUX flux_v1.ckpt --local-dir checkpoints --local-dir-use-symlinks False
 ```
 
-### 🤖 Run FLUX Model
-Run the following line to start the FLUX server:
+### 🤖 运行 FLUX 模型
+
+启动 FLUX 服务：
+
 ```bash
-# Terminal 1: Start the server
+# 终端 1：启动服务
 python baselines/flux/server.py --port 9999 --checkpoint checkpoints/flux_v1.ckpt
 ```
 
-To verify if the server is running correctly, you can use the provided test script in a new terminal:
+在新终端中用测试脚本检查服务是否正常：
+
 ```bash
-# Terminal 2: Run verification script
+# 终端 2：验证脚本
 python test_flask_server.py
 ```
 
-<!-- ### 📈 Training with GRPO
-FLUX supports online reinforcement learning fine-tuning using **Group Relative Policy Optimization (GRPO)** to enhance performance in dynamic environments.
+<!-- ### 📈 使用 GRPO 训练
+FLUX 支持使用 **GRPO（Group Relative Policy Optimization）** 在动态场景中进行在线强化学习微调。
 
 ```bash
-# Start GRPO training across multiple tasks and scenes
 isaacsim-python baselines/flux/train_grpo.py \
     --checkpoint checkpoints/flux_v1.ckpt \
     --scene_dirs assets/dyn_scenes/cluttered_easy assets/dyn_scenes/isaacsim_scene \
@@ -100,38 +108,41 @@ isaacsim-python baselines/flux/train_grpo.py \
     --lr 3e-5 --update_interval 32 --save_interval 100
 ``` -->
 
+### 💻 将基线作为服务运行
 
-### 💻 Running Baselines as Server
-For each pre-built baseline methods, each contains a server.py file, just simply run server python script with parsing the server port as well as the checkpoint path. Taking NavDP as an example:
+各预置基线目录中通常包含 `server.py`，指定端口与 checkpoint 路径即可启动。以 NavDP 为例：
+
 ```bash
-# please first download the NavDP checkpoint
+# 请先下载 NavDP checkpoint
 cd baselines/navdp/
 python navdp_server.py --port 9999 --checkpoint ./checkpoints/navdp_checkpoint.ckpt 
 ```
 
-For other baselines, please refer to [NavDP](https://github.com/InternRobotics/NavDP)'s repository or the corresponding README.md file.
+其它基线请参考 [NavDP](https://github.com/InternRobotics/NavDP) 仓库或对应 README。
 
-### 📊 Running Evaluation
+### 📊 运行评测
+
 ```bash
-# Evaluation commands
 python eval_pointgoal_wheeled.py --port {PORT} --scene_dir {ASSET_SCENE}
 ```
-Notes: Please parse the port to match the server port (default is 9999), and always parse the absolute path for the scene_dir. For **internscenes**, please parse scene_scale as 0.01, and 1.0 for **cluttered scenes**.
 
-### 🕹️ Running Teleoperation
+**说明：** `--port` 需与服务器端口一致（默认 9999）；`--scene_dir` 请使用**绝对路径**。对 **internscenes** 请将 `scene_scale` 设为 `0.01`，**cluttered** 类场景一般为 `1.0`。
+
+### 🕹️ 遥操作
+
 ```bash
-# Teleoperation commands
-# if the running server support no-goal task
+# 若服务端支持无目标任务
 python teleop_nogoal_wheeled.py
-# if the running server support point-goal task
+# 若支持点目标
 python teleop_pointgoal_wheeled.py
-# if the running server support image-goal task
+# 若支持图像目标
 python teleop_imagegoal_wheeled.py 
 ```
 
-# 🔗 Citation
+# 🔗 引用
 
-If you find our work helpful, please cite:
+若本工作对您有帮助，欢迎引用：
+
 ```bibtex
 @article{gong2025flux,
     title     = {FLUX: Accelerating Cross-Embodiment Generative Navigation Policies via Rectified Flow and Static-to-Dynamic Learning},
@@ -141,5 +152,6 @@ If you find our work helpful, please cite:
 }
 ```
 
-# 👏 Acknowledgement
-We thank the authors of [NavDP](https://github.com/InternRobotics/NavDP) for their excellent open-source codebase.
+# 👏 致谢
+
+感谢 [NavDP](https://github.com/InternRobotics/NavDP) 作者的优秀开源代码。
