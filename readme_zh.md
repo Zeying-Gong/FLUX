@@ -49,50 +49,85 @@
     <img src="./assets/images/compressed/v2_teaser_02.png" alt="FLUX Teaser" width=100% >
 </div>
 
-### 🛠️ 安装
+### 🛠️ 环境与运行（Docker，推荐）
 
-请按下列步骤配置 FLUX 运行环境。
+推荐使用 **Docker 镜像** 运行 FLUX 与 Isaac Lab 配套环境，**无需**在宿主机单独创建 conda 环境。镜像内已包含所需依赖；将本仓库与 [IsaacLab](https://github.com/Zeying-Gong/IsaacLab) 通过卷挂载进容器后，在 `/workspace` 下开发即可。
 
-**步骤 0：** 克隆本仓库
+#### 拉取镜像
+
+```bash
+docker pull quay.io/zeyinggong/flux:v0
+```
+
+**镜像：** `quay.io/zeyinggong/flux:v0`
+
+#### 克隆 GitHub 仓库
 
 ```bash
 git clone https://github.com/Zeying-Gong/FLUX.git
-cd FLUX/
 ```
 
-**步骤 1：** 创建 conda 环境并安装依赖
+（还需克隆 **[IsaacLab](https://github.com/Zeying-Gong/IsaacLab)** 仓库，以便与下述挂载路径一致。）
+
+#### 启动容器
+
+将下面命令中的宿主机路径换成你本机克隆的 FLUX 与 IsaacLab 所在目录（**不要**照抄示例占位路径）。
 
 ```bash
-conda create -n flux python=3.10
-conda activate flux
-pip install -r requirements.txt
+docker run --name flux_v0 \
+    -e "ACCEPT_EULA=Y" \
+    -e "PRIVACY_CONSENT=Y" \
+    -e "DISPLAY=${DISPLAY}" \
+    --entrypoint bash \
+    --gpus all \
+    --network=host \
+    --privileged \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    -v /path/to/FLUX:/workspace/FLUX \
+    -v /path/to/IsaacLab:/workspace/IsaacLab \
+    -w /workspace \
+    -it quay.io/zeyinggong/flux:v0
 ```
+
+- `/path/to/FLUX` — 本仓库 [Zeying-Gong/FLUX](https://github.com/Zeying-Gong/FLUX) 在本机的克隆目录。
+- `/path/to/IsaacLab` — [IsaacLab](https://github.com/Zeying-Gong/IsaacLab) 在本机的克隆目录。
+
+进入容器后，后续 Python 命令请在 **`/workspace/FLUX`** 目录下执行（可先 `cd /workspace/FLUX`）。
 
 ### 📥 预训练权重
 
-从 [Hugging Face](https://huggingface.co/zgong313/FLUX/tree/main) 下载 FLUX 预训练权重。
+在 **FLUX 仓库根目录**（宿主机上你克隆下来的那份，挂载后对应容器内 `/workspace/FLUX`）下 **新建文件夹 `checkpoints`**，将预训练权重文件 **`flux_v1.ckpt`** 下载并保存到该文件夹中。
+
+权重发布页：[Hugging Face · zgong313/FLUX](https://huggingface.co/zgong313/FLUX/tree/main)。
+
+可使用 Hugging Face CLI（需在能访问 Hugging Face 的环境中执行，例如在容器内若已配置好 CLI）：
 
 ```bash
-mkdir checkpoints
-# 使用 huggingface-cli 下载
+cd /path/to/FLUX   # 换成你的本机 FLUX 根目录；若在容器内则: cd /workspace/FLUX
+mkdir -p checkpoints
 huggingface-cli download zgong313/FLUX flux_v1.ckpt --local-dir checkpoints --local-dir-use-symlinks False
 ```
 
+也可在浏览器从上述页面手动下载 `flux_v1.ckpt`，再放入 `checkpoints/`。
+
 ### 🤖 运行 FLUX 模型
 
-启动 FLUX 服务：
+在容器内、**FLUX 仓库根目录**下启动服务：
 
 ```bash
+cd /workspace/FLUX
 # 终端 1：启动服务
 python baselines/flux/server.py --port 9999 --checkpoint checkpoints/flux_v1.ckpt
 ```
 
-在新终端中用测试脚本检查服务是否正常：
+在同一容器内另开终端（或 `docker exec -it flux_v0 bash`）用测试脚本检查服务：
 
 ```bash
-# 终端 2：验证脚本
+cd /workspace/FLUX
 python test_flask_server.py
 ```
+
+**说明：** 下文「将基线作为服务」「评测」「遥操作」中的命令，同样建议在容器内先执行 `cd /workspace/FLUX` 再运行。
 
 <!-- ### 📈 使用 GRPO 训练
 FLUX 支持使用 **GRPO（Group Relative Policy Optimization）** 在动态场景中进行在线强化学习微调。
