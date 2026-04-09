@@ -1,5 +1,5 @@
 <p align="center">
-<h1 align="center"><strong>FLUX：通过整流流与静到动学习加速跨具身生成式导航策略</strong></h1>
+<h1 align="center"><strong>FLUX：通过修正流匹配与静到动学习加速跨具身生成式导航策略</strong></h1>
 
   <!-- Badges -->
   <p align="center">
@@ -94,6 +94,77 @@ docker run --name flux_v0 \
 
 进入容器后，后续 Python 命令请在 **`/workspace/FLUX`** 目录下执行（可先 `cd /workspace/FLUX`）。
 
+### 数据集与场景资产
+
+评测用 **USD 场景与配套资源** 需放在 **[IsaacLab](https://github.com/Zeying-Gong/IsaacLab)** 仓库的 `assets/scenes/` 下：宿主机上对应你克隆的 IsaacLab 目录，容器内为 **`/workspace/IsaacLab/assets/scenes/`**。Episode 配置与说明可在 IsaacLab 仓库中查阅。
+
+#### 🌆 静态场景资产（Prepare Scene Asset）
+
+请从 HuggingFace 上的 **[InternScene-N1](https://huggingface.co/datasets/InternRobotics/Scene-N1/tree/main/n1_eval_scenes)** 下载场景资源，解压后整理为如下目录结构（相对 **IsaacLab 仓库根目录** 的 `assets/scenes/`）：
+
+```text
+assets/scenes/
+├── SkyTexture/
+│   ├── belfast_sunset_puresky_4k.hdr
+│   ├── citrus_orchard_road_puresky_4k.hdr
+│   ├── ...
+├── Materials/
+│   ├── Carpet/
+│   │   ├── textures/
+│   │   ├── Carpet_Woven.mdl
+│   │   └── ...
+│   ├── ...
+├── cluttered_easy/
+│   └── easy_0/
+│       ├── cluttered-0.usd/
+│       ├── imagegoal_start_goal_pairs.npy
+│       └── pointgoal_start_goal_pairs.npy
+│   ├── ...
+├── cluttered_hard/
+│   └── hard_0/
+│       ├── cluttered-0.usd/
+│       ├── imagegoal_start_goal_pairs.npy
+│       └── pointgoal_start_goal_pairs.npy
+│   ├── ...
+├── internscenes_commercial/
+│   ├── models/
+│   ├── Materials/
+│   └── scenes_commercial/
+│       ├── MV4AFHQKTKJZ2AABAAAAADQ8_usd/
+│       │   ├── models/
+│       │   ├── Materials/
+│       │   ├── metadata.json
+│       │   ├── start_result_navigation.usd
+│       │   ├── imagegoal_start_goal_pairs.npy
+│       │   └── pointgoal_start_goal_pairs.npy
+│       ├── ...
+├── internscenes_home/
+│   ├── models/
+│   ├── Materials/
+│   └── scenes_home/
+│       ├── MV4AFHQKTKJZ2AABAAAAADQ8_usd/
+│       │   ├── models/
+│       │   ├── Materials/
+│       │   ├── metadata.json
+│       │   ├── start_result_navigation.usd
+│       │   ├── imagegoal_start_goal_pairs.npy
+│       │   └── pointgoal_start_goal_pairs.npy
+│       ├── ...
+```
+
+| 类别 | 资源下载 | Episodes（IsaacLab 仓库） |
+|------|----------|---------------------------|
+| SkyTexture | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/SkyTexture.tar.gz) | - |
+| Materials | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/Materials.tar.gz) | - |
+| Cluttered-Easy | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/cluttered_easy.tar.gz) | [目录](https://github.com/Zeying-Gong/IsaacLab/tree/main/assets/scenes/cluttered_easy) |
+| Cluttered-Hard | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/cluttered_hard.tar.gz) | [目录](https://github.com/Zeying-Gong/IsaacLab/tree/main/assets/scenes/cluttered_hard) |
+| InternScenes-Home | [目录](https://huggingface.co/datasets/InternRobotics/Scene-N1/tree/main/n1_eval_scenes/internscenes_home) | [目录](https://github.com/Zeying-Gong/IsaacLab/tree/main/assets/scenes/internscenes_home) |
+| InternScenes-Commercial | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/internscenes_commercial.tar.gz) | [目录](https://github.com/Zeying-Gong/IsaacLab/tree/main/assets/scenes/internscenes_commercial) |
+
+#### 动态场景（`isaacsim_scene`）
+
+动态场景相关资源（例如 `isaacsim_scene`）计划发布至 HuggingFace，**链接与下载方式待定**；确定后将更新本节。
+
 ### 📥 预训练权重
 
 在 **FLUX 仓库根目录**（宿主机上你克隆下来的那份，挂载后对应容器内 `/workspace/FLUX`）下 **新建文件夹 `checkpoints`**，将预训练权重文件 **`flux_v1.ckpt`** 下载并保存到该文件夹中。
@@ -129,20 +200,6 @@ python test_flask_server.py
 
 **说明：** 下文「将基线作为服务」「评测」「遥操作」中的命令，同样建议在容器内先执行 `cd /workspace/FLUX` 再运行。
 
-<!-- ### 📈 使用 GRPO 训练
-FLUX 支持使用 **GRPO（Group Relative Policy Optimization）** 在动态场景中进行在线强化学习微调。
-
-```bash
-isaacsim-python baselines/flux/train_grpo.py \
-    --checkpoint checkpoints/flux_v1.ckpt \
-    --scene_dirs assets/dyn_scenes/cluttered_easy assets/dyn_scenes/isaacsim_scene \
-    --tasks dynpointgoal dynnogoal socialnav \
-    --num_episodes 3000 \
-    --save_dir baselines/flux/checkpoints_rl \
-    --gpu_id 0 --train_gpu_id 0 \
-    --lr 3e-5 --update_interval 32 --save_interval 100
-``` -->
-
 ### 💻 将基线作为服务运行
 
 各预置基线目录中通常包含 `server.py`，指定端口与 checkpoint 路径即可启动。以 NavDP 为例：
@@ -173,6 +230,20 @@ python teleop_pointgoal_wheeled.py
 # 若支持图像目标
 python teleop_imagegoal_wheeled.py 
 ```
+
+<!-- ### 📈 使用 GRPO 后训练
+FLUX 支持使用 **GRPO（Group Relative Policy Optimization）** 在动态场景中进行在线强化学习微调。
+
+```bash
+isaacsim-python baselines/flux/train_grpo.py \
+    --checkpoint checkpoints/flux_v1.ckpt \
+    --scene_dirs assets/dyn_scenes/cluttered_easy assets/dyn_scenes/isaacsim_scene \
+    --tasks dynpointgoal dynnogoal socialnav \
+    --num_episodes 3000 \
+    --save_dir baselines/flux/checkpoints_rl \
+    --gpu_id 0 --train_gpu_id 0 \
+    --lr 3e-5 --update_interval 32 --save_interval 100
+``` -->
 
 # 🔗 引用
 

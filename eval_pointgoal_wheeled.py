@@ -10,7 +10,7 @@
 
 命令示例：
 python eval_pointgoal_wheeled.py \
-    --port 8888 \
+    --port 9999 \
     --scene_dir /path/to/scenes \
     --scene_index 0 \
     --scene_scale 0.01
@@ -49,7 +49,7 @@ parser.add_argument(
     help="期望速度 (m/s)"
 )
 parser.add_argument(
-    "--port", type=int, default=8888,
+    "--port", type=int, default=9999,
     help="NavDP Server 的端口号"
 )
 args_cli = parser.parse_args()

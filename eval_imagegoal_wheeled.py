@@ -17,7 +17,7 @@ parser.add_argument(
 parser.add_argument(
     "--speed", type=float, default=0.5)
 parser.add_argument(
-    "--port", type=int, default=8888)
+    "--port", type=int, default=9999)
 args_cli = parser.parse_args()
 app_launcher = AppLauncher(headless=True, enable_cameras=True)
 simulation_app = app_launcher.app

@@ -13,7 +13,7 @@ parser.add_argument(
 parser.add_argument(
     "--num_episodes", type=int, default=100)
 parser.add_argument(
-    "--port", type=int, default=8888)
+    "--port", type=int, default=9999)
 args_cli = parser.parse_args()
 CUSTOM_APP_PATH = "/workspace/isaaclab/apps/isaaclab.python.rendering_dyn.kit" 
 

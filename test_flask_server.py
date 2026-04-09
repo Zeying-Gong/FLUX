@@ -1,12 +1,13 @@
-import requests
-import numpy as np
-from PIL import Image
+import argparse
 import io
 import json
 
-PORT = 8888
-# 服务器配置
-SERVER_URL = f"http://localhost:{PORT}"
+import numpy as np
+import requests
+from PIL import Image
+
+# Overwritten in main() from CLI --port (default 9999)
+SERVER_URL = "http://localhost:9999"
 
 def create_dummy_image(height=480, width=640, batch_size=1):
     """创建测试用的RGB图像"""
@@ -236,7 +237,9 @@ def test_batch_processing():
     
     return True
 
-def main():
+def main(port: int = 9999):
+    global SERVER_URL
+    SERVER_URL = f"http://localhost:{port}"
     print("开始测试 IPlanner Navigation Server")
     print(f"服务器地址: {SERVER_URL}\n")
     
@@ -288,5 +291,14 @@ def main():
     return all_passed
 
 if __name__ == "__main__":
-    success = main()
+    parser = argparse.ArgumentParser(description="Test FLUX / IPlanner navigation HTTP server")
+    parser.add_argument(
+        "--port",
+        "-p",
+        type=int,
+        default=9999,
+        help="Server port the Flask app listens on (default: 9999)",
+    )
+    args = parser.parse_args()
+    success = main(port=args.port)
     exit(0 if success else 1)
