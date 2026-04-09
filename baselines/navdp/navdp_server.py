@@ -19,7 +19,7 @@ import argparse
 # ============ 解析命令行参数 ============
 parser = argparse.ArgumentParser()
 parser.add_argument("--port", type=int, default=8888)  # 服务器端口号
-parser.add_argument("--checkpoint", type=str, default="checkpoints/navdp-cross-modal.ckpt")  # 模型权重路径
+parser.add_argument("--checkpoint", type=str, default="/workspace/FLUX/checkpoints/navdp-cross-modal.ckpt")  # 模型权重路径
 args = parser.parse_known_args()[0]
 
 # ============ 创建 Flask 应用 ============

@@ -1,6 +1,6 @@
 """
 点目标导航评估脚本 (客户端)
-功能：在 Isaac Sim 中评估 NavDP 模型的点目标导航性能
+功能：在 Isaac Sim 中评估模型的点目标导航性能
 
 工作流程：
 1. 启动 Isaac Sim 仿真环境
@@ -16,12 +16,12 @@ python eval_pointgoal_wheeled.py \
     --scene_scale 0.01
 """
 import argparse
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # ============ 解析命令行参数 ============
 parser = argparse.ArgumentParser(description="点目标导航评估脚本")
 parser.add_argument(
-    "--scene_dir", type=str, default="./asset_scenes/cluttered_easy",
+    "--scene_dir", type=str, default="/workspace/FLUX/assets/scenes/cluttered_easy",
     help="场景文件夹路径"
 )
 parser.add_argument(
@@ -54,11 +54,8 @@ parser.add_argument(
 )
 args_cli = parser.parse_args()
 
-# ============ 启动 Isaac Sim ============
-app_launcher = AppLauncher(
-    headless=True,         # 无头模式（不显示GUI）
-    enable_cameras=True    # 启用相机渲染
-)
+CUSTOM_APP_PATH = "/workspace/isaaclab/apps/isaaclab.python.rendering_dyn.kit"
+app_launcher = AppLauncher(headless=False, enable_cameras=True, experience=CUSTOM_APP_PATH)
 simulation_app = app_launcher.app
 
 # ============ 导入依赖（必须在 AppLauncher 之后导入） ============
@@ -73,9 +70,9 @@ import torch
 import open3d as o3d
 from scipy.spatial.transform import Rotation as R
 from pxr import Usd, Sdf
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import SceneEntityCfg
+from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 from wheeled_robots.controllers.differential_controller import DifferentialController
 import torchvision.transforms as F
 import time
@@ -253,7 +250,7 @@ env_config.events.reset_pose.params = {
 env = ManagerBasedRLEnv(env_config)
 env = RslRlVecEnvWrapper(env)  # RL 包装器
 adjust_usd_scale(scale=args_cli.scene_scale)  # 调整场景缩放
-_, infos = env.reset()
+obs, infos = env.reset()
 
 # ===== 步骤5：预热（让物理引擎稳定）=====
 PREHEAT_STEPS = 10
@@ -300,7 +297,7 @@ os.makedirs(save_dir, exist_ok=True)
 
 # 初始欧几里得距离（用于计算 SPL）
 euclidean = np.sqrt(
-    np.square(infos['observations']['goal_pose'].cpu().numpy()[:, 0:2]).sum(axis=-1)
+    np.square(obs['goal_pose'].cpu().numpy()[:, 0:2]).sum(axis=-1)
 )
 
 # 视频写入器
@@ -316,9 +313,9 @@ trajectory_length = np.zeros((scene_config.num_envs))
 while simulation_app.is_running():
     with torch.inference_mode():
         # ===== 步骤1：获取最新观测 =====
-        goals = infos['observations']['goal_pose'].cpu().numpy()[:, 0:2]  # (num_envs, 2) 相对目标
-        images = infos['observations']['rgb'].cpu().numpy()[:, :, :, 0:3]  # (num_envs, H, W, 3) RGB
-        depths = infos['observations']['depth'].cpu().numpy()[:, :, :]     # (num_envs, H, W) Depth
+        goals = obs['goal_pose'].cpu().numpy()[:, 0:2]  # (num_envs, 2) 相对目标
+        images = obs['rgb'].cpu().numpy()[:, :, :, 0:3]  # (num_envs, H, W, 3) RGB
+        depths = obs['depth'].cpu().numpy()[:, :, :]     # (num_envs, H, W) Depth
         
         # 获取相机位姿（世界坐标系）
         camera_pos = env.unwrapped.scene.sensors['camera_sensor'].data.pos_w.cpu().numpy()  # (num_envs, 3)
@@ -364,7 +361,7 @@ while simulation_app.is_running():
             
             for i in range(args_cli.num_envs):
                 # ===== 5.1 可视化轨迹 =====
-                vis_image = vis_manager[i].visualize_trajectory(
+                vis_image = vis_manager[i].visualize_trajectory_global_with_people(
                     images[i],                           # RGB 图像
                     depths[i][:, :, None],               # Depth 图像
                     camera_intrinsic.cpu().numpy(),      # 相机内参
@@ -407,18 +404,18 @@ while simulation_app.is_running():
                         "实际 lin.:%.2f ang.:%.2f" % (robot_vel, robot_ang_vel)
                     )
                     # Critic 价值范围
-                    if current_all_values is not None:
-                        vis_image = draw_box_with_text(
-                            vis_image, 0, 770, 430, 50,
-                            "Critic max:%.2f min:%.2f" % (
-                                np.max(current_all_values[i]),
-                                np.min(current_all_values[i])
-                            )
-                        )
-                    # 目标坐标
+                    # if current_all_values is not None:
+                    #     vis_image = draw_box_with_text(
+                    #         vis_image, 0, 770, 430, 50,
+                    #         "Critic max:%.2f min:%.2f" % (
+                    #             np.max(current_all_values[i]),
+                    #             np.min(current_all_values[i])
+                    #         )
+                    #     )
+                    # # 目标坐标
                     vis_image = draw_box_with_text(
                         vis_image, 0, 820, 430, 50,
-                        "点目标:(%.2f, %.2f)" % (goals[i][0], goals[i][1])
+                        "point goal:(%.2f, %.2f)" % (goals[i][0], goals[i][1])
                     )
                     # 保存帧
                     cv2.imwrite(f"frame_test.png", cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
@@ -435,7 +432,7 @@ while simulation_app.is_running():
             desired_joint_velocities = env.unwrapped.scene.articulations['robot'].data.joint_vel_target[0, :2].cpu().numpy()
             
             # 累计轨迹长度
-            trajectory_length += (infos['observations']['policy'][:, 0] * env.unwrapped.step_dt).cpu().numpy()
+            trajectory_length += (obs['policy'][:, 0] * env.unwrapped.step_dt).cpu().numpy()
         
         else:
             # ===== 轨迹未就绪，使用零动作 =====
@@ -475,7 +472,7 @@ while simulation_app.is_running():
                 
                 # 重置变量（准备下一回合）
                 euclidean[i] = np.sqrt(
-                    np.square(infos['observations']['goal_pose'].cpu().numpy()[:, 0:2]).sum(axis=-1)
+                    np.square(obs['goal_pose'].cpu().numpy()[:, 0:2]).sum(axis=-1)
                 )[i]
                 fps_writer[i] = imageio.get_writer(save_dir + "fps_%d.mp4" % episode_num, fps=10)
                 trajectory_length[i] = 0.0
