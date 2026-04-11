@@ -3,7 +3,7 @@ from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="A script to run a car control simulation")
 parser.add_argument(
-    "--scene_dir", type=str, default="/workspace/FLUX/assets/scenes/cluttered_easy")
+    "--scene_dir", type=str, default="/workspace/FLUX/assets/n1_eval_scenes/cluttered_easy")
 parser.add_argument(
     "--scene_index", type=int, default=0)
 parser.add_argument(

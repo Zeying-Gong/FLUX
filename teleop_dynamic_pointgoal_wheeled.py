@@ -2,12 +2,8 @@ import argparse
 from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser("Teleoperation with dynamic environments")
-parser.add_argument("-c", "--config_file", required=True, help="Path to a IRA config file", default="/isaac-sim/tools/agent_sdg/simple_nosave_config.yaml" )
-parser.add_argument("--people_config", type=str, default="/workspace/NavDP/configs/people_config.yaml")
-# parser.add_argument("--num_people", type=int, default=3)
-parser.add_argument("--people_seed", type=int, default=3)
 parser.add_argument(
-    "--scene_dir", type=str, default="/workspace/NavDP/assets/dyn_scenes/cluttered_easy")
+    "--scene_dir", type=str, default="/workspace/FLUX/assets/dynbench/isaacsim_scene")
 parser.add_argument(
     "--scene_index", type=int, default=0)
 parser.add_argument(

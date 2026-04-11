@@ -135,17 +135,23 @@ def _get_input_images(proc_images: np.ndarray) -> np.ndarray:
     return np.array(input_images)
 
 
-def _decode_image_depth(image_file, depth_file, batch_size: int):
+def _decode_image_depth(image_file, depth_file, declared_batch_size: int = None):
     image = Image.open(image_file.stream).convert("RGB")
     image = np.asarray(image)
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    image = image.reshape((batch_size, -1, image.shape[1], 3))
 
     depth = Image.open(depth_file.stream).convert("I")
-    depth = np.asarray(depth)[:, :, np.newaxis].astype(np.float32) / 10000.0
-    depth = depth.reshape((batch_size, -1, depth.shape[1], 1))
-    return image, depth
+    depth = np.asarray(depth).astype(np.float32) / 10000.0
 
+    # 用 declared_batch_size，如果没传则用全局 _batch_size
+    batch_size = declared_batch_size if declared_batch_size is not None else _batch_size
+
+    H_single_img = image.shape[0] // batch_size
+    H_single_dep = depth.shape[0] // batch_size
+
+    image = image.reshape((batch_size, H_single_img, image.shape[1], 3))
+    depth = depth.reshape((batch_size, H_single_dep, depth.shape[1], 1))
+    return image, depth, batch_size  # 把实际 batch_size 也返回出去
 
 # ------------------------------------------------------------------
 # Flask 路由（与 NavDP server 完全一致）
@@ -187,86 +193,62 @@ def navigator_reset_env():
 @app.route("/pointgoal_step", methods=["POST"])
 def pointgoal_step():
     import torch
-    start = time.time()
 
     goal_data = json.loads(request.form.get("goal_data"))
+    # goal_data 里的列表长度就是真实 batch_size
+    actual_batch_size = len(goal_data["goal_x"])
+
+    image, depth, actual_batch_size = _decode_image_depth(
+        request.files["image"], request.files["depth"], actual_batch_size
+    )
+    # ... 后续用 actual_batch_size 替换所有 _batch_size ...
     goal = np.stack(
         (np.array(goal_data["goal_x"]),
          np.array(goal_data["goal_y"]),
-         np.zeros_like(np.array(goal_data["goal_x"]))),
+         np.zeros(actual_batch_size)),
         axis=1
-    )  # (batch, 3)
-
-    image, depth = _decode_image_depth(
-        request.files["image"], request.files["depth"], _batch_size
     )
 
-    t1 = time.time()
-
-    # 预处理
-    proc_images = _process_image(image)
-    proc_depths = _process_depth(depth)
+    proc_images  = _process_image(image)
+    proc_depths  = _process_depth(depth)
     input_images = _get_input_images(proc_images)
-    input_goals = _process_pointgoal(goal)
+    input_goals  = _process_pointgoal(goal)
 
-    # 推理（不需要梯度）
     with torch.no_grad():
         all_trajectory, critic_scores, _ = _policy.forward_train_pointgoal(
             input_goals, input_images, proc_depths, sample_num=16
         )
 
-    all_trajectory_np = all_trajectory.cpu().numpy()   # (B, 16, 24, 3)
-    all_values_np = critic_scores.cpu().numpy()        # (B, 16)
+    all_trajectory_np = all_trajectory.cpu().numpy()
+    all_values_np     = critic_scores.cpu().numpy()
 
-    # 选最优
-    best_idx = all_values_np.argmax(axis=1)            # (B,)
-    execute_traj = all_trajectory_np[
-        np.arange(_batch_size), best_idx
-    ]  # (B, 24, 3)
+    best_idx     = all_values_np.argmax(axis=1)
+    execute_traj = all_trajectory_np[np.arange(actual_batch_size), best_idx]
 
-    # stop 判断
     if all_values_np.max() < _stop_threshold:
         execute_traj[:, :, 0] = 0.0
         execute_traj[:, :, 1] = np.sign(execute_traj[:, :, 1].mean())
 
-    t2 = time.time()
-
-    # 可视化
-    try:
-        from matplotlib import colormaps as cm
-        vis = np.array(image[0])
-        for traj, val in zip(all_trajectory_np[0], all_values_np[0]):
-            c = np.array(cm.get("jet")(np.clip(-val * 0.1, 0, 1))[:3]) * 255
-            for j in range(traj.shape[0] - 1):
-                x1 = int(traj[j, 0] * 100 + vis.shape[1] // 2)
-                y1 = int(vis.shape[0] - traj[j, 1] * 100)
-                x2 = int(traj[j+1, 0] * 100 + vis.shape[1] // 2)
-                y2 = int(vis.shape[0] - traj[j+1, 1] * 100)
-                if all(0 < v < vis.shape[1] for v in [x1, x2]) and \
-                   all(0 < v < vis.shape[0] for v in [y1, y2]):
-                    vis = cv2.line(vis, (x1, y1), (x2, y2), c.astype(np.uint8).tolist(), 3)
-        _fps_writer.append_data(vis)
-    except Exception:
-        pass
-
-    print("phase1:%.3f phase2:%.3f total:%.3f" % (t1 - start, t2 - t1, time.time() - start))
-
     return jsonify({
-        "trajectory": execute_traj.tolist(),
+        "trajectory":     execute_traj.tolist(),
         "all_trajectory": all_trajectory_np.tolist(),
-        "all_values": all_values_np.tolist(),
+        "all_values":     all_values_np.tolist(),
     })
 
 
 @app.route("/nogoal_step", methods=["POST"])
 def nogoal_step():
-    """无目标探索，使用 forward_train_nogoal（goal_embed 全零独立分支）"""
     import torch
-    image, depth = _decode_image_depth(
+
+    # nogoal 没有 goal_data，从图像高度推断
+    # 客户端垂直拼接了 batch_size 帧，高度是单帧的整数倍
+    # 这里先按 _batch_size 解码，如果测试时需要动态 batch 再改
+    image, depth, actual_batch_size = _decode_image_depth(
         request.files["image"], request.files["depth"], _batch_size
     )
-    proc_images = _process_image(image)
-    proc_depths = _process_depth(depth)
+
+    proc_images  = _process_image(image)
+    proc_depths  = _process_depth(depth)
     input_images = _get_input_images(proc_images)
 
     with torch.no_grad():
@@ -274,32 +256,72 @@ def nogoal_step():
             input_images, proc_depths, sample_num=16
         )
 
-    all_trajectory_np = all_trajectory.cpu().numpy()   # (B, 16, 24, 3)
-    all_values_np = critic_scores.cpu().numpy()        # (B, 16)
+    all_trajectory_np = all_trajectory.cpu().numpy()
+    all_values_np     = critic_scores.cpu().numpy()
 
-    # 与 policy_agent.step_nogoal 一致：优先在有效长度轨迹里选 best
-    best_idx = np.zeros(_batch_size, dtype=np.int64)
-    for b in range(_batch_size):
-        traj_lens = np.linalg.norm(all_trajectory_np[b, :, -1, :2], axis=-1)  # (16,)
-        valid_mask = traj_lens > 0.3
+    best_idx = np.zeros(actual_batch_size, dtype=np.int64)
+    for b in range(actual_batch_size):
+        traj_lens   = np.linalg.norm(all_trajectory_np[b, :, -1, :2], axis=-1)
+        valid_mask  = traj_lens > 0.3
         masked_scores = all_values_np[b].copy()
         if valid_mask.any():
             masked_scores[~valid_mask] = -1e9
         best_idx[b] = masked_scores.argmax()
 
-    execute_traj = all_trajectory_np[np.arange(_batch_size), best_idx]  # (B, 24, 3)
+    execute_traj = all_trajectory_np[np.arange(actual_batch_size), best_idx]
 
-    # stop 判断
     if all_values_np.max() < _stop_threshold:
         execute_traj[:, :, 0] = 0.0
         execute_traj[:, :, 1] = np.sign(execute_traj[:, :, 1].mean())
 
     return jsonify({
-        "trajectory": execute_traj.tolist(),
+        "trajectory":     execute_traj.tolist(),
         "all_trajectory": all_trajectory_np.tolist(),
-        "all_values": all_values_np.tolist(),
+        "all_values":     all_values_np.tolist(),
     })
 
+
+@app.route("/imagegoal_step", methods=["POST"])
+def imagegoal_step():
+    import torch
+
+    image, depth, actual_batch_size = _decode_image_depth(
+        request.files["image"], request.files["depth"], _batch_size
+    )
+
+    goal_file  = request.files["goal"]
+    goal_image = Image.open(goal_file.stream).convert("RGB")
+    goal_image = np.asarray(goal_image)
+    goal_image = cv2.cvtColor(goal_image, cv2.COLOR_RGB2BGR)
+    H_single   = goal_image.shape[0] // actual_batch_size
+    goal_image = goal_image.reshape((actual_batch_size, H_single, goal_image.shape[1], 3))
+
+    proc_images  = _process_image(image)
+    proc_depths  = _process_depth(depth)
+    proc_goals   = _process_image(goal_image)
+    input_images = _get_input_images(proc_images)
+
+    with torch.no_grad():
+        all_trajectory, critic_scores, _, _ = _policy.predict_imagegoal_action(
+            proc_goals, input_images, proc_depths, sample_num=16
+        )
+
+    all_trajectory_np = np.array(all_trajectory)
+    all_values_np     = np.array(critic_scores)
+
+    best_idx     = all_values_np.argmax(axis=1)
+    execute_traj = all_trajectory_np[np.arange(actual_batch_size), best_idx]
+
+    if all_values_np.max() < _stop_threshold:
+        execute_traj[:, :, 0] = 0.0
+        execute_traj[:, :, 1] = np.sign(execute_traj[:, :, 1].mean())
+
+    return jsonify({
+        "trajectory":     execute_traj.tolist(),
+        "all_trajectory": all_trajectory_np.tolist(),
+        "all_values":     all_values_np.tolist(),
+    })
+    
 if __name__ == "__main__":
     print(f"[flux server] Starting on port {args.port}, device={args.device}")
     print(f"[flux server] Checkpoint: {args.checkpoint}")

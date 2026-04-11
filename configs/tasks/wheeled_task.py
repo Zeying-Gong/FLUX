@@ -40,7 +40,6 @@ import glob
 from configs.scenes import SocialNavSceneCfg, DynPointGoalSceneCfg, DynExploreSceneCfg
 from scipy.spatial.transform import Rotation as R
 
-
 reset_counter = 0
 def camera_rgb_data(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("camera")) -> torch.Tensor:
     asset = env.scene[asset_cfg.name]
@@ -643,6 +642,7 @@ class DingoExplorationCfg(ManagerBasedRLEnvCfg):
     actions = DingoActionsCfg()
     terminations = DingoExploreTerminationsCfg()
     events = ExploreEventCfg()
+    rewards = RewardsCfg()
     def __post_init__(self):
         self.sim.render_interval = 15
         self.decimation = 15
@@ -889,33 +889,35 @@ class DingoSocialNavCfg(ManagerBasedRLEnvCfg):
 
 def dynamic_target_pose_data(env: ManagerBasedEnv, 
                               robot_asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
-    robot = env.unwrapped.scene.articulations["robot"]
-    robot_pos = robot.data.root_pos_w       # [num_envs, 3]
-    from omni.anim.people.scripts.global_character_position_manager import (
-        GlobalCharacterPositionManager,
-    )
+    """获取动态目标（行人）的相对位置（实时）
+    
+    这个函数从people manager获取目标行人的位置，并转换为相对于机器人的坐标
+    """
+    from omni.anim.people.scripts.global_character_position_manager import GlobalCharacterPositionManager
+
+    robot_asset = env.scene[robot_asset_cfg.name]
+    robot_rot = math_utils.matrix_from_quat(robot_asset.data.root_quat_w)
+    robot_pos = robot_asset.data.root_pos_w
+    
     char_manager = GlobalCharacterPositionManager.get_instance()
     all_chars = char_manager.get_all_managed_characters()
     
     if len(all_chars) == 0:
-        return torch.zeros((robot_pos.shape[0], 3), device=robot_pos.device)
+        return torch.zeros(robot_pos.shape[0], dtype=torch.bool, device=robot_pos.device)
     
+    # 只有一个行人，直接取第一个
     target_path = list(all_chars)[0]
+    
     pos = char_manager.get_character_current_pos(target_path)
-    target_pos = torch.tensor(
-        [float(pos[0]), float(pos[1]), float(pos[2])], 
-        dtype=torch.float32, device=robot_pos.device
-    )
+    target_pos = torch.tensor([float(pos[0]), float(pos[1]), float(pos[2])], 
+                                dtype=torch.float32, device=robot_pos.device)
     
-    # 世界坐标系下的相对位移
-    rel_world = target_pos.unsqueeze(0) - robot_pos  # [num_envs, 3]
-    
-    # 用 isaaclab 自带的 quat_rotate_inverse 转到机器人局部坐标系
-    from isaaclab.utils.math import quat_rotate_inverse
-    robot_quat = robot.data.root_quat_w     # [num_envs, 4] wxyz
-    rel_local = quat_rotate_inverse(robot_quat, rel_world)  # [num_envs, 3]
-    print(f"human robot distance: {rel_local}")
-    return rel_local
+    # 计算相对位置
+    rel_pos = torch.zeros((robot_pos.shape[0], 3), device=robot_pos.device)
+    for i in range(rel_pos.shape[0]):
+        rel_pos[i] = torch.matmul(torch.inverse(robot_rot[i]), 
+                                    (target_pos - robot_pos[i]).T)
+    return rel_pos
 
 def arrival_dynamic_target_check(env: ManagerBasedEnv,
                                   robot_asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),

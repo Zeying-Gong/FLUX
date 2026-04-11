@@ -237,7 +237,7 @@ class CFM_Policy(nn.Module):
     def predict_pointgoal_action(self, goal_point, input_images, input_depths, sample_num=16):
         with torch.no_grad():
             B = goal_point.shape[0]
-            tensor_goal = torch.as_tensor(goal_point, dtype=torch.float32, device=self.device)
+            tensor_goal = torch.as_tensor(goal_point, dtype=torch.float32, device=_dev)
 
             rgbd_embed = self.rgbd_encoder(input_images, input_depths)
             goal_embed = self.point_encoder(tensor_goal).unsqueeze(1)
@@ -412,7 +412,8 @@ class CFM_RL_Policy(CFM_Policy):
         input_depths: np.ndarray,
         sample_num: int = 16,
     ):
-        tensor_point_goal = torch.as_tensor(goal_point, dtype=torch.float32, device=self.device)
+        _dev = next(self.parameters()).device
+        tensor_point_goal = torch.as_tensor(goal_point, dtype=torch.float32, device=_dev)  # ← 改这里
         rgbd_embed = self.rgbd_encoder(input_images, input_depths)          # (B, 128, 384)
         pointgoal_embed = self.point_encoder(tensor_point_goal).unsqueeze(1)  # (B, 1, 384)
 
