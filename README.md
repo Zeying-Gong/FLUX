@@ -103,7 +103,7 @@ Place evaluation **USD scenes and related assets** under **[IsaacLab](https://gi
 Download scene assets from Hugging Face **[InternScene-N1](https://huggingface.co/datasets/InternRobotics/Scene-N1/tree/main/n1_eval_scenes)**, extract, and arrange them as below relative to the **IsaacLab repo root** under `assets/scenes/`:
 
 ```text
-assets/n1_eval_scenes
+FLUX/assets/n1_eval_scenes
 ├── SkyTexture/
 │   ├── belfast_sunset_puresky_4k.hdr
 │   ├── citrus_orchard_road_puresky_4k.hdr
@@ -163,7 +163,7 @@ assets/n1_eval_scenes
 
 #### 🏃 Dynamic scenes (`isaacsim_scene` / DynBench)
 
-Download data from Hugging Face **[DynBench · zgong313/DynBench](https://huggingface.co/datasets/zgong313/DynBench/tree/main)**. The dataset layout is roughly:
+Download data from Hugging Face **[DynBench](https://huggingface.co/datasets/zgong313/DynBench/tree/main)**. The dataset layout is roughly:
 
 - **`Materials/`**, **`SkyTexture/`**: shared **auxiliary** assets (materials, skyboxes, etc.) for training scenes.
 - **`dynbench/cluttered_scenes/`**: **training** set (cluttered scene assets).

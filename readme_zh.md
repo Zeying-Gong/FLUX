@@ -103,7 +103,7 @@ docker run --name flux_v0 \
 请从 HuggingFace 上的 **[InternScene-N1](https://huggingface.co/datasets/InternRobotics/Scene-N1/tree/main/n1_eval_scenes)** 下载场景资源，解压后整理为如下目录结构（相对 **IsaacLab 仓库根目录** 的 `assets/scenes/`）：
 
 ```text
-assets/n1_eval_scenes
+FLUX/assets/n1_eval_scenes
 ├── SkyTexture/
 │   ├── belfast_sunset_puresky_4k.hdr
 │   ├── citrus_orchard_road_puresky_4k.hdr
@@ -164,7 +164,7 @@ assets/n1_eval_scenes
 
 #### 🏃 动态场景（`isaacsim_scene` / DynBench）
 
-请从 HuggingFace 上的 **[DynBench · zgong313/DynBench](https://huggingface.co/datasets/zgong313/DynBench/tree/main)** 下载数据。数据集根目录大致分工如下：
+请从 HuggingFace 上的 **[DynBench](https://huggingface.co/datasets/zgong313/DynBench/tree/main)** 下载数据。数据集根目录大致分工如下：
 
 - **`Materials/`、`SkyTexture/`**：场景**辅助资源**（材质、天空盒等），供训练场景共用。
 - **`dynbench/cluttered_scenes/`**：**训练集**（cluttered 场景相关资产）。
