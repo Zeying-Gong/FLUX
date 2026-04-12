@@ -42,54 +42,277 @@
 **Languages:** [English](README.md) | [中文](readme_zh.md)
 
 # 🏡 Introduction
+
 We propose **FLUX**, the first **FL**ow-based **U**nified policy for **X**-platform (Cross-Embodiment) navigation. FLUX leverages a static-to-dynamic curriculum and linearizes probability flow for efficient, straight-line trajectory generation. This enables state-of-the-art performance and zero-shot sim-to-real transfer across wheeled, quadrupedal, and humanoid robots without any fine-tuning.
+
 <div style="text-align: center;">
     <img src="./assets/images/compressed/v2_teaser_02.png" alt="FLUX Teaser" width=100% >
 </div>
 
-### 🛠️ Installation
-Please follow the instructions to config the environment for FLUX.
+### 🛠️ Environment and setup (Docker, recommended)
 
-Step 0: Clone this repository
+We recommend using the **Docker image** for FLUX together with the Isaac Lab stack. You **do not** need a separate conda environment on the host; dependencies are preinstalled in the image. Mount this repo and [IsaacLab](https://github.com/Zeying-Gong/IsaacLab) into the container and work under `/workspace`.
+
+#### Pull the image
+
+```bash
+docker pull quay.io/zeyinggong/flux:v0
+```
+
+**Image:** `quay.io/zeyinggong/flux:v0`
+
+#### Clone the repositories
+
 ```bash
 git clone https://github.com/Zeying-Gong/FLUX.git
-cd FLUX/
 ```
 
-Step 1: Create conda environment and install the dependency
+(Also clone **[IsaacLab](https://github.com/Zeying-Gong/IsaacLab)** so the mount paths below match.)
+
+#### Start the container
+
+Replace the host paths in the command with your local clones of FLUX and IsaacLab (**do not** copy the placeholder paths verbatim).
+
 ```bash
-conda create -n flux python=3.10
-conda activate flux
-pip install -r requirements.txt
+docker run --name flux_v0 \
+    -e "ACCEPT_EULA=Y" \
+    -e "PRIVACY_CONSENT=Y" \
+    -e "DISPLAY=${DISPLAY}" \
+    --entrypoint bash \
+    --gpus all \
+    --network=host \
+    --privileged \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    -v /path/to/FLUX:/workspace/FLUX \
+    -v /path/to/IsaacLab:/workspace/IsaacLab \
+    -w /workspace \
+    -it quay.io/zeyinggong/flux:v0
 ```
 
-### 📥 Pre-trained Weights
-Download the pre-trained FLUX weights from [Hugging Face](https://huggingface.co/zgong313/FLUX/tree/main).
+- `/path/to/FLUX` — local clone of [Zeying-Gong/FLUX](https://github.com/Zeying-Gong/FLUX).
+- `/path/to/IsaacLab` — local clone of [IsaacLab](https://github.com/Zeying-Gong/IsaacLab).
+
+Inside the container, run subsequent Python commands from the **FLUX repo root** (e.g. `cd /workspace/FLUX` first).
+
+### Datasets and scene assets
+
+Place evaluation **USD scenes and related assets** under **[IsaacLab](https://github.com/Zeying-Gong/IsaacLab)** at `assets/scenes/` — on the host this is your cloned IsaacLab tree; inside the container that is **`/workspace/IsaacLab/assets/scenes/`**. Episode configs and notes are documented in the IsaacLab repo.
+
+#### 🌆 Static scene assets (prepare scene asset)
+
+Download scene assets from Hugging Face **[InternScene-N1](https://huggingface.co/datasets/InternRobotics/Scene-N1/tree/main/n1_eval_scenes)**, extract, and arrange them as below relative to the **IsaacLab repo root** under `assets/scenes/`:
+
+```text
+assets/n1_eval_scenes
+├── SkyTexture/
+│   ├── belfast_sunset_puresky_4k.hdr
+│   ├── citrus_orchard_road_puresky_4k.hdr
+│   ├── ...
+├── Materials/
+│   ├── Carpet/
+│   │   ├── textures/
+│   │   ├── Carpet_Woven.mdl
+│   │   └── ...
+│   ├── ...
+├── cluttered_easy/
+│   └── easy_0/
+│       ├── cluttered-0.usd/
+│       ├── imagegoal_start_goal_pairs.npy
+│       └── pointgoal_start_goal_pairs.npy
+│   ├── ...
+├── cluttered_hard/
+│   └── hard_0/
+│       ├── cluttered-0.usd/
+│       ├── imagegoal_start_goal_pairs.npy
+│       └── pointgoal_start_goal_pairs.npy
+│   ├── ...
+├── internscenes_commercial/
+│   ├── models/
+│   ├── Materials/
+│   └── scenes_commercial/
+│       ├── MV4AFHQKTKJZ2AABAAAAADQ8_usd/
+│       │   ├── models/
+│       │   ├── Materials/
+│       │   ├── metadata.json
+│       │   ├── start_result_navigation.usd
+│       │   ├── imagegoal_start_goal_pairs.npy
+│       │   └── pointgoal_start_goal_pairs.npy
+│       ├── ...
+├── internscenes_home/
+│   ├── models/
+│   ├── Materials/
+│   └── scenes_home/
+│       ├── MV4AFHQKTKJZ2AABAAAAADQ8_usd/
+│       │   ├── models/
+│       │   ├── Materials/
+│       │   ├── metadata.json
+│       │   ├── start_result_navigation.usd
+│       │   ├── imagegoal_start_goal_pairs.npy
+│       │   └── pointgoal_start_goal_pairs.npy
+│       ├── ...
+```
+
+| Category | Download | Episodes |
+|----------|----------|----------|
+| SkyTexture | [link](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/SkyTexture.tar.gz) | — |
+| Materials | [link](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/Materials.tar.gz) | — |
+| Cluttered-Easy | [link](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/cluttered_easy.tar.gz) | [dir](FLUX/assets/n1_eval_scenes/cluttered_easy) |
+| Cluttered-Hard | [link](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/cluttered_hard.tar.gz) | [dir](FLUX/assets/n1_eval_scenes/cluttered_hard) |
+| InternScenes-Home | [link](https://huggingface.co/datasets/InternRobotics/Scene-N1/tree/main/n1_eval_scenes/internscenes_home) | [dir](FLUX/assets/n1_eval_scenes/internscenes_home) |
+| InternScenes-Commercial | [link](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/internscenes_commercial.tar.gz) | [dir](FLUX/assets/n1_eval_scenes/internscenes_commercial) |
+
+#### 🏃 Dynamic scenes (`isaacsim_scene` / DynBench)
+
+Download data from Hugging Face **[DynBench · zgong313/DynBench](https://huggingface.co/datasets/zgong313/DynBench/tree/main)**. The dataset layout is roughly:
+
+- **`Materials/`**, **`SkyTexture/`**: shared **auxiliary** assets (materials, skyboxes, etc.) for training scenes.
+- **`dynbench/cluttered_scenes/`**: **training** set (cluttered scene assets).
+- **`isaacsim_scene/`**: **test** set (Isaac Sim dynamic scenes; each subfolder has USD, `episode_*.json`, pedestrian configs, etc.).
+
+Download command:
 
 ```bash
-mkdir checkpoints
-# Download via huggingface-cli
+export FLUX_ROOT=/path/to/FLUX 
+mkdir -p "${FLUX_ROOT}/assets/dynbench"
+huggingface-cli download zgong313/DynBench --repo-type dataset --local-dir "${FLUX_ROOT}/assets/dynbench"
+```
+
+You should see a layout like:
+
+```text
+FLUX/assets/dynbench
+├── Materials/                 # auxiliary scene assets
+├── SkyTexture/                # auxiliary scene assets
+├── dynbench/
+│   └── cluttered_scenes/      # training (cluttered)
+└── isaacsim_scene/            # test (isaacsim)
+    ├── Full_Warehouse/
+    │   ├── full_warehouse.usd
+    │   ├── episode_0.json
+    │   ├── episode_1.json
+    │   └── ...
+    ├── Hospital/
+    ├── Jetracer/
+    ├── Office/
+    ├── Warehouse/
+    └── Warehouse_multiple_shelves/
+```
+
+### 📥 Pre-trained weights
+
+At the **FLUX repo root** (your host clone; inside the container: `/workspace/FLUX`), create a folder **`checkpoints`** and download **`flux_v1.ckpt`** into it.
+
+Weights page: [Hugging Face · zgong313/FLUX](https://huggingface.co/zgong313/FLUX/tree/main).
+
+With Hugging Face CLI (run where HF is reachable, e.g. inside the container if CLI is configured):
+
+```bash
+cd /path/to/FLUX   # your host path; in container: cd /workspace/FLUX
+mkdir -p checkpoints
 huggingface-cli download zgong313/FLUX flux_v1.ckpt --local-dir checkpoints --local-dir-use-symlinks False
 ```
 
-### 🤖 Run FLUX Model
-Run the following line to start the FLUX server:
+You can also download `flux_v1.ckpt` from that page in a browser and place it under `checkpoints/`.
+
+### 🤖 Run FLUX model
+
+Inside the container, from the **FLUX repo root**:
+
 ```bash
-# Terminal 1: Start the server
+cd /workspace/FLUX
+# Terminal 1: start server
 python baselines/flux/server.py --port 9999 --checkpoint checkpoints/flux_v1.ckpt
 ```
 
-To verify if the server is running correctly, you can use the provided test script in a new terminal:
+In another terminal in the same container (or `docker exec -it flux_v0 bash`), verify with the test script:
+
 ```bash
-# Terminal 2: Run verification script
+cd /workspace/FLUX
 python test_flask_server.py
 ```
 
-<!-- ### 📈 Training with GRPO
-FLUX supports online reinforcement learning fine-tuning using **Group Relative Policy Optimization (GRPO)** to enhance performance in dynamic environments.
+**Note:** For **Running baselines as server**, **Evaluation**, and **Teleoperation** below, run `cd /workspace/FLUX` first inside the container.
+
+### 💻 Running baselines as server
+
+Each baseline folder typically includes `server.py`; pass port and checkpoint to start. Example (NavDP):
 
 ```bash
-# Start GRPO training across multiple tasks and scenes
+# Download the NavDP checkpoint first
+cd baselines/navdp/
+python navdp_server.py --port 9999 --checkpoint ./checkpoints/navdp_checkpoint.ckpt 
+```
+
+For other baselines, see the [NavDP](https://github.com/InternRobotics/NavDP) repo or the corresponding README.
+
+### 📊 Running evaluation
+
+**Scripts vs. tasks:**
+
+| Task type | Goal type | Script | Typical `--scene_dir` |
+|-----------|-----------|--------|------------------------|
+| Static | Point goal | `eval_pointgoal_wheeled.py` | A category under `n1_eval_scenes` (e.g. `cluttered_easy`) |
+| Static | Image goal | `eval_imagegoal_wheeled.py` | A category under `n1_eval_scenes` (e.g. `cluttered_easy`) |
+| Static | No-goal exploration | `eval_nogoal_wheeled.py` | A category under `n1_eval_scenes` (e.g. `cluttered_easy`) |
+| Dynamic | Dynamic point goal | `eval_dynpointgoal_wheeled.py` | A category under `DynBench/isaacsim_scene` (e.g. `Hospital`) |
+| Dynamic | No-goal with people | `eval_dynnogoal_wheeled.py` | A category under `DynBench/isaacsim_scene` (e.g. `Hospital`) |
+| Dynamic | Social navigation | `eval_socialnav_wheeled.py` | A category under `DynBench/isaacsim_scene` (e.g. `Hospital`) |
+
+**Common flags:** `--port` matches the server (default `9999`); `--scene_dir` should be an **absolute** path; `--scene_index` is the sub-scene index under `scene_dir` (0-based). **`--scene_scale`**: use **`0.01`** for InternScenes-style assets and **`1.0`** for **cluttered** scenes. Dynamic scripts also take **`--gpu_id`** (default `0`).
+
+**Examples:**
+
+```bash
+cd /workspace/FLUX
+
+# ---------- Static (assets under IsaacLab assets/scenes/n1_eval_scenes, or synced FLUX/assets/n1_eval_scenes) ----------
+# Point goal · cluttered
+python eval_pointgoal_wheeled.py --port 9999 \
+  --scene_dir /workspace/FLUX/assets/n1_eval_scenes/cluttered_easy \
+  --scene_index 0 --scene_scale 1.0
+
+# Image goal
+python eval_imagegoal_wheeled.py --port 9999 \
+  --scene_dir /workspace/FLUX/assets/n1_eval_scenes/cluttered_easy \
+  --scene_index 0 --scene_scale 1.0
+
+# No-goal exploration
+python eval_nogoal_wheeled.py --port 9999 \
+  --scene_dir /workspace/FLUX/assets/n1_eval_scenes/cluttered_easy \
+  --scene_index 0 --scene_scale 1.0
+
+# ---------- Dynamic (full DynBench download; isaacsim_scene subdirs e.g. Hospital, Office) ----------
+# Dynamic point goal (follow pedestrians)
+python eval_dynpointgoal_wheeled.py --port 9999 --gpu_id 0 \
+  --scene_dir /workspace/FLUX/assets/dynbench/isaacsim_scene \
+  --scene_index 0 --scene_scale 1.0 --num_episodes 100
+
+# Dynamic no-goal exploration
+python eval_dynnogoal_wheeled.py --port 9999 --gpu_id 0 \
+  --scene_dir /workspace/FLUX/assets/dynbench/isaacsim_scene \
+  --scene_index 0 --scene_scale 1.0 --num_episodes 100
+
+# Social navigation (point goal + pedestrians)
+python eval_socialnav_wheeled.py --port 9999 --gpu_id 0 \
+  --scene_dir /workspace/FLUX/assets/dynbench/isaacsim_scene \
+  --scene_index 0 --scene_scale 1.0 --num_episodes 100
+```
+
+### 🕹️ Teleoperation
+
+```bash
+# If the server supports no-goal tasks
+python teleop_nogoal_wheeled.py
+# If it supports point-goal tasks
+python teleop_pointgoal_wheeled.py
+# If it supports image-goal tasks
+python teleop_imagegoal_wheeled.py 
+```
+
+<!-- ### 📈 Post-training with GRPO
+FLUX supports online RL fine-tuning in dynamic scenes with **GRPO (Group Relative Policy Optimization)**.
+
+```bash
 isaacsim-python baselines/flux/train_grpo.py \
     --checkpoint checkpoints/flux_v1.ckpt \
     --scene_dirs assets/dyn_scenes/cluttered_easy assets/dyn_scenes/isaacsim_scene \
@@ -100,38 +323,10 @@ isaacsim-python baselines/flux/train_grpo.py \
     --lr 3e-5 --update_interval 32 --save_interval 100
 ``` -->
 
-
-### 💻 Running Baselines as Server
-For each pre-built baseline methods, each contains a server.py file, just simply run server python script with parsing the server port as well as the checkpoint path. Taking NavDP as an example:
-```bash
-# please first download the NavDP checkpoint
-cd baselines/navdp/
-python navdp_server.py --port 9999 --checkpoint ./checkpoints/navdp_checkpoint.ckpt 
-```
-
-For other baselines, please refer to [NavDP](https://github.com/InternRobotics/NavDP)'s repository or the corresponding README.md file.
-
-### 📊 Running Evaluation
-```bash
-# Evaluation commands
-python eval_pointgoal_wheeled.py --port {PORT} --scene_dir {ASSET_SCENE}
-```
-Notes: Please parse the port to match the server port (default is 9999), and always parse the absolute path for the scene_dir. For **internscenes**, please parse scene_scale as 0.01, and 1.0 for **cluttered scenes**.
-
-### 🕹️ Running Teleoperation
-```bash
-# Teleoperation commands
-# if the running server support no-goal task
-python teleop_nogoal_wheeled.py
-# if the running server support point-goal task
-python teleop_pointgoal_wheeled.py
-# if the running server support image-goal task
-python teleop_imagegoal_wheeled.py 
-```
-
 # 🔗 Citation
 
 If you find our work helpful, please cite:
+
 ```bibtex
 @article{gong2025flux,
     title     = {FLUX: Accelerating Cross-Embodiment Generative Navigation Policies via Rectified Flow and Static-to-Dynamic Learning},
@@ -142,4 +337,5 @@ If you find our work helpful, please cite:
 ```
 
 # 👏 Acknowledgement
+
 We thank the authors of [NavDP](https://github.com/InternRobotics/NavDP) for their excellent open-source codebase.

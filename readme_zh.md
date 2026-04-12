@@ -103,7 +103,7 @@ docker run --name flux_v0 \
 请从 HuggingFace 上的 **[InternScene-N1](https://huggingface.co/datasets/InternRobotics/Scene-N1/tree/main/n1_eval_scenes)** 下载场景资源，解压后整理为如下目录结构（相对 **IsaacLab 仓库根目录** 的 `assets/scenes/`）：
 
 ```text
-assets/scenes/
+assets/n1_eval_scenes
 ├── SkyTexture/
 │   ├── belfast_sunset_puresky_4k.hdr
 │   ├── citrus_orchard_road_puresky_4k.hdr
@@ -152,18 +152,54 @@ assets/scenes/
 │       ├── ...
 ```
 
-| 类别 | 资源下载 | Episodes（IsaacLab 仓库） |
+| 类别 | 资源下载 | Episodes目录 |
 |------|----------|---------------------------|
 | SkyTexture | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/SkyTexture.tar.gz) | - |
 | Materials | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/Materials.tar.gz) | - |
-| Cluttered-Easy | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/cluttered_easy.tar.gz) | [目录](https://github.com/Zeying-Gong/IsaacLab/tree/main/assets/scenes/cluttered_easy) |
-| Cluttered-Hard | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/cluttered_hard.tar.gz) | [目录](https://github.com/Zeying-Gong/IsaacLab/tree/main/assets/scenes/cluttered_hard) |
-| InternScenes-Home | [目录](https://huggingface.co/datasets/InternRobotics/Scene-N1/tree/main/n1_eval_scenes/internscenes_home) | [目录](https://github.com/Zeying-Gong/IsaacLab/tree/main/assets/scenes/internscenes_home) |
-| InternScenes-Commercial | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/internscenes_commercial.tar.gz) | [目录](https://github.com/Zeying-Gong/IsaacLab/tree/main/assets/scenes/internscenes_commercial) |
+| Cluttered-Easy | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/cluttered_easy.tar.gz) | [目录](FLUX/assets/n1_eval_scenes/cluttered_easy) |
+| Cluttered-Hard | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/cluttered_hard.tar.gz) | [目录](FLUX/assets/n1_eval_scenes/cluttered_hard) |
+| InternScenes-Home | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/tree/main/n1_eval_scenes/internscenes_home) | [目录](FLUX/assets/n1_eval_scenes/internscenes_home) |
+| InternScenes-Commercial | [链接](https://huggingface.co/datasets/InternRobotics/Scene-N1/blob/main/n1_eval_scenes/internscenes_commercial.tar.gz) | [目录](FLUX/assets/n1_eval_scenes/internscenes_commercial) |
 
-#### 动态场景（`isaacsim_scene`）
 
-动态场景相关资源（例如 `isaacsim_scene`）计划发布至 HuggingFace，**链接与下载方式待定**；确定后将更新本节。
+#### 🏃 动态场景（`isaacsim_scene` / DynBench）
+
+请从 HuggingFace 上的 **[DynBench · zgong313/DynBench](https://huggingface.co/datasets/zgong313/DynBench/tree/main)** 下载数据。数据集根目录大致分工如下：
+
+- **`Materials/`、`SkyTexture/`**：场景**辅助资源**（材质、天空盒等），供训练场景共用。
+- **`dynbench/cluttered_scenes/`**：**训练集**（cluttered 场景相关资产）。
+- **`isaacsim_scene/`**：**测试集**（Isaac Sim 动态场景；各子目录内含 USD、`episode_*.json`、行人配置等）。
+
+下载命令为
+
+```bash
+export FLUX_ROOT=/path/to/FLUX 
+mkdir -p "${FLUX_ROOT}/assets/dynbench"
+huggingface-cli download zgong313/DynBench --repo-type dataset --local-dir "${FLUX_ROOT}/assets/dynbench"
+```
+
+应看到如下的文件逻辑结构：
+
+```text
+FLUX/assets/dynbench
+├── Materials/                 # 场景辅助资源
+├── SkyTexture/                # 场景辅助资源
+├── dynbench/
+│   └── cluttered_scenes/      # 训练集（cluttered）
+└── isaacsim_scene/            # 测试集（isaacsim）
+    ├── Full_Warehouse/
+    │   ├── full_warehouse.usd
+    │   ├── episode_0.json
+    │   ├── episode_1.json
+    │   └── ...
+    ├── Hospital/
+    ├── Jetracer/
+    ├── Office/
+    ├── Warehouse/
+    └── Warehouse_multiple_shelves/
+```
+
+
 
 ### 📥 预训练权重
 
@@ -214,11 +250,57 @@ python navdp_server.py --port 9999 --checkpoint ./checkpoints/navdp_checkpoint.c
 
 ### 📊 运行评测
 
+**脚本与任务对应关系：**
+
+| 任务类型 | 目标类型 | 脚本 | 典型场景根目录（`--scene_dir`） |
+|------|------|------|--------------------------------|
+| 静态 | 点目标 | `eval_pointgoal_wheeled.py` | `n1_eval_scenes` 下某一类场景目录（如 `cluttered_easy`） |
+| 静态 | 图像目标 | `eval_imagegoal_wheeled.py` | `n1_eval_scenes` 下某一类场景目录（如 `cluttered_easy`） |
+| 静态 | 无目标探索 | `eval_nogoal_wheeled.py` | `n1_eval_scenes` 下某一类场景目录（如 `cluttered_easy`） |
+| 动态 | 动态点目标 | `eval_dynpointgoal_wheeled.py` | `DynBench/isaacsim_scene`下某一类场景目录（如 `Hospital`） |
+| 动态 | 有人场景无目标探索 | `eval_dynnogoal_wheeled.py` | `DynBench/isaacsim_scene`下某一类场景目录（如 `Hospital`） |
+| 动态 | 社会导航 | `eval_socialnav_wheeled.py` | `DynBench/isaacsim_scene`下某一类场景目录（如 `Hospital`） |
+
+**常用参数：** `--port` 与服务器一致（默认 `9999`）；`--scene_dir` 建议**绝对路径**；`--scene_index` 为 `scene_dir` 下列出的子场景序号（从 0 起）。**`--scene_scale`**：InternScenes 类一般为 **`0.01`**，**cluttered** 类一般为 **`1.0`**。动态类脚本另有 **`--gpu_id`**（默认 `0`）。
+
+**示例：**
+
 ```bash
-python eval_pointgoal_wheeled.py --port {PORT} --scene_dir {ASSET_SCENE}
+cd /workspace/FLUX
+
+# ---------- 静态场景（资产在 IsaacLab assets/scenes/n1_eval_scenes，或你同步后的 FLUX/assets/n1_eval_scenes）----------
+# 点目标 · cluttered
+python eval_pointgoal_wheeled.py --port 9999 \
+  --scene_dir /workspace/FLUX/assets/n1_eval_scenes/cluttered_easy \
+  --scene_index 0 --scene_scale 1.0
+
+# 图像目标
+python eval_imagegoal_wheeled.py --port 9999 \
+  --scene_dir /workspace/FLUX/assets/n1_eval_scenes/cluttered_easy \
+  --scene_index 0 --scene_scale 1.0
+
+# 无目标探索
+python eval_nogoal_wheeled.py --port 9999 \
+  --scene_dir /workspace/FLUX/assets/n1_eval_scenes/cluttered_easy \
+  --scene_index 0 --scene_scale 1.0
+
+# ---------- 动态场景（整库下载后的 isaacsim_scene；子目录如 Hospital、Office）----------
+# 动态点目标（跟行人）
+python eval_dynpointgoal_wheeled.py --port 9999 --gpu_id 0 \
+  --scene_dir /workspace/FLUX/assets/dynbench/isaacsim_scene \
+  --scene_index 0 --scene_scale 1.0 --num_episodes 100
+
+# 动态无目标探索
+python eval_dynnogoal_wheeled.py --port 9999 --gpu_id 0 \
+  --scene_dir /workspace/FLUX/assets/dynbench/isaacsim_scene \
+  --scene_index 0 --scene_scale 1.0 --num_episodes 100
+
+# 社会导航（点目标 + 行人）
+python eval_socialnav_wheeled.py --port 9999 --gpu_id 0 \
+  --scene_dir /workspace/FLUX/assets/dynbench/isaacsim_scene \
+  --scene_index 0 --scene_scale 1.0 --num_episodes 100
 ```
 
-**说明：** `--port` 需与服务器端口一致（默认 9999）；`--scene_dir` 请使用**绝对路径**。对 **internscenes** 请将 `scene_scale` 设为 `0.01`，**cluttered** 类场景一般为 `1.0`。
 
 ### 🕹️ 遥操作
 

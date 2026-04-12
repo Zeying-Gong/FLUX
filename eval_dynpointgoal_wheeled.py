@@ -11,7 +11,7 @@ parser.add_argument(
     "--scene_dir", type=str, default="/workspace/FLUX/assets/dynbench/isaacsim_scene",
     help="Directory containing scene folders",
 )
-parser.add_argument("--scene_index", type=int, default=5, help="Scene index within scene_dir")
+parser.add_argument("--scene_index", type=int, default=0, help="Scene index within scene_dir")
 parser.add_argument("--scene_scale", type=float, default=1.0, help="Scene scale factor")
 parser.add_argument(
     "--stop_threshold", type=float, default=-3.0,
