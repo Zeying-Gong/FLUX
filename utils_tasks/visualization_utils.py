@@ -406,7 +406,7 @@ class VisualizationManager:
     def visualize_trajectory_global_with_people(self, rgb_image, depth_image, intrinsic, trajectory_points, 
                                                 robot_pose, goal_position=None, camera_roll=0, 
                                                 all_trajectories_points=None, all_trajectories_values=None,
-                                                people_positions=None,people_positions_dict=None):
+                                                people_positions=None,people_positions_dict=None,explored_points=None):
         """
         带行人可视化的全局轨迹可视化
         
@@ -526,16 +526,24 @@ class VisualizationManager:
         
         # ==================== 左下角：所有候选轨迹 + 行人 ====================
         if all_trajectories_points is None or len(all_trajectories_points) == 0:
-            vis_global = self._create_global_map_with_people(robot_pose, goal_position, people_positions)
+            vis_global = self._create_global_map_with_people(
+                robot_pose, goal_position, people_positions, explored_points=explored_points
+            )
             vis_global_resized = cv2.resize(vis_global, (bottom_map_size, bottom_map_size), interpolation=cv2.INTER_CUBIC)
             vis_global_resized = cv2.GaussianBlur(vis_global_resized, (3, 3), 0.5)
-            
-            target_width = rgb_image.shape[1]
-            if combined_image.shape[1] > bottom_map_size:
-                padding_width = combined_image.shape[1] - bottom_map_size
-                padding = np.zeros((bottom_map_size, padding_width, 3), dtype=np.uint8)
-                vis_global_resized = np.concatenate((vis_global_resized, padding), axis=1)
-            
+
+            # 对齐上下两行宽度后再 concat
+            top_width = combined_image.shape[1]
+            bot_width = vis_global_resized.shape[1]
+            if top_width > bot_width:
+                pad = np.zeros((vis_global_resized.shape[0], top_width - bot_width, 3),
+                            dtype=vis_global_resized.dtype)
+                vis_global_resized = np.concatenate((vis_global_resized, pad), axis=1)
+            elif bot_width > top_width:
+                pad = np.zeros((combined_image.shape[0], bot_width - top_width, 3),
+                            dtype=combined_image.dtype)
+                combined_image = np.concatenate((combined_image, pad), axis=1)
+
             final_combined_image = np.concatenate((combined_image, vis_global_resized), axis=0)
             return final_combined_image
         
@@ -611,7 +619,7 @@ class VisualizationManager:
 
         # ==================== 右下角：全局地图 + 行人 + 规划轨迹 ====================
         # 修改这里，传入trajectory_points参数
-        vis_global = self._create_global_map_with_people(robot_pose, goal_position, people_positions, trajectory_points)
+        vis_global = self._create_global_map_with_people(robot_pose, goal_position, people_positions, trajectory_points,explored_points=explored_points)
         vis_global_resized = cv2.resize(vis_global, (bottom_map_size, bottom_map_size), interpolation=cv2.INTER_CUBIC)
         vis_global_resized = cv2.GaussianBlur(vis_global_resized, (3, 3), 0.5)
 
@@ -619,8 +627,20 @@ class VisualizationManager:
         cv2.rectangle(vis_global_resized, (0, 0), (bottom_map_size-1, bottom_map_size-1), border_color, thickness)
 
         bottom_row = np.concatenate((vis_resized_all, vis_global_resized), axis=1)
+
+        # 对齐上下两行宽度
+        top_width = combined_image.shape[1]
+        bot_width = bottom_row.shape[1]
+        if top_width > bot_width:
+            pad = np.zeros((bottom_row.shape[0], top_width - bot_width, 3),
+                        dtype=bottom_row.dtype)
+            bottom_row = np.concatenate((bottom_row, pad), axis=1)
+        elif bot_width > top_width:
+            pad = np.zeros((combined_image.shape[0], bot_width - top_width, 3),
+                        dtype=combined_image.dtype)
+            combined_image = np.concatenate((combined_image, pad), axis=1)
+
         final_combined_image = np.concatenate((combined_image, bottom_row), axis=0)
-        
         return final_combined_image
 
 
@@ -682,7 +702,7 @@ class VisualizationManager:
         
         return vis_image
 
-    def _create_global_map_with_people(self, robot_pose, goal_position, people_positions, trajectory_points=None):
+    def _create_global_map_with_people(self, robot_pose, goal_position, people_positions, trajectory_points=None, explored_points=None):
         """创建带行人的全局累积地图"""
         grid_size = self.global_grid_size
         vis_global = np.zeros((grid_size, grid_size, 3), dtype=np.uint8)
@@ -711,7 +731,23 @@ class VisualizationManager:
             all_global_world_points = np.concatenate(all_global_world_points_list, axis=0)
         else:
             all_global_world_points = np.array([])
-        
+        # ========== 绘制已探索区域（青色底图，在障碍物之前） ==========
+        if explored_points is not None and len(explored_points) > 0:
+            # 取 XY 投影
+            explored_xy = np.asarray(explored_points)[:, :2]
+            
+            vis_coords_explored = transform_to_vis_coords(
+                explored_xy, robot_pose, self.resolution, center_offset, grid_size
+            )
+            if vis_coords_explored.size > 0:
+                cyan = (0, 120, 120)
+                # 直接单像素太稀疏（navigable_pcd 降采样过），画成 3×3 小块
+                for px, py in vis_coords_explored:
+                    cv2.rectangle(
+                        vis_global,
+                        (py - 1, px - 1), (py + 1, px + 1),
+                        cyan, -1
+                    )
         # ========== 绘制障碍物 ==========
         vis_coords_global = transform_to_vis_coords(all_global_world_points, robot_pose, 
                                                     self.resolution, center_offset, grid_size)
