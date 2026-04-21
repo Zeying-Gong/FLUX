@@ -120,26 +120,3 @@ def _set_barrier(is_open: bool):
     carb.settings.get_settings().set(
         "/exts/people_sim/character_barrier_open", bool(is_open)
     )
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# Target-person helper (only used by dynpointgoal)
-# ═══════════════════════════════════════════════════════════════════════════
-def get_target_person_position():
-    """Return first managed character's world position [x, y, z], or None."""
-    import numpy as np
-    try:
-        from omni.anim.people.scripts.global_character_position_manager import (
-            GlobalCharacterPositionManager,
-        )
-        mgr = GlobalCharacterPositionManager.get_instance()
-        chars = mgr.get_all_managed_characters()
-        if not chars:
-            return None
-        path = list(chars)[0]
-        pos  = mgr.get_character_current_pos(path)
-        return np.array([float(pos[0]), float(pos[1]), float(pos[2])])
-    except Exception as e:
-        print(f"[get_target_person_position] {e}")
-        return None
-

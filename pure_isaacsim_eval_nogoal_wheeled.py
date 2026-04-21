@@ -1,9 +1,14 @@
 """Exploration (no goal) navigation (native IsaacSim). Refactored to use utils_tasks.*"""
 from utils_tasks.sim_launcher import make_common_parser, launch_sim, register_signal_handlers, start_planning_thread, stop_event, \
-    EpisodeRunner, load_episode, build_navigation_metrics, print_episode_metrics, update_occupancy
-args_cli = make_common_parser("Exploration (no goal) (native IsaacSim)").parse_args()
+    EpisodeRunner, load_episode_from_npy, build_exploration_metrics, print_episode_metrics, update_occupancy
 
-simulation_app = launch_sim(headless=False)
+parser = make_common_parser(
+    "Exploration (no goal) (native IsaacSim)",
+    default_scene_dir="/workspace/FLUX/assets/n1_eval_scenes/cluttered_easy",
+)
+args_cli = parser.parse_args()
+
+simulation_app = launch_sim(headless=True)
 
 import os, sys
 import numpy as np
@@ -22,15 +27,11 @@ def main():
     scene_list = sorted(os.listdir(args_cli.scene_dir))
     scene_name = scene_list[args_cli.scene_index]
     scene_path = os.path.join(args_cli.scene_dir, scene_name) + "/"
-    usd_path, _ = find_usd_path(scene_path, "pointgoal")
+    usd_path, npy_path = find_usd_path(scene_path, "pointgoal")
 
-    episode_files = []
-    for ep_id in range(args_cli.num_episodes):
-        p = os.path.join(scene_path, f"episode_{ep_id}.json")
-        if not os.path.exists(p):
-            raise RuntimeError(f"Missing episode file: {p}")
-        episode_files.append(p)
-    print(f"[INFO] {len(episode_files)} episode files validated.")
+    samples = np.load(npy_path)
+    num_episodes = min(args_cli.num_episodes, len(samples))
+    print(f"[INFO] {len(samples)} samples in npy, running {num_episodes} episodes.")
 
     evaluator = IsaacSimEvaluator(simulation_app, usd_path,
                                   scene_scale=args_cli.scene_scale)
@@ -75,11 +76,10 @@ def main():
     evaluation_metrics: list[dict] = []
     vis_manager = VisualizationManager(history_size=5)
 
-    for ep_idx in range(args_cli.num_episodes):
-        print(f"\n{'='*60}\n  Episode {ep_idx}/{args_cli.num_episodes}  scene={scene_name}\n{'='*60}")
+    for ep_idx in range(num_episodes):
+        print(f"\n{'='*60}\n  Episode {ep_idx}/{num_episodes}  scene={scene_name}\n{'='*60}")
 
-        ep_path = episode_files[ep_idx]
-        start_pos, start_yaw, _ = load_episode(ep_path)
+        start_pos, start_yaw, goal_world = load_episode_from_npy(npy_path, ep_idx)
         evaluator.reset_robot(start_pos, start_yaw)
         navigator_reset(env_id=0, port=args_cli.port)
 

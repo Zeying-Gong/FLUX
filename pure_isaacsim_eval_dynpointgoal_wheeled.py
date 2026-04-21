@@ -17,7 +17,7 @@ from utils_tasks.visualization_utils import VisualizationManager
 from utils_tasks.client_utils        import navigator_reset, pointgoal_step
 from utils_tasks.evaluator           import IsaacSimEvaluator
 from utils_tasks.people_runtime      import (
-    bake_navmesh, setup_people_episode, open_character_barrier,
+    bake_navmesh, setup_people_episode, open_character_barrier
 )
 from socialnav_metrics            import SocialMetricsTracker, get_people_positions
 from wheeled_robots.controllers.differential_controller import DifferentialController

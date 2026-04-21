@@ -1,17 +1,21 @@
 """Image-goal navigation (native IsaacSim). Refactored to use utils_tasks.*"""
-from utils_tasks.sim_launcher import make_common_parser, launch_sim, register_signal_handlers, start_planning_thread, stop_event, \
-    EpisodeRunner, load_episode, build_navigation_metrics, print_episode_metrics
+from utils_tasks.sim_launcher import (
+    make_common_parser, launch_sim, register_signal_handlers,
+    start_planning_thread, stop_event,
+    EpisodeRunner, load_episode_from_npy,
+    build_navigation_metrics, print_episode_metrics,
+)
+
 parser = make_common_parser(
     "Image-Goal navigation (native IsaacSim)",
     default_scene_dir="/workspace/FLUX/assets/n1_eval_scenes/cluttered_easy",
 )
 args_cli = parser.parse_args()
 
-simulation_app = launch_sim(headless=False)
+simulation_app = launch_sim(headless=True)
 
 import os, sys
 import numpy as np
-import carb
 
 from utils_tasks.basic_utils         import find_usd_path, write_metrics
 from utils_tasks.visualization_utils import VisualizationManager
@@ -20,20 +24,17 @@ from utils_tasks.evaluator           import IsaacSimEvaluator
 from wheeled_robots.controllers.differential_controller import DifferentialController
 from configs.robots import DINGO_WHEEL_RADIUS, DINGO_WHEEL_BASE
 
+
 def main():
     task_name = "imagegoal"
     scene_list = sorted(os.listdir(args_cli.scene_dir))
     scene_name = scene_list[args_cli.scene_index]
     scene_path = os.path.join(args_cli.scene_dir, scene_name) + "/"
-    usd_path, _ = find_usd_path(scene_path, "imagegoal")
+    usd_path, npy_path = find_usd_path(scene_path, "imagegoal")
 
-    episode_files = []
-    for ep_id in range(args_cli.num_episodes):
-        p = os.path.join(scene_path, f"episode_{ep_id}.json")
-        if not os.path.exists(p):
-            raise RuntimeError(f"Missing episode file: {p}")
-        episode_files.append(p)
-    print(f"[INFO] {len(episode_files)} episode files validated.")
+    samples = np.load(npy_path)
+    num_episodes = min(args_cli.num_episodes, len(samples))
+    print(f"[INFO] {len(samples)} samples in npy, running {num_episodes} episodes.")
 
     evaluator = IsaacSimEvaluator(simulation_app, usd_path,
                                   scene_scale=args_cli.scene_scale)
@@ -78,15 +79,14 @@ def main():
     evaluation_metrics: list[dict] = []
     vis_manager = VisualizationManager(history_size=5)
 
-    for ep_idx in range(args_cli.num_episodes):
-        print(f"\n{'='*60}\n  Episode {ep_idx}/{args_cli.num_episodes}  scene={scene_name}\n{'='*60}")
+    for ep_idx in range(num_episodes):
+        print(f"\n{'='*60}\n  Episode {ep_idx}/{num_episodes}  scene={scene_name}\n{'='*60}")
 
-        ep_path = episode_files[ep_idx]
-        start_pos, start_yaw, goal_world = load_episode(ep_path)
+        start_pos, start_yaw, goal_world = load_episode_from_npy(npy_path, ep_idx)
 
         # snapshot the goal image at the goal pose
         evaluator.place_goal_camera(goal_world, yaw=start_yaw)
-        goal_image = evaluator.get_goal_rgb()
+        goal_image       = evaluator.get_goal_rgb()
         goal_image_batch = goal_image[None]
 
         evaluator.reset_robot(start_pos, start_yaw)
@@ -105,7 +105,6 @@ def main():
         while not runner.done and runner.step_count < args_cli.max_steps:
             obs = runner.observe()
 
-            # image-goal: push the goal image as the `goal` payload
             runner.push_plan(obs, goal_image_batch)
 
             traj_w, all_traj_w, all_vals = runner.pop_plan()
@@ -114,7 +113,6 @@ def main():
             dist_to_target = float(np.linalg.norm(obs.cam_pos[:2] - goal_world))
 
             if traj_w is not None:
-                # side-by-side: current view | goal image
                 rgb_with_goal = np.concatenate(
                     (obs.rgb[0], goal_image), axis=1
                 )
@@ -144,7 +142,7 @@ def main():
         print_episode_metrics(ep_idx, ep_metrics)
         write_metrics(evaluation_metrics, save_dir + "metric.csv")
 
-    print(f"\n[INFO] All {args_cli.num_episodes} episodes done. Metrics → {save_dir}metric.csv")
+    print(f"\n[INFO] All {num_episodes} episodes done. Metrics → {save_dir}metric.csv")
     stop_event.set()
     planner_thread.join(timeout=5)
     evaluator.close()

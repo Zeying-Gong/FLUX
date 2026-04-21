@@ -846,3 +846,21 @@ def print_episode_metrics(ep_idx: int, metrics: dict):
             print(f"  {k}: {v:.3f}")
         else:
             print(f"  {k}: {v}")
+
+def load_episode_from_npy(npy_path: str, idx: int):
+    """Load one episode from a .npy sample file.
+
+    Column layout (matches imagenav_reset):
+        [start_x, start_y, goal_x, goal_y, yaw, ...]
+
+    Returns:
+        start_pos  : np.ndarray shape (2,)
+        start_yaw  : float  (radians)
+        goal_world : np.ndarray shape (2,)
+    """
+    samples = np.load(npy_path)
+    row = samples[idx % len(samples)]
+    start_pos  = np.array([row[0], row[1]], dtype=np.float64)
+    goal_world = np.array([row[2], row[3]], dtype=np.float64)
+    start_yaw  = float(row[4])
+    return start_pos, start_yaw, goal_world
