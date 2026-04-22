@@ -1,284 +1,152 @@
-import argparse
-from isaaclab.app import AppLauncher
+"""Image-goal navigation (native IsaacSim). Refactored to use utils_tasks.*"""
+from utils_tasks.sim_launcher import (
+    make_common_parser, launch_sim, register_signal_handlers,
+    start_planning_thread, stop_event,
+    EpisodeRunner, load_episode_from_npy,
+    build_navigation_metrics, print_episode_metrics,
+)
 
-parser = argparse.ArgumentParser(description="A script to run a car control simulation")
-parser.add_argument(
-    "--scene_dir", type=str, default="./asset_scenes/cluttered_easy")
-parser.add_argument(
-    "--scene_index", type=int, default=0)
-parser.add_argument(
-    "--scene_scale", type=float, default=1.0)
-parser.add_argument(
-    "--stop_threshold", type=float, default=-3.0)
-parser.add_argument(
-    "--num_envs", type=int, default=1)
-parser.add_argument(
-    "--num_episodes", type=int, default=100)
-parser.add_argument(
-    "--speed", type=float, default=0.5)
-parser.add_argument(
-    "--port", type=int, default=8888)
+parser = make_common_parser(
+    "Image-Goal navigation (native IsaacSim)",
+    default_scene_dir="/workspace/FLUX/assets/n1_eval_scenes/cluttered_easy",
+)
 args_cli = parser.parse_args()
-app_launcher = AppLauncher(headless=True, enable_cameras=True)
-simulation_app = app_launcher.app
 
-import omni
-import carb
+simulation_app = launch_sim(headless=True)
+
+import os, sys
 import numpy as np
-import imageio
-import os
-import csv
-import torch
-import requests
-import io
-import json
-import cv2
-import open3d as o3d
-from scipy.spatial.transform import Rotation as R
-from pxr import Usd, Sdf
-from isaaclab.envs import ManagerBasedRLEnv
-from isaaclab.managers import SceneEntityCfg
-from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
-from wheeled_robots.controllers.differential_controller import DifferentialController
-import torchvision.transforms as F
-import time
-import threading
 
-from utils_tasks.basic_utils import PlanningInput, PlanningOutput, find_usd_path, write_metrics, draw_box_with_text,adjust_usd_scale
-from configs.robots import *
-from configs.scenes import *
-from configs.tasks import *
-from utils_tasks.client_utils import navigator_reset,imagegoal_step
+from utils_tasks.basic_utils         import find_usd_path, write_metrics
 from utils_tasks.visualization_utils import VisualizationManager
-from utils_tasks.tracking_utils import MPC_Controller
+from utils_tasks.client_utils        import navigator_reset, imagegoal_step
+from utils_tasks.evaluator           import IsaacSimEvaluator
+from wheeled_robots.controllers.differential_controller import DifferentialController
+from configs.robots import DINGO_WHEEL_RADIUS, DINGO_WHEEL_BASE
 
-planning_input = PlanningInput() 
-planning_output = PlanningOutput()
-input_lock = threading.Lock()
-output_lock = threading.Lock()
-stop_event = threading.Event()
-vis_manager = [VisualizationManager(history_size=5) for i in range(args_cli.num_envs)]
-mpc = None
 
-def planning_thread(env, camera_intrinsic):
-    global mpc
-    """Thread function that continuously plans trajectories"""
-    while not stop_event.is_set():
-        try:
-            # Get latest observations from shared state
-            with input_lock:
-                if planning_input.current_goal is None or planning_input.current_image is None or planning_input.current_depth is None or planning_input.camera_pos is None or planning_input.camera_rot is None:
-                    time.sleep(0.01)
-                    continue
-                goal = planning_input.current_goal.copy()
-                image = planning_input.current_image.copy()
-                depth = planning_input.current_depth.copy()
-                camera_pos = planning_input.camera_pos.copy()
-                camera_rot = planning_input.camera_rot.copy()
-            with output_lock:
-                planning_output.is_planning = True
-            
-            # Start timing planning
-            planning_start = time.time()
-            trajectory_points_camera, all_trajectories_camera, all_values_camera = imagegoal_step(goal, image, depth,port=args_cli.port)
-        
-            # Transform trajectory from camera frame to world frame
-            batch_optimal_points_world = []
-            for idx in range(trajectory_points_camera.shape[0]):
-                trajectory_points_world = []
-                for i, point in enumerate(trajectory_points_camera[idx]):
-                    if i < 0:
-                        continue
-                    point_local = np.array([point[0], point[1], 0.0])
-                    point_world = camera_pos[idx] + camera_rot[idx] @ point_local
-                    trajectory_points_world.append(point_world[:2])
-                trajectory_points_world = np.array(trajectory_points_world)
-                batch_optimal_points_world.append(trajectory_points_world)
-                mpc = MPC_Controller(trajectory_points_world,
-                                     desired_v=args_cli.speed,
-                                     v_max=args_cli.speed,
-                                     w_max=args_cli.speed)
-            batch_optimal_points_world = np.array(batch_optimal_points_world)
-           
-            batch_all_points_world = []
-            for idx in range(all_trajectories_camera.shape[0]):
-                # Transform all trajectories
-                all_trajectories_world = []
-                for traj_camera in all_trajectories_camera[idx]:
-                    traj_world = []
-                    for point in traj_camera:
-                        point_local = np.array([point[0], point[1], 0.0])
-                        point_world = camera_pos[idx] + camera_rot[idx] @ point_local
-                        traj_world.append(point_world[:2])
-                    all_trajectories_world.append(np.array(traj_world))
-                batch_all_points_world.append(all_trajectories_world)
-            batch_all_points_world = np.array(batch_all_points_world)
+def main():
+    task_name = "imagegoal"
+    scene_list = sorted(os.listdir(args_cli.scene_dir))
+    scene_name = scene_list[args_cli.scene_index]
+    scene_path = os.path.join(args_cli.scene_dir, scene_name) + "/"
+    usd_path, npy_path = find_usd_path(scene_path, "imagegoal")
 
-            # Update shared state
-            with output_lock:
-                planning_output.trajectory_points_world = batch_optimal_points_world
-                planning_output.all_trajectories_world = batch_all_points_world
-                planning_output.all_values_camera = all_values_camera
-                planning_output.is_planning = False
-                planning_output.planning_error = None
-            
-            # Print planning timing
-            planning_time = time.time() - planning_start
-            # print(f"Planning time: {planning_time:.3f}s, Goal: [{goal[0]:.2f}, {goal[1]:.2f}, {goal[2]:.2f}]")
-                
-        except Exception as e:
-            print(f"Planning error: {e}")
-            with output_lock:
-                planning_output.is_planning = False
-                planning_output.planning_error = str(e)
-        # Small sleep to prevent CPU overload
-        time.sleep(0.1)
+    samples = np.load(npy_path)
+    num_episodes = min(args_cli.num_episodes, len(samples))
+    print(f"[INFO] {len(samples)} samples in npy, running {num_episodes} episodes.")
 
-scene_path = os.path.join(args_cli.scene_dir,os.listdir(args_cli.scene_dir)[args_cli.scene_index]) + "/"
-usd_path,init_path = find_usd_path(scene_path,task='imagegoal')
-scene_config = ImageNavSceneCfg()
-scene_config.num_envs = args_cli.num_envs
-scene_config.env_spacing = 0.0
-scene_config.terrain = BENCH_TERRAIN_CFG
-scene_config.terrain.usd_path = usd_path
-scene_config.goal_marker = GOAL_CFG
-scene_config.goal_camera = DINGO_ImageGoal_CameraCfg
-scene_config.robot = DINGO_CFG
-scene_config.camera_sensor = DINGO_CameraCfg
-scene_config.contact_sensor = DINGO_ContactCfg
-env_config = DingoImageNavCfg()
-env_config.scene = scene_config
-env_config.events.reset_pose.params = {"init_point_path":init_path, 
-                                       'height_offset':0.1,
-                                       'camera_offset':0.25,
-                                       'robot_visible': False,
-                                       'light_enabled': False}
-env = ManagerBasedRLEnv(env_config)
-env = RslRlVecEnvWrapper(env)
-adjust_usd_scale(scale=args_cli.scene_scale)
-_,infos = env.reset()
-# warm-up
-PREHEAT_STEPS = 10
-for _ in range(PREHEAT_STEPS):
-    action = torch.zeros((args_cli.num_envs, 2), device="cuda:0")
-    obs, rewards, dones, infos = env.step(action)
-    
-camera_intrinsic = env.unwrapped.scene.sensors['camera_sensor'].data.intrinsic_matrices[0]
+    evaluator = IsaacSimEvaluator(simulation_app, usd_path,
+                                  scene_scale=args_cli.scene_scale)
+    evaluator.enable_goal_camera()
+    evaluator.setup()
 
-planning_thread_obj = threading.Thread(target=planning_thread, args=(env, camera_intrinsic))
-planning_thread_obj.daemon = True
-planning_thread_obj.start()
+    register_signal_handlers(
+        get_env=lambda: None,
+        get_simulation_app=lambda: simulation_app,
+        stop_event=stop_event,
+    )
 
-controller = DifferentialController(name="simple_control",
-                                    wheel_radius=DINGO_WHEEL_RADIUS,
-                                    wheel_base=DINGO_WHEEL_BASE)
-algo = navigator_reset(camera_intrinsic.cpu().numpy(),batch_size=scene_config.num_envs,stop_threshold=args_cli.stop_threshold,port=args_cli.port)
+    print("[INFO] Preheating simulation...")
+    for _ in range(10):
+        evaluator.world.step(render=False)
+        simulation_app.update()
 
-episode_num = args_cli.num_envs - 1
-evaluation_metrics = []
-save_dir = "./imagegoal_%s_%s/%s/"%(algo,args_cli.scene_dir.split("/")[-1],scene_path.split("/")[-2])
-os.makedirs(save_dir,exist_ok=True)
+    algo = navigator_reset(
+        evaluator.cam_intrinsic, batch_size=1,
+        stop_threshold=args_cli.stop_threshold, port=args_cli.port,
+    )
+    if algo == "fallback_algo":
+        print(f"[ERROR] Algorithm server not found. Start: python server.py --port {args_cli.port}")
+        evaluator.close()
+        sys.exit(1)
+    print(f"[INFO] Algorithm connected, algo={algo}")
 
-euclidean = np.sqrt(np.square(infos['observations']['goal_pose'].cpu().numpy()[:,0:2]).sum(axis=-1))
-fps_writer = [imageio.get_writer(save_dir + "fps_%d.mp4"%i, fps=10) for i in range(scene_config.num_envs)]
+    planner_thread = start_planning_thread(
+        plan_fn=imagegoal_step, port=args_cli.port,
+        speed=args_cli.speed, goal_required=True,
+    )
 
-trajectory_length = np.zeros((scene_config.num_envs))
+    diff_ctrl = DifferentialController(
+        name="dingo_ctrl",
+        wheel_radius=DINGO_WHEEL_RADIUS, wheel_base=DINGO_WHEEL_BASE,
+    )
 
-while simulation_app.is_running():
-    with torch.inference_mode():
-        goal_poses = infos['observations']['goal_pose'].cpu().numpy()[:,0:2]
-        goal_images = infos['observations']['goal_image'].cpu().numpy()[:,:,:,0:3]
-        images = infos['observations']['rgb'].cpu().numpy()[:,:,:,0:3]
-        depths = infos['observations']['depth'].cpu().numpy()[:,:,:]
-        # get all camera poses
-        camera_pos = env.unwrapped.scene.sensors['camera_sensor'].data.pos_w.cpu().numpy()
-        camera_rot_quat = env.unwrapped.scene.sensors['camera_sensor'].data.quat_w_world.cpu().numpy()
-        camera_rot_quat = camera_rot_quat[:,[1, 2, 3, 0]]
-        camera_rot = R.from_quat(camera_rot_quat).as_matrix()
-        
-        with input_lock:
-            planning_input.current_goal = goal_images.copy()
-            planning_input.current_image = images.copy()
-            planning_input.current_depth = depths.copy()
-            planning_input.camera_pos = camera_pos.copy()
-            planning_input.camera_rot = camera_rot.copy()
+    save_dir = "./metrics/%s_%s_%s/%s/" % (
+        task_name, algo, args_cli.scene_dir.split("/")[-1], scene_name,
+    )
+    os.makedirs(save_dir, exist_ok=True)
+    evaluation_metrics: list[dict] = []
+    vis_manager = VisualizationManager(history_size=5)
 
-        # based on the current world trajectory 
-        robot_vel = env.unwrapped.scene.articulations['robot'].data.root_lin_vel_w[0, :2].norm().cpu().numpy()
-        robot_ang_vel = env.unwrapped.scene.articulations['robot'].data.root_ang_vel_w[0, 2].cpu().numpy()
+    for ep_idx in range(num_episodes):
+        print(f"\n{'='*60}\n  Episode {ep_idx}/{num_episodes}  scene={scene_name}\n{'='*60}")
 
-        x0 = np.stack([camera_pos[:,0], camera_pos[:,1], np.arctan2(camera_rot[:,1,0], camera_rot[:,0,0]), [robot_vel], [robot_ang_vel]],axis=-1)
-        current_trajectory = None
-        current_all_trajectories = None
-        current_all_values = None
-        with output_lock:
-            if planning_output.trajectory_points_world is not None:
-                current_trajectory = planning_output.trajectory_points_world.copy() if planning_output.trajectory_points_world is not None else None
-                current_all_trajectories = planning_output.all_trajectories_world.copy() if planning_output.all_trajectories_world is not None else None
-                current_all_values = planning_output.all_values_camera.copy() if planning_output.all_values_camera is not None else None
-        
-        if current_trajectory is not None:
-            control_start = time.time()
-            action_list = []
-            for i in range(args_cli.num_envs):
-                vis_image = vis_manager[i].visualize_trajectory(
-                    np.concatenate((images[i],goal_images[i]),axis=1), depths[i][:,:,None], camera_intrinsic.cpu().numpy(),
-                    current_trajectory[i],
-                    robot_pose=x0[i],
-                    all_trajectories_points=current_all_trajectories[i],
-                    all_trajectories_values=current_all_values[i]
+        start_pos, start_yaw, goal_world = load_episode_from_npy(npy_path, ep_idx)
+
+        # snapshot the goal image at the goal pose
+        evaluator.place_goal_camera(goal_world, yaw=start_yaw)
+        goal_image       = evaluator.get_goal_rgb()
+        goal_image_batch = goal_image[None]
+
+        evaluator.reset_robot(start_pos, start_yaw)
+        navigator_reset(env_id=0, port=args_cli.port)
+        initial_dist = float(np.linalg.norm(start_pos - goal_world))
+
+        runner = EpisodeRunner(
+            evaluator, vis_manager, diff_ctrl,
+            max_steps=args_cli.max_steps, save_dir=save_dir,
+            ep_idx=ep_idx, algo=algo, task_name=task_name, scene_name=scene_name,
+            goal_required=True,
+        )
+        runner.reset_vis_from_current_pose()
+        runner.prepare_planning()
+
+        while not runner.done and runner.step_count < args_cli.max_steps:
+            obs = runner.observe()
+
+            runner.push_plan(obs, goal_image_batch)
+
+            traj_w, all_traj_w, all_vals = runner.pop_plan()
+            joint_vels, v, w = runner.tick_mpc(traj_w, obs)
+
+            dist_to_target = float(np.linalg.norm(obs.cam_pos[:2] - goal_world))
+
+            if traj_w is not None:
+                rgb_with_goal = np.concatenate(
+                    (obs.rgb[0], goal_image), axis=1
                 )
-                if mpc is None:
-                    continue
-                t0 = time.time()
-                opt_u_controls, opt_x_states = mpc.solve(x0[i,:3])
-                print(f"solve mpc cost {time.time() - t0}")
-                v, w = opt_u_controls[1, 0], opt_u_controls[1, 1]
-                action = torch.tensor([v, w], device="cuda:0")
-                action_cpu = action.cpu().numpy()
-                joint_velocities = controller.forward(action_cpu).joint_velocities
-                action_list.append(joint_velocities)
-                
-                try:
-                    vis_image = draw_box_with_text(vis_image,0,0,430,50,"desired lin.:%.2f ang.:%.2f"%(v,w))
-                    vis_image = draw_box_with_text(vis_image,0,50,430,50,"actual lin.:%.2f ang.:%.2f"%(robot_vel,robot_ang_vel))
-                    if current_all_values is not None:
-                        vis_image = draw_box_with_text(vis_image,0,770,430,50,"critic max:%.2f min:%.2f"%(np.max(current_all_values[i]), np.min(current_all_values[i])))
-                    vis_image = draw_box_with_text(vis_image,0,820,430,50,"point goal:(%.2f, %.2f)"%(goal_poses[i][0],goal_poses[i][1]))
-                    cv2.imwrite(f"frame_test.png", cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
-                    fps_writer[i].append_data(vis_image)
-                except:
-                    pass
-                
-            action = torch.as_tensor(np.stack(action_list, axis=0),device="cuda:0")
-            obs, rewards, dones, infos = env.step(action)
-            # Get actual joint velocities from Isaac Sim
-            actual_joint_velocities = env.unwrapped.scene.articulations['robot'].data.joint_vel[0, :2].cpu().numpy()
-            desired_joint_velocities = env.unwrapped.scene.articulations['robot'].data.joint_vel_target[0, :2].cpu().numpy()
-            trajectory_length += (infos['observations']['policy'][:,0] * env.unwrapped.step_dt).cpu().numpy()
-        else:
-            action = torch.zeros((args_cli.num_envs, 2), device="cuda:0")
-            obs, rewards, dones, infos = env.step(action)
-            print("No trajectory available, using zero action")
-        
-        for i in range(args_cli.num_envs):
-            if dones[i] == True:
-                episode_num += 1
-                navigator_reset(env_id=i,port=args_cli.port)
-                success_flag = (np.sqrt(np.square(goal_poses[i]).sum())<1.5).astype(np.float32)
-                fps_writer[i].close()
-                evaluation_metrics.append({'success':success_flag,
-                                           'spl': np.clip(euclidean[i] / trajectory_length[i],0,1) * success_flag,
-                                           'distance':euclidean[i]})
-                write_metrics(evaluation_metrics,save_dir+"metric.csv")
-                euclidean[i] = np.sqrt(np.square(infos['observations']['goal_pose'].cpu().numpy()[:,0:2]).sum(axis=-1))[i]
-                fps_writer[i] = imageio.get_writer(save_dir + "fps_%d.mp4"%episode_num, fps=10)
-                trajectory_length[i] = 0.0
+                runner.write_vis_frame(
+                    obs, traj_w, all_traj_w, all_vals, v, w,
+                    goal_position=goal_world,
+                    dist_label_value=dist_to_target,
+                    rgb_override=rgb_with_goal,
+                    extra_vis_kwargs={"people_positions": None,
+                                      "people_positions_dict": None},
+                )
 
-        if episode_num > args_cli.num_episodes:
-            break
-       
-                
-   
+            runner.step_world(joint_vels, has_plan=(traj_w is not None))
+            runner.record_position(obs)
+            runner.check_termination(dist_to_target)
 
-        
+        runner.close_video()
+
+        final_dist = float(np.linalg.norm(runner.last_cam_pos[:2] - goal_world))
+        ep_metrics = build_navigation_metrics(
+            ep_idx=ep_idx, success=runner.success,
+            initial_dist=initial_dist, final_dist=final_dist,
+            step_count=runner.step_count, step_dt=evaluator.step_dt,
+            traj_length=runner.traj_length,
+        )
+        evaluation_metrics.append(ep_metrics)
+        print_episode_metrics(ep_idx, ep_metrics)
+        write_metrics(evaluation_metrics, save_dir + "metric.csv")
+
+    print(f"\n[INFO] All {num_episodes} episodes done. Metrics → {save_dir}metric.csv")
+    stop_event.set()
+    planner_thread.join(timeout=5)
+    evaluator.close()
+
+
+if __name__ == "__main__":
+    main()
