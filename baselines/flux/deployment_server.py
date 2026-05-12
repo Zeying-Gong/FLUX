@@ -17,7 +17,10 @@ from flask import Flask, jsonify, request
 from PIL import Image
 
 from policy_agent import GRPO_Agent
-from visualization_utils import VisualizationManager
+import sys
+sys.path.insert(0, '/workspace/FLUX')
+
+from utils_tasks.visualization_utils import VisualizationManager
 
 app = Flask(__name__)
 
@@ -28,7 +31,7 @@ _flux_fps_writer = None
 _flux_fps_rgbd_writer = None
 
 # Navigation state
-goal_world_pos = [7.0, 0.2, 0.0]  # Default goal in world frame
+goal_world_pos = [7.0, 5.0, 0.0]  # Default goal in world frame # []
 is_first_step = True
 start_time = time.time()
 step_idx = 0
@@ -55,7 +58,7 @@ def world_to_local(robot_pose, world_goal):
     dy = wy - ry
     
     local_x = dx * math.cos(ryaw) + dy * math.sin(ryaw)
-    local_y = -dx * math.sin(yaw) + dy * math.cos(ryaw)
+    local_y = -dx * math.sin(ryaw) + dy * math.cos(ryaw)
     
     return np.array([[local_x, local_y, 0.0]])
 
@@ -127,44 +130,46 @@ def eval_dual():
         point_goal = np.array([[local_x, local_y, 0.0]])
         
         # 4. Decode Observations
-        # RGB
+        # RGB: (H, W, 3) → (1, H, W, 3)
         img_pil = Image.open(image_file.stream).convert('RGB')
-        img_np = np.asarray(img_pil).reshape((1, -1, img_pil.size[1], 3))
-        
-        # Depth (16-bit mm -> meters)
+        img_np = np.asarray(img_pil).astype(np.uint8)
+        img_np = img_np.reshape((1, img_np.shape[0], img_np.shape[1], 3))  # (1, H, W, 3)
+
+        # Depth: (H, W) → (1, H, W, 1)
         depth_pil = Image.open(depth_file.stream).convert('I')
-        depth_np = (np.asarray(depth_pil).astype(np.float32) / 10000.0).reshape((1, -1, depth_pil.size[1], 1))
+        depth_np = np.asarray(depth_pil).astype(np.float32) / 10000.0
+        depth_np = depth_np[:, :, np.newaxis]                              # (H, W, 1)
+        depth_np = depth_np.reshape((1, depth_np.shape[0], depth_np.shape[1], 1))  # (1, H, W, 1)
         
         # 5. Model Inference
         step_idx += 1
         exec_traj, all_trajs, all_vals, traj_mask, traj_depth_mask = agent.step_pointgoal(point_goal, img_np, depth_np)
         
         # 6. Post-processing & Visualization
-        # Prepare RGB-D side-by-side for logging
-        depth_vis = np.clip(depth_np[0, -1, :, :, 0], 0.1, 3.0)
+        depth_vis = np.clip(depth_np[0, :, :, 0], 0.1, 3.0)
         depth_vis = ((depth_vis - 0.1) / 2.9 * 255).astype(np.uint8)
         depth_color = cv2.applyColorMap(depth_vis, cv2.COLORMAP_JET)
-        rgbd_frame = np.hstack([img_np[0, -1], depth_color])
-        
-        # Project trajectories onto image
-        vis_rgb, vis_all = vis_manager.visualize_trajectory(
-            img_np[0, -1], depth_np[0, -1], args.camera_intrinsic,
+        rgbd_frame = np.hstack([img_np[0], depth_color])
+
+        # visualize_trajectory 返回单张已拼好的图
+        debug_full = vis_manager.visualize_trajectory(
+            img_np[0], depth_np[0], args.camera_intrinsic,
             exec_traj[0], robot_pose=robot_pose,
             all_trajectories_points=all_trajs[0],
             all_trajectories_values=all_vals[0],
-            goal_pos=point_goal[0]
         )
-        
-        # Combine everything for a summary debug image
-        debug_top = np.concatenate((traj_mask, vis_rgb), axis=1)
-        debug_bottom = np.concatenate((traj_depth_mask, vis_all), axis=1)
-        debug_full = np.concatenate((debug_top, debug_bottom), axis=0)
-        
-        # Save to disk for real-time debugging (overwrites each step)
-        # Note: This may slightly increase latency but is useful for monitoring.
-        Image.fromarray(debug_full).save('./output_image.png')
-        
-        # Async-like logging (appends to video buffer)
+
+        # traj_mask / traj_depth_mask 单独拼在左边（可选）
+        # 统一高度后横向拼接
+        h = debug_full.shape[0]
+        traj_mask_resized = cv2.resize(traj_mask, 
+            (int(traj_mask.shape[1] * h / traj_mask.shape[0]), h))
+        traj_depth_resized = cv2.resize(traj_depth_mask,
+            (int(traj_depth_mask.shape[1] * h / traj_depth_mask.shape[0]), h))
+
+        debug_full = np.concatenate((traj_mask_resized, traj_depth_resized, debug_full), axis=1)
+
+        Image.fromarray(debug_full).save('./output_flux.png')
         if _flux_fps_writer: _flux_fps_writer.append_data(debug_full)
         if _flux_fps_rgbd_writer: _flux_fps_rgbd_writer.append_data(rgbd_frame)
         
@@ -188,7 +193,7 @@ if __name__ == '__main__':
     parser.add_argument("--port", type=int, default=5801)
     parser.add_argument("--host", type=str, default="0.0.0.0")
     parser.add_argument("--device", type=str, default="cuda:0")
-    parser.add_argument("--model_path", type=str, default="./checkpoints/flux_v1.ckpt")
+    parser.add_argument("--model_path", type=str, default="/workspace/FLUX/checkpoints/flux_v1.ckpt")
     parser.add_argument("--save_video", action="store_true", default=True)
     args = parser.parse_args()
 
@@ -215,11 +220,12 @@ if __name__ == '__main__':
     agent.reset(1, -3.0)
 
     if args.save_video:
+        log_dir = "/workspace/FLUX/logs"
+        os.makedirs(log_dir, exist_ok=True)          # ← 先建目录
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        _flux_fps_writer = imageio.get_writer(f"logs/flux_{timestamp}_debug.mp4", fps=5)
-        _flux_fps_rgbd_writer = imageio.get_writer(f"logs/flux_{timestamp}_rgbd.mp4", fps=5)
-        os.makedirs("logs", exist_ok=True)
-        print(f"[FLUX] Video logging enabled: logs/flux_{timestamp}_*.mp4")
+        _flux_fps_writer = imageio.get_writer(f"{log_dir}/flux_{timestamp}_debug.mp4", fps=5)
+        _flux_fps_rgbd_writer = imageio.get_writer(f"{log_dir}/flux_{timestamp}_rgbd.mp4", fps=5)
+        print(f"[FLUX] Video logging enabled: {log_dir}/flux_{timestamp}_*.mp4")
 
     print(f"[FLUX] Server starting at http://{args.host}:{args.port}")
     try:

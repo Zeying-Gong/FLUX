@@ -1,22 +1,15 @@
 """Open a USDA scene, bake NavMesh, bring up physics, spawn N pedestrians
 on the NavMesh, and have them randomly walk forever until Ctrl+C.
 
-Pipeline (ORDER matters):
-    1. open_stage(usda)
-    2. temporarily make collision geometry visible to the navmesh baker
-    3. create + size NavMeshVolume to cover the scene
-    4. BAKE NAVMESH   ← before World(), or PhysX hides meshes from baker
-    5. restore collision visibility
-    6. World(...) + initialize_physics + reset
-    7. spawn N characters at random NavMesh points
-    8. timeline.play()
-    9. send initial GoTo commands
-   10. hold loop: world.step(render=True) + reissue waypoints on timeout
+NavMesh caching
+---------------
+For a given USDA scene, two cache files are written beside the USDA:
 
-Usage:
-    python check_scene_navmesh.py --usda /path/to/scene.usda
-    python check_scene_navmesh.py --usda /path/to/scene.usda --num_people 3
-    python check_scene_navmesh.py --usda /path/to/scene.usda --num_people 0
+  <scene_stem>.navmesh          – binary NavMesh data  (inav.save/load_navmesh)
+  <scene_stem>_navvols.usda     – NavMeshVolume prims  (USD sublayer)
+
+On the second run both are restored and baking is skipped entirely.
+Pass --force_rebake to ignore the cache and redo everything.
 """
 from __future__ import annotations
 import argparse
@@ -50,16 +43,18 @@ def parse_args():
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--navmesh_probe_interval", type=float, default=10.0)
 
-    # CLI: 加两行
     p.add_argument("--semantic_map_json", type=str, default=None,
-                help="Optional 2D semantic map JSON — used to carve out "
+                   help="Optional 2D semantic map JSON — used to carve out "
                         "Exclude volumes above furniture so characters don't "
                         "walk onto tables/sofas/beds.")
-    p.add_argument("--exclude_labels", type=str, nargs="*",
-                default=["table", "chair", "sofa", "bed", "wardrobe",
-                            "desk", "counter", "cabinet"],
-                help="Category labels from semantic map JSON that should "
-                        "become NavMesh Exclude volumes.")
+
+    # ── Cache control ──────────────────────────────────────────────────────
+    p.add_argument("--force_rebake", action="store_true",
+                   help="Ignore existing NavMesh / NavMeshVolume cache and "
+                        "redo bake from scratch.")
+    p.add_argument("--cache_dir", type=str, default=None,
+                   help="Directory to store cache files. "
+                        "Defaults to the same directory as --usda.")
     return p.parse_args()
 
 
@@ -89,7 +84,7 @@ simulation_app = SimulationApp(
 )
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Post-launch imports  (NOT World yet — that's deferred past bake)
+# Post-launch imports
 # ═══════════════════════════════════════════════════════════════════════════
 import numpy as np
 import carb
@@ -106,6 +101,26 @@ from isaacsim.replicator.agent.core.settings import AssetPaths, PrimPaths, Behav
 from isaacsim.replicator.agent.core.stage_util import CharacterUtil
 from isaacsim.core.utils import prims
 from omni.anim.people.scripts.custom_command.populate_anim_graph import populate_anim_graph
+from omni.anim.people.settings import PeopleSettings
+
+CHARACTER_ASSET_PATH = "/workspace/FLUX/assets/isaacsim_assets/Characters"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Cache path helpers
+# ═══════════════════════════════════════════════════════════════════════════
+def _cache_paths(usda_path: str, cache_dir: str | None) -> str:
+    """Return navvols_usda path. NavMesh binary is managed by Isaac Sim internally."""
+    stem = os.path.splitext(os.path.basename(usda_path))[0]
+    if cache_dir:
+        base = cache_dir
+    else:
+        usda_dir = os.path.dirname(os.path.abspath(usda_path))
+        parent   = os.path.dirname(usda_dir)
+        base     = os.path.join(parent, "usda_processed")
+    os.makedirs(base, exist_ok=True)
+    return os.path.join(base, f"{stem}_navvols.usda")
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Stage / bbox / visibility helpers
@@ -114,12 +129,11 @@ def _update(n: int = 1):
     for _ in range(n):
         simulation_app.update()
 
-import sys
 
-def safe_query_random_point(nm, max_z=0.3, retries=30):
-    """安全的 NavMesh 随机点采样，过滤家具面高度点，防递归崩溃"""
+def safe_query_random_point(nm, max_z=0.1, retries=30):
+    """Safely sample a random NavMesh point, filtering furniture-top heights."""
     old_limit = sys.getrecursionlimit()
-    sys.setrecursionlimit(500)  # 提前截断，避免真正崩溃
+    sys.setrecursionlimit(500)
     try:
         best = None
         for _ in range(retries):
@@ -129,7 +143,7 @@ def safe_query_random_point(nm, max_z=0.3, retries=30):
                 if z < max_z:
                     return p
                 if best is None:
-                    best = p  # 备用：至少返回个点
+                    best = p
             except RecursionError:
                 print("[WARN] query_random_point recursion, NavMesh may be damaged")
                 break
@@ -139,6 +153,7 @@ def safe_query_random_point(nm, max_z=0.3, retries=30):
         return best
     finally:
         sys.setrecursionlimit(old_limit)
+
 
 def open_stage(usda_path: str) -> bool:
     if not os.path.exists(usda_path):
@@ -200,90 +215,9 @@ def compute_scene_bbox(stage):
         print(f"[BBox] failed: {e}")
         return None
 
-def verify_one_furniture_alignment(stage, semantic_map_json: str,
-                                   flip_x=True, flip_y=True):
-    """找 semantic_map 里第一个家具，在 stage 里搜索对应 prim，对比坐标"""
-    import json as _json
-    with open(semantic_map_json) as f:
-        items = _json.load(f)
-    
-    furn_labels = {"table","chair","sofa","bed","wardrobe","desk","counter","cabinet"}
-    
-    # 取第一个家具
-    target = None
-    for it in items:
-        if it.get("category_label","").lower() in furn_labels:
-            target = it
-            break
-    if target is None:
-        print("[AlignCheck] No furniture found in semantic_map")
-        return
-    
-    x_l, y_b, x_r, y_t = [float(v) for v in target["bbox_m"]]
-    cx_raw = 0.5*(x_l+x_r)
-    cy_raw = 0.5*(y_b+y_t)
-    cx_isaac = -cx_raw if flip_x else cx_raw
-    cy_isaac = -cy_raw if flip_y else cy_raw
-    
-    print(f"\n[AlignCheck] Target: {target['item_id']}")
-    print(f"[AlignCheck]   semantic_map bbox (raw): x∈[{x_l},{x_r}] y∈[{y_b},{y_t}]")
-    print(f"[AlignCheck]   computed Isaac center: ({cx_isaac:.3f}, {cy_isaac:.3f})")
-    print(f"[AlignCheck]   z_max={target['max_z_m']}")
-    
-    # 在 stage 里搜索所有 prim，找 bbox 中心最接近的
-    label = target.get("category_label","").lower()
-    print(f"[AlignCheck] Searching stage for prims matching label '{label}'...")
-    
-    best_prim = None
-    best_dist = float('inf')
-    
-    for prim in stage.Traverse():
-        prim_name = prim.GetName().lower()
-        if label not in prim_name:
-            continue
-        if not prim.IsA(UsdGeom.Xformable):
-            continue
-        try:
-            cache = UsdGeom.BBoxCache(
-                Usd.TimeCode.Default(),
-                [UsdGeom.Tokens.default_, UsdGeom.Tokens.render],
-                useExtentsHint=True
-            )
-            bbox = cache.ComputeWorldBound(prim)
-            rng = bbox.ComputeAlignedRange()
-            if rng.IsEmpty():
-                continue
-            mn, mx = rng.GetMin(), rng.GetMax()
-            pcx = (float(mn[0])+float(mx[0]))*0.5
-            pcy = (float(mn[1])+float(mx[1]))*0.5
-            pcz_max = float(mx[2])
-            dist = ((pcx-cx_isaac)**2 + (pcy-cy_isaac)**2)**0.5
-            if dist < best_dist:
-                best_dist = dist
-                best_prim = (str(prim.GetPath()), pcx, pcy, pcz_max)
-        except Exception:
-            continue
-    
-    if best_prim:
-        path, pcx, pcy, pcz = best_prim
-        print(f"[AlignCheck] Best match prim: {path}")
-        print(f"[AlignCheck]   Isaac prim center: ({pcx:.3f}, {pcy:.3f}), z_max={pcz:.3f}")
-        print(f"[AlignCheck]   Distance from computed: {best_dist:.3f}m")
-        print(f"[AlignCheck]   ★ Offset needed: dx={pcx-cx_isaac:.3f}, dy={pcy-cy_isaac:.3f}")
-        return pcx-cx_isaac, pcy-cy_isaac
-    else:
-        print(f"[AlignCheck] No prim with '{label}' in name found in stage")
-        # fallback: 列出所有可能相关的prim名
-        names = set()
-        for prim in stage.Traverse():
-            n = prim.GetName().lower()
-            if any(l in n for l in furn_labels):
-                names.add(prim.GetName())
-        print(f"[AlignCheck] Stage prims with furniture keywords: {sorted(names)[:20]}")
-        return 0.0, 0.0
 
 # ═══════════════════════════════════════════════════════════════════════════
-# NavMesh bake
+# NavMesh Volume helpers
 # ═══════════════════════════════════════════════════════════════════════════
 def size_navmesh_volume(stage, volume_path: Sdf.Path,
                         padding: float, fallback_size: float):
@@ -301,10 +235,10 @@ def size_navmesh_volume(stage, volume_path: Sdf.Path,
     else:
         bmin, bmax = bbox
         center   = Gf.Vec3d((bmin[0]+bmax[0])*0.5, (bmin[1]+bmax[1])*0.5,
-                            (bmin[2]+bmax[2])*0.5)
+                             (bmin[2]+bmax[2])*0.5)
         half_ext = Gf.Vec3d((bmax[0]-bmin[0])*0.5*padding,
-                            (bmax[1]-bmin[1])*0.5*padding,
-                            (bmax[2]-bmin[2])*0.5*padding)
+                             (bmax[1]-bmin[1])*0.5*padding,
+                             (bmax[2]-bmin[2])*0.5*padding)
         print(f"[NavMesh] Scene bbox min={tuple(bmin)} max={tuple(bmax)}")
         print(f"[NavMesh] Volume center={tuple(center)} "
               f"half_extent(padded)={tuple(half_ext)}")
@@ -318,252 +252,310 @@ def size_navmesh_volume(stage, volume_path: Sdf.Path,
                               path=volume_path, new_transform_matrix=mat)
     print(f"[NavMesh] NavMeshVolume resized. scale={tuple(scale)}")
 
-def add_exclude_volumes_from_semantic_map(stage,
-                                          semantic_map_json: str,
-                                          exclude_labels: list[str],
-                                          flip_x: bool = True,
-                                          flip_y: bool = True,
-                                          offset_x = 0.0,
-                                          offset_y = 0.0
-                                          ) -> int:   # ← 新增
+
+def add_exclude_volumes_from_semantic_map(stage, semantic_map_json,
+                                          flip_x=True, flip_y=True,
+                                          negate_xy=True) -> int:
     import json as _json
-    with open(semantic_map_json, "r", encoding="utf-8") as f:
+    with open(semantic_map_json) as f:
         items = _json.load(f)
 
-    label_set = set(l.lower() for l in exclude_labels)
+    exclude_label_set = ["table", "chair", "sofa", "bed", "wardrobe",
+                         "desk", "counter", "cabinet"]
+    all_y, all_x = [], []
+    for inst in items:
+        for y, x in inst.get("mask_coords_m", []):
+            try:
+                all_y.append(float(y))
+                all_x.append(float(x))
+            except (ValueError, TypeError):
+                continue
+
+    if not all_x:
+        print("[Exclude] ERROR: no mask_coords_m found")
+        return 0
+
+    min_x, max_x = min(all_x), max(all_x)
+    min_y, max_y = min(all_y), max(all_y)
+    print(f"[Exclude] map bounds from mask_coords_m: "
+          f"x∈[{min_x:.3f},{max_x:.3f}] y∈[{min_y:.3f},{max_y:.3f}]")
+
+    def sm_to_isaac(sm_x, sm_y):
+        px, py = sm_x, sm_y
+        if flip_x:
+            px = (min_x + max_x) - px
+        if flip_y:
+            py = (min_y + max_y) - py
+        if negate_xy:
+            px = -px
+            py = -py
+        return px, py
+
     mpu = UsdGeom.GetStageMetersPerUnit(stage)
     half_extent_stage_units = 0.5 / mpu
-
     bbox = compute_scene_bbox(stage)
-    if bbox:
-        bmin, bmax = bbox
-        print(f"[Exclude] Live scene bbox: x∈[{bmin[0]:.2f},{bmax[0]:.2f}] "
-              f"y∈[{bmin[1]:.2f},{bmax[1]:.2f}]")
-
-    # 诊断变换前后坐标
-    sample_items = [it for it in items
-                    if it.get("category_label","").lower() in label_set][:3]
-    for it in sample_items:
-        x_l, y_b, x_r, y_t = [float(v) for v in it["bbox_m"]]
-        cx_raw, cy_raw = 0.5*(x_l+x_r), 0.5*(y_b+y_t)
-        cy_xfm = -cy_raw if flip_y else cy_raw
-        print(f"[Exclude] {it['item_id']}: raw_cx={cx_raw:.2f} raw_cy={cy_raw:.2f} "
-              f"→ isaac_cy={cy_xfm:.2f}")
-
     created = 0
     skipped = 0
 
     for item in items:
         label = str(item.get("category_label", "")).lower()
-        if label not in label_set:
+        if not any(keyword in label for keyword in exclude_label_set):
             continue
-        try:
-            x_l, y_b, x_r, y_t = [float(v) for v in item["bbox_m"]]
-            z_min = float(item["min_z_m"])
-            z_max = float(item["max_z_m"])
-        except Exception as e:
-            print(f"[Exclude] skip {item.get('item_id')}: parse failed ({e})")
-            continue
+        x_l, y_b, x_r, y_t = [float(v) for v in item["bbox_m"]]
+        z_min = float(item["min_z_m"])
+        z_max = float(item["max_z_m"])
 
-        cx_raw = 0.5 * (x_l + x_r)
-        cy_raw = 0.5 * (y_b + y_t)
-
-        # ★ 两轴都取反
-        cx = (-cx_raw if flip_x else cx_raw) + offset_x
-        cy = (-cy_raw if flip_y else cy_raw) + offset_y
-
-        # bbox 边界也跟着翻
-        if flip_x:
-            new_x_l = -x_r
-            new_x_r = -x_l
-        else:
-            new_x_l, new_x_r = x_l, x_r
-
-        if flip_y:
-            new_y_b = -y_t
-            new_y_t = -y_b
-        else:
-            new_y_b, new_y_t = y_b, y_t
+        corners_sm = [(x_l, y_b), (x_l, y_t), (x_r, y_b), (x_r, y_t)]
+        corners_isaac = [sm_to_isaac(cx, cy) for cx, cy in corners_sm]
+        ix_vals = [c[0] for c in corners_isaac]
+        iy_vals = [c[1] for c in corners_isaac]
+        ix_l, ix_r = min(ix_vals), max(ix_vals)
+        iy_b, iy_t = min(iy_vals), max(iy_vals)
+        cx = 0.5*(ix_l + ix_r)
+        cy = 0.5*(iy_b + iy_t)
 
         PAD = 0.10
-        hx = 0.5 * (new_x_r - new_x_l) + PAD
-        hy = 0.5 * (new_y_t - new_y_b) + PAD
+        hx = 0.5*(ix_r - ix_l) + PAD
+        hy = 0.5*(iy_t - iy_b) + PAD
 
-        # in-bounds 检查（变换后）
         if bbox:
             bmin, bmax = bbox
             margin = 1.0
-            if not (bmin[0]-margin <= cx    <= bmax[0]+margin and
-                    bmin[1]-margin <= cy    <= bmax[1]+margin):
+            if not (bmin[0]-margin <= cx <= bmax[0]+margin and
+                    bmin[1]-margin <= cy <= bmax[1]+margin):
                 skipped += 1
-                print(f"[Exclude] SKIP {item.get('item_id')} "
-                      f"cx={cx:.2f} cy={cy:.2f} still out of bounds after flip")
                 continue
-        FLOOR_CLEARANCE = 0.30
-        bottom = max(z_max - 0.15, FLOOR_CLEARANCE)
-        top    = z_max + 1.80   # 顶面上方1.8m（人体高度）
+
+        bottom = max(z_min - 0.05, -0.01)
+        top    = z_max + 0.05
         hz     = 0.5 * (top - bottom)
         cz     = 0.5 * (top + bottom)
 
         existing = {p.GetPath() for p in stage.Traverse()
                     if p.GetName().startswith("NavMeshVolume")}
-        omni.kit.commands.execute(
-            "CreateNavMeshVolumeCommand",
-            parent_prim_path=Sdf.Path.emptyPath,
-            volume_type=1,
-            usd_context_name="",
-            layer=None,
-        )
+        omni.kit.commands.execute("CreateNavMeshVolumeCommand",
+                                  parent_prim_path=Sdf.Path.emptyPath,
+                                  volume_type=1, usd_context_name="", layer=None)
         _update(1)
         new_prims = [p.GetPath() for p in stage.Traverse()
                      if p.GetName().startswith("NavMeshVolume")
                      and p.GetPath() not in existing]
         if not new_prims:
-            print(f"[Exclude] failed to locate new volume for {item.get('item_id')}")
             continue
         vol_path = new_prims[0]
 
         scale  = Gf.Vec3d(hx / half_extent_stage_units,
                           hy / half_extent_stage_units,
                           hz / half_extent_stage_units)
-        center = Gf.Vec3d(cx, cy, cz)
         mat = Gf.Matrix4d(1.0)
         mat.SetScale(scale)
-        mat = mat * Gf.Matrix4d(1.0).SetTranslate(center)
-        omni.kit.commands.execute("TransformPrim",
-                                  path=vol_path, new_transform_matrix=mat)
+        mat = mat * Gf.Matrix4d(1.0).SetTranslate(Gf.Vec3d(cx, cy, cz))
+        omni.kit.commands.execute("TransformPrim", path=vol_path,
+                                  new_transform_matrix=mat)
         created += 1
 
     _update(10)
-
-    # 验证最终位置
-    print(f"[Exclude] Created {created}, skipped {skipped}. Final positions:")
-    for p in stage.Traverse():
-        if "NavMeshVolume" in p.GetName() and p.GetPath() != Sdf.Path("/World/NavMeshVolume"):
-            xf = UsdGeom.Xformable(p)
-            if xf:
-                t = xf.ComputeLocalToWorldTransform(0).ExtractTranslation()
-                print(f"  {p.GetPath()}  center=({t[0]:.2f}, {t[1]:.2f}, {t[2]:.2f})")
-
-    verify_exclude_volume_alignment(stage, semantic_map_json, flip_x=flip_x, flip_y=flip_y)
-
+    print(f"[Exclude] Created {created}, skipped {skipped}.")
     return created
 
-def verify_exclude_volume_alignment(stage, semantic_map_json: str,
-                                    flip_x=True, flip_y=True, n_check=5):
-    """对比已创建的 NavMeshVolume 和 stage 里实际家具 prim 的中心，量化偏差"""
-    import json as _json
-    with open(semantic_map_json) as f:
-        items = _json.load(f)
 
-    furn_labels = {"table","chair","sofa","bed","wardrobe","desk","counter","cabinet"}
-    
-    # 预先建立 stage 里所有家具相关 prim 的 bbox 中心表
-    print("\n[AlignCheck] Building stage furniture prim index...")
-    stage_furns = []   # list of (prim_path, cx, cy, cz_max, label_guess)
-    bbox_cache = UsdGeom.BBoxCache(
-        Usd.TimeCode.Default(),
-        [UsdGeom.Tokens.default_, UsdGeom.Tokens.render],
-        useExtentsHint=True
-    )
-    for prim in stage.Traverse():
-        prim_name = prim.GetName().lower()
-        matched_label = next((l for l in furn_labels if l in prim_name), None)
-        if matched_label is None:
-            continue
-        if not prim.IsA(UsdGeom.Xformable):
-            continue
-        try:
-            bbox = bbox_cache.ComputeWorldBound(prim)
-            rng = bbox.ComputeAlignedRange()
-            if rng.IsEmpty():
-                continue
-            mn, mx = rng.GetMin(), rng.GetMax()
-            pcx = (float(mn[0])+float(mx[0]))*0.5
-            pcy = (float(mn[1])+float(mx[1]))*0.5
-            pcz_max = float(mx[2])
-            stage_furns.append((str(prim.GetPath()), pcx, pcy, pcz_max, matched_label))
-        except Exception:
-            continue
-    print(f"[AlignCheck] Found {len(stage_furns)} furniture prims in stage")
+# ═══════════════════════════════════════════════════════════════════════════
+# NavMeshVolume USD cache  save / restore
+# ═══════════════════════════════════════════════════════════════════════════
+def _collect_navmesh_volume_paths(stage) -> list[Sdf.Path]:
+    """Return USD paths of all NavMeshVolume prims currently in the stage."""
+    return [p.GetPath() for p in stage.Traverse()
+            if p.GetName().startswith("NavMeshVolume")]
 
-    # 取 semantic_map 里前 n_check 个家具，找对应的 NavMeshVolume，再找最近的 stage prim
-    checked = 0
-    vol_index = 1  # NavMeshVolume_01, _02, ...
-    
-    for item in items:
-        if checked >= n_check:
-            break
-        label = item.get("category_label","").lower()
-        if label not in furn_labels:
-            continue
-        if "bbox_m" not in item:
-            continue
+def restore_navmesh_volumes(stage, navvols_usda: str) -> int:
+    """Re-add NavMeshVolume prims from a cached USDA into the live stage.
 
-        x_l, y_b, x_r, y_t = [float(v) for v in item["bbox_m"]]
-        cx_raw = 0.5*(x_l+x_r)
-        cy_raw = 0.5*(y_b+y_t)
-        cx_computed = -cx_raw if flip_x else cx_raw
-        cy_computed = -cy_raw if flip_y else cy_raw
+    We use SdfLayer merging so that the prims land in the session layer
+    (non-destructive, not written back to the original USDA).
+    """
+    cached = Sdf.Layer.FindOrOpen(navvols_usda)
+    if cached is None:
+        print(f"[Cache] Could not open {navvols_usda}")
+        return 0
 
-        # 找对应的 NavMeshVolume（按创建顺序，_01对应第一个家具）
-        vol_name = f"/World/NavMeshVolume_{vol_index:02d}"
-        vol_prim = stage.GetPrimAtPath(vol_name)
-        vol_index += 1
+    session = stage.GetSessionLayer()
+    edit_target = Usd.EditTarget(session)
+    stage.SetEditTarget(edit_target)
 
-        if not vol_prim or not vol_prim.IsValid():
-            print(f"[AlignCheck] {vol_name} not found, skipping")
-            continue
+    restored = 0
+    for spec in cached.rootPrims:
+        vp = Sdf.Path(f"/{spec.name}")
+        if not stage.GetPrimAtPath(vp).IsValid():
+            Sdf.CopySpec(cached, vp, session, vp)
+            restored += 1
+        else:
+            print(f"[Cache]   {vp} already present, skipping.")
 
-        # 读 NavMeshVolume 的实际世界坐标
-        xf = UsdGeom.Xformable(vol_prim)
-        t = xf.ComputeLocalToWorldTransform(0).ExtractTranslation()
-        vol_cx, vol_cy = float(t[0]), float(t[1])
+    # Restore edit target to default layer
+    stage.SetEditTarget(Usd.EditTarget(stage.GetRootLayer()))
 
-        # 找 stage 里最近的同类家具 prim
-        candidates = [(p, px, py, pz) for p, px, py, pz, pl in stage_furns if pl == label]
-        if not candidates:
-            candidates = [(p, px, py, pz) for p, px, py, pz, pl in stage_furns]
-        
-        best = min(candidates, key=lambda c: (c[1]-vol_cx)**2 + (c[2]-vol_cy)**2)
-        best_path, best_px, best_py, best_pz = best
-        
-        print(f"\n[AlignCheck] {item['item_id']} ({label})")
-        print(f"  semantic_map raw:      cx={cx_raw:+.3f}  cy={cy_raw:+.3f}")
-        print(f"  computed (after flip): cx={cx_computed:+.3f}  cy={cy_computed:+.3f}")
-        print(f"  NavMeshVolume actual:  cx={vol_cx:+.3f}  cy={vol_cy:+.3f}  ← should match computed")
-        print(f"  Stage prim ({best_path}):")
-        print(f"    prim center:         cx={best_px:+.3f}  cy={best_py:+.3f}")
-        print(f"  ★ Volume→Prim offset:  dx={best_px-vol_cx:+.3f}  dy={best_py-vol_cy:+.3f}")
-        
-        checked += 1
+    _update(5)
+    print(f"[Cache] Restored {restored} NavMeshVolume(s) from {navvols_usda}")
+    return restored
 
-    print(f"\n[AlignCheck] Done. If dx/dy are consistent across items, "
-          f"add that as a fixed offset in add_exclude_volumes_from_semantic_map.\n")
 
-def try_bake_navmesh(offset_x=0.0, offset_y=0.0):
-    """Returns (success, nav_interface). Toggles collision_root visibility."""
+# ═══════════════════════════════════════════════════════════════════════════
+# NavMesh binary cache  save / restore
+# ═══════════════════════════════════════════════════════════════════════════
+def save_navmesh_binary(inav, navmesh_bin: str) -> bool:
+    """Persist the baked NavMesh to disk using the navigation interface."""
     try:
-        import omni.anim.navigation.core as nav
+        # Isaac Sim ≥ 4.x exposes save_navmesh(path) on the nav interface.
+        inav.save_navmesh(navmesh_bin)
+        print(f"[Cache] NavMesh binary saved → {navmesh_bin}")
+        return True
+    except AttributeError:
+        print("[Cache] inav.save_navmesh() not available on this Isaac Sim version.")
     except Exception as e:
-        print(f"[NavMesh] omni.anim.navigation.core not available: {e}")
-        return False, None
+        print(f"[Cache] save_navmesh failed: {e}")
+    return False
 
+
+def load_navmesh_binary(inav, navmesh_bin: str) -> bool:
+    """Restore a previously baked NavMesh from disk."""
+    try:
+        inav.load_navmesh(navmesh_bin)
+        print(f"[Cache] NavMesh binary loaded ← {navmesh_bin}")
+        return True
+    except AttributeError:
+        print("[Cache] inav.load_navmesh() not available on this Isaac Sim version.")
+    except Exception as e:
+        print(f"[Cache] load_navmesh failed: {e}")
+    return False
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# NavMesh bake  (full or cached)
+# ═══════════════════════════════════════════════════════════════════════════
+def _apply_navmesh_settings():
+    settings = carb.settings.get_settings()
+    settings.set("/persistent/exts/omni.anim.navigation.core/navMesh/config/agentMinRadius", 0.3)
+    settings.set("/persistent/exts/omni.anim.navigation.core/navMesh/config/cellSize", 0.15)
+    settings.set("/persistent/exts/omni.anim.navigation.core/navMesh/config/regionMergeSize", 20)
+    settings.set(PeopleSettings.CHARACTER_FINAL_TARGET_DISTANCE, 0.5)
+    settings.set("/persistent/exts/omni.anim.people/minDistanceToIntermediateTarget", 0.8)
+    settings.set("/persistent/exts/omni.anim.navigation.core/navMesh/config/agentMinHeight", 1.8)
+    settings.set("/persistent/exts/omni.anim.navigation.core/navMesh/config/agentMinIslandRadius", 0.5)
+    settings.set("/persistent/exts/omni.anim.navigation.core/navMesh/config/autoRebakeOnChanges", False)
+    settings.set(PeopleSettings.NAVMESH_ENABLED, True)
+    settings.set(PeopleSettings.DYNAMIC_AVOIDANCE_ENABLED, False)
+    settings.set(PeopleSettings.NUMBER_OF_LOOP, "0")
+    from omni.anim.navigation.core import NavMeshSettings
+    settings.set(NavMeshSettings.CACHE_ENABLED_SETTING_PATH, True)
+    _update(5)
+
+def save_navmesh_volumes_as_delta(stage, navvols_usda: str):
+    """把所有 NavMeshVolume specs 单独存成一个最小 delta layer。
+    不碰原始场景，不 flatten，材质/灯光完全不受影响。
+    """
+    # 找到实际持有这些 spec 的 layer（通常是 edit target layer）
+    vol_paths = [p.GetPath() for p in stage.Traverse()
+                 if p.GetName().startswith("NavMeshVolume")]
+    if not vol_paths:
+        print("[Cache] No NavMeshVolume prims found, nothing to save.")
+        return
+
+    layer_stack = stage.GetLayerStack(includeSessionLayers=False)
+
+    # 创建一个新的空 layer，手动写入 Volume specs
+    delta = Sdf.Layer.CreateNew(navvols_usda)
+    delta.Clear()
+
+    # /World spec 必须存在（作为父节点容器，但不带任何其他内容）
+    world_spec = Sdf.PrimSpec(delta, "World", Sdf.SpecifierOver)
+
+    for vp in vol_paths:
+        # 找持有该 spec 的最强 layer
+        src_layer = None
+        for lyr in layer_stack:
+            if lyr.GetPrimAtPath(vp):
+                src_layer = lyr
+                break
+        if src_layer is None:
+            print(f"[Cache] WARNING: no layer has spec for {vp}, skipping.")
+            continue
+        vol_name = vp.name  # e.g. "NavMeshVolume", "NavMeshVolume_01"
+        Sdf.CopySpec(src_layer, vp, delta, Sdf.Path(f"/World/{vol_name}"))
+
+    delta.Save()
+    print(f"[Cache] Saved {len(vol_paths)} NavMeshVolume(s) as delta → {navvols_usda}")
+
+
+def restore_navmesh_volumes_as_sublayer(stage, navvols_usda: str) -> bool:
+    """把 delta layer 作为 sublayer 插入原始场景最顶层（强于 root layer）。
+    原始场景结构、材质、灯光完全不变。
+    """
+    root_layer = stage.GetRootLayer()
+
+    # 避免重复插入
+    if navvols_usda in root_layer.subLayerPaths:
+        print(f"[Cache] Delta layer already in subLayerPaths, skipping.")
+        return True
+
+    # 插到 subLayerPaths[0]（最高优先级）
+    root_layer.subLayerPaths.insert(0, navvols_usda)
+    _update(5)
+
+    # 验证
+    vol_count = sum(1 for p in stage.Traverse()
+                    if p.GetName().startswith("NavMeshVolume"))
+    print(f"[Cache] Delta sublayer inserted, {vol_count} NavMeshVolume(s) active.")
+    return vol_count > 0
+
+def try_bake_navmesh(navvols_usda: str, force_rebake: bool):
+    import omni.anim.navigation.core as nav
+
+    _apply_navmesh_settings()
+    inav = nav.acquire_interface()
+    print(f"[NavMesh] Internal cache dir: {inav.get_cache_dir()}")
+
+    has_cached_delta = (
+        not force_rebake
+        and os.path.exists(navvols_usda)
+    )
+
+    if has_cached_delta:
+        print(f"[Cache] Restoring NavMeshVolumes from delta: {navvols_usda}")
+        stage = omni.usd.get_context().get_stage()
+        ok = restore_navmesh_volumes_as_sublayer(stage, navvols_usda)
+        if ok:
+            # ★ 让 collision geometry 可见，NavMesh bake 才能采样到它
+            prev_vis = set_subtree_visibility(stage, ARGS.collision_root, visible=True)
+            _update(5)
+
+            print("[NavMesh] Baking (volumes restored, expect cache hit)...")
+            inav.start_navmesh_baking_and_wait()
+            nm = inav.get_navmesh()
+            rp = safe_query_random_point(nm)
+
+            # bake 完恢复原来的 visibility
+            if prev_vis == "invisible" and not ARGS.keep_collision_visible:
+                set_subtree_visibility(stage, ARGS.collision_root, visible=False)
+                _update(2)
+
+            if rp is not None:
+                print(f"[Cache] NavMesh OK. Sample point: {tuple(rp)}")
+                return True, inav
+        print("[Cache] Restore failed — falling back to full bake.")
+
+    # ── 完整 bake ──────────────────────────────────────────────────────────
+    print("\n[NavMesh] Running full bake...")
     stage = omni.usd.get_context().get_stage()
 
     prev_vis = set_subtree_visibility(stage, ARGS.collision_root, visible=True)
     _update(5)
 
-    existing = {p.GetPath() for p in stage.Traverse()
-                if p.GetName().startswith("NavMeshVolume")}
+    existing_vols = {p.GetPath() for p in stage.Traverse()
+                     if p.GetName().startswith("NavMeshVolume")}
     try:
-        omni.kit.commands.execute(
-            "CreateNavMeshVolumeCommand",
-            parent_prim_path=Sdf.Path.emptyPath,
-            volume_type=0,
-            usd_context_name="",
-            layer=None,
-        )
+        omni.kit.commands.execute("CreateNavMeshVolumeCommand",
+                                  parent_prim_path=Sdf.Path.emptyPath,
+                                  volume_type=0, usd_context_name="", layer=None)
     except Exception as e:
         print(f"[NavMesh] CreateNavMeshVolumeCommand failed: {e}")
         return False, None
@@ -571,216 +563,46 @@ def try_bake_navmesh(offset_x=0.0, offset_y=0.0):
 
     new_volumes = [p.GetPath() for p in stage.Traverse()
                    if p.GetName().startswith("NavMeshVolume")
-                   and p.GetPath() not in existing]
+                   and p.GetPath() not in existing_vols]
     if not new_volumes:
         print("[NavMesh] Could not find new NavMeshVolume.")
         return False, None
-    volume_path = new_volumes[0]
-    print(f"[NavMesh] Created {volume_path}")
 
-    size_navmesh_volume(stage, volume_path,
+    size_navmesh_volume(stage, new_volumes[0],
                         padding=ARGS.volume_padding,
                         fallback_size=ARGS.fallback_size)
 
-    # Carve out furniture tops so characters don't climb onto tables/sofas
     if ARGS.semantic_map_json and os.path.exists(ARGS.semantic_map_json):
-        add_exclude_volumes_from_semantic_map(
-            stage, ARGS.semantic_map_json, ARGS.exclude_labels, offset_x=offset_x, offset_y=offset_y,
-        )
+        add_exclude_volumes_from_semantic_map(stage, ARGS.semantic_map_json)
     elif ARGS.semantic_map_json:
         print(f"[Exclude] semantic_map_json not found: {ARGS.semantic_map_json}")
 
-    print(f"[NavMesh] Warming up for {ARGS.warmup_frames} frames before bake...")
+    print(f"[NavMesh] Warming up {ARGS.warmup_frames} frames...")
     _update(ARGS.warmup_frames)
 
-    inav = nav.acquire_interface()
     print("[NavMesh] Baking...")
-    try:
-        inav.start_navmesh_baking_and_wait()
-        nm = inav.get_navmesh()
-        diagnose_navmesh_connectivity(nm)
+    inav.start_navmesh_baking_and_wait()
+    nm = inav.get_navmesh()
+    rp = safe_query_random_point(nm)
+    print(f"[NavMesh] OK. Sample point: {tuple(rp)}")
 
-        if ARGS.semantic_map_json and os.path.exists(ARGS.semantic_map_json):
-            stage = omni.usd.get_context().get_stage()
-            diagnose_coordinate_offset(ARGS.semantic_map_json, stage, flip_y=True)
-            
-    except Exception as e:
-        print(f"[NavMesh] Baking raised: {e}")
-        nm = None
-
-    if nm is None:
-        print("[NavMesh] FAILED.")
-        success = False
-    else:
-        try:
-            rp = safe_query_random_point(nm)
-            print(f"[NavMesh] OK. Sample random point: {tuple(rp)}")
-        except Exception as e:
-            print(f"[NavMesh] OK but query_random_point raised: {e}")
-        success = True
+    # ── 保存 delta（只存 Volume specs，不碰原始场景）──────────────────────
+    stage = omni.usd.get_context().get_stage()
+    save_navmesh_volumes_as_delta(stage, navvols_usda)
 
     if prev_vis == "invisible" and not ARGS.keep_collision_visible:
         set_subtree_visibility(stage, ARGS.collision_root, visible=False)
         _update(2)
 
-    return success, inav
+    return True, inav
 
-def diagnose_navmesh_connectivity(nm, n_samples=20):
-    """采样 NavMesh 点，测试连通性，打印孤岛分布"""
-    print("\n[ConnDiag] ── NavMesh Connectivity Diagnosis ──")
-    
-    # 1. 采样点
-    samples = []
-    for i in range(n_samples):
-        p = safe_query_random_point(nm, max_z=0.5)
-        if p is not None:
-            samples.append(p)
-            print(f"  sample_{i:02d}: ({float(p[0]):+.3f}, {float(p[1]):+.3f}, {float(p[2]):+.5f})")
-    
-    if len(samples) < 2:
-        print("[ConnDiag] Not enough samples.")
-        return
-    
-    # x/y 范围
-    xs = [float(p[0]) for p in samples]
-    ys = [float(p[1]) for p in samples]
-    print(f"[ConnDiag] Sample x range: [{min(xs):.2f}, {max(xs):.2f}]")
-    print(f"[ConnDiag] Sample y range: [{min(ys):.2f}, {max(ys):.2f}]")
-    print(f"[ConnDiag] Sample centroid: ({sum(xs)/len(xs):.2f}, {sum(ys)/len(ys):.2f})")
-    
-    # 2. 连通性矩阵：前5个点两两测试
-    print("[ConnDiag] Path reachability matrix (first 5 samples):")
-    test = samples[:5]
-    for i, a in enumerate(test):
-        row = []
-        for j, b in enumerate(test):
-            if i == j:
-                row.append(" ·")
-                continue
-            try:
-                fa = carb.Float3(float(a[0]), float(a[1]), float(a[2]))
-                fb = carb.Float3(float(b[0]), float(b[1]), float(b[2]))
-                path = nm.query_shortest_path(fa, fb)
-                row.append(" ✓" if _path_is_valid(path) else " ✗")
-            except Exception as e:
-                row.append(" E")
-                if j == 1 and i == 0:  # 只打印一次
-                    print(f"[ConnDiag] query_shortest_path exception: {type(e).__name__}: {e}")
-        print(f"  [{i}] ({float(test[i][0]):+.2f},{float(test[i][1]):+.2f}) → {''.join(row)}")
-    
-    print("[ConnDiag] ── End ──\n")
-
-
-def diagnose_coordinate_offset(semantic_map_json: str, stage, flip_y: bool = True):
-    """对比 semantic_map 坐标原点和 Isaac 场景 bbox，计算偏移"""
-    import json as _json
-    
-    print("\n[OffsetDiag] ── Coordinate Offset Diagnosis ──")
-    
-    # 读 semantic_map meta（需要 occupancy.json，从 semantic_map_json 路径推断）
-    sm_path = os.path.dirname(semantic_map_json)
-    # semantic_map_json 通常形如 .../2D_Semantic_Map_839873_Complete.json
-    # 对应场景 .../839873/occupancy.json
-    scene_id = os.path.basename(semantic_map_json).replace(
-        "2D_Semantic_Map_", "").replace("_Complete.json", "")
-    
-    # 尝试几个常见路径
-    occ_candidates = [
-        os.path.join(sm_path, scene_id, "occupancy.json"),
-        os.path.join(sm_path, "..", scene_id, "occupancy.json"),
-        os.path.join(sm_path, "..", "..", scene_id, "occupancy.json"),
-    ]
-    meta = None
-    for cand in occ_candidates:
-        cand = os.path.normpath(cand)
-        if os.path.exists(cand):
-            with open(cand) as f:
-                meta = _json.load(f)
-            print(f"[OffsetDiag] Loaded occupancy meta from: {cand}")
-            break
-    
-    if meta:
-        sm_origin_x = float(meta["min"][0])
-        sm_origin_y = float(meta["min"][1])
-        scale       = float(meta["scale"])
-        print(f"[OffsetDiag] semantic_map origin (min): x={sm_origin_x:.3f}, y={sm_origin_y:.3f}")
-        print(f"[OffsetDiag] semantic_map scale: {scale:.4f} m/pixel")
-        
-        if flip_y:
-            # flip_y: isaac_y = -sm_y，所以原点在 isaac_y = -sm_origin_y
-            print(f"[OffsetDiag] After flip_y: isaac_y_origin = {-sm_origin_y:.3f}")
-    else:
-        print("[OffsetDiag] Could not find occupancy.json, reading from semantic_map items directly")
-        with open(semantic_map_json) as f:
-            items = _json.load(f)
-        all_x = []
-        all_y = []
-        for it in items:
-            if "bbox_m" in it:
-                x_l, y_b, x_r, y_t = [float(v) for v in it["bbox_m"]]
-                all_x += [x_l, x_r]
-                all_y += [y_b, y_t]
-        if all_x:
-            sm_xmin, sm_xmax = min(all_x), max(all_x)
-            sm_ymin, sm_ymax = min(all_y), max(all_y)
-            print(f"[OffsetDiag] semantic_map all-items x range: [{sm_xmin:.2f}, {sm_xmax:.2f}]")
-            print(f"[OffsetDiag] semantic_map all-items y range (raw): [{sm_ymin:.2f}, {sm_ymax:.2f}]")
-            if flip_y:
-                print(f"[OffsetDiag] semantic_map all-items y range (flipped): [{-sm_ymax:.2f}, {-sm_ymin:.2f}]")
-    
-    # Isaac scene bbox
-    bbox = compute_scene_bbox(stage)
-    if bbox:
-        bmin, bmax = bbox
-        isaac_cx = (float(bmin[0]) + float(bmax[0])) * 0.5
-        isaac_cy = (float(bmin[1]) + float(bmax[1])) * 0.5
-        print(f"[OffsetDiag] Isaac scene bbox: x∈[{bmin[0]:.2f},{bmax[0]:.2f}] y∈[{bmin[1]:.2f},{bmax[1]:.2f}]")
-        print(f"[OffsetDiag] Isaac scene center: ({isaac_cx:.2f}, {isaac_cy:.2f})")
-        
-        if meta:
-            sm_cx = (sm_origin_x + float(meta.get("max", [0,0])[0])) * 0.5 if "max" in meta else None
-            # 直接算偏移
-            # 假设 semantic_map x 对应 isaac x（方向一致），y 翻转
-            # 则理论上：isaac_x = sm_x + offset_x
-            #           isaac_y = -sm_y + offset_y
-            # 如果家具中心在 semantic_map 里是 (sm_cx, sm_cy)
-            # 在 isaac 里对应 (sm_cx + offset_x, -sm_cy + offset_y)
-            # 我们知道 isaac scene center ≈ 家具分布中心
-            # 从 semantic_map items 估算家具中心
-            with open(semantic_map_json) as f:
-                items = _json.load(f)
-            furn_labels = {"table","chair","sofa","bed","wardrobe","desk","counter","cabinet"}
-            fxs, fys = [], []
-            for it in items:
-                if it.get("category_label","").lower() in furn_labels and "bbox_m" in it:
-                    x_l, y_b, x_r, y_t = [float(v) for v in it["bbox_m"]]
-                    fxs.append(0.5*(x_l+x_r))
-                    fys.append(0.5*(y_b+y_t))
-            if fxs:
-                sm_furn_cx = sum(fxs)/len(fxs)
-                sm_furn_cy = sum(fys)/len(fys)
-                print(f"[OffsetDiag] semantic_map furniture centroid (raw): ({sm_furn_cx:.2f}, {sm_furn_cy:.2f})")
-                print(f"[OffsetDiag] semantic_map furniture centroid (flip_y): ({sm_furn_cx:.2f}, {-sm_furn_cy:.2f})")
-                
-                # 估算需要的额外平移offset
-                est_offset_x = isaac_cx - sm_furn_cx
-                est_offset_y = isaac_cy - (-sm_furn_cy)
-                print(f"[OffsetDiag] ★ Estimated missing offset: dx={est_offset_x:.3f}, dy={est_offset_y:.3f}")
-                print(f"[OffsetDiag]   (if non-zero, add to cx/cy in add_exclude_volumes_from_semantic_map)")
-    
-    print("[OffsetDiag] ── End ──\n")
 # ═══════════════════════════════════════════════════════════════════════════
-# Character discovery (uses AssetPaths.default_character_path())
+# Character discovery
 # ═══════════════════════════════════════════════════════════════════════════
 EXCLUDED_CHARACTER_FOLDERS = {"biped_demo"}
 
 
 def load_character_assets() -> list[str]:
-    """List every character .usd file under AssetPaths.default_character_path().
-
-    AssetPaths resolves to a local path on Isaac Sim 5.x (bundled assets),
-    so this does NOT hit Nucleus and won't hang.
-    """
     assets_root_path = AssetPaths.default_character_path()
     print(f"[PEOPLE] Listing characters under {assets_root_path}")
 
@@ -810,9 +632,6 @@ def load_character_assets() -> list[str]:
 
 
 def spawn_character(idx: int, usd_path: str, spawn_xyz) -> str:
-    """Use CharacterUtil so the character gets loaded with the structure
-    omni.anim.people expects (SkelRoot at the right place, default xform ops,
-    correct name under PrimPaths.characters_parent_path())."""
     spawn_location = carb.Float3(float(spawn_xyz[0]),
                                  float(spawn_xyz[1]),
                                  float(spawn_xyz[2]))
@@ -826,10 +645,8 @@ def spawn_character(idx: int, usd_path: str, spawn_xyz) -> str:
     print(f"[PEOPLE] Spawned {prim_path}  usd={usd_path}  at={tuple(spawn_xyz)}")
     return prim_path
 
+
 def load_default_skeleton_and_animations():
-    """Create /World/Characters parent + biped template + populate_anim_graph.
-    Without this, SkelRoot can't find an Animation Graph to bind to."""
-    # Make sure CharacterBehavior can derive agent name from prim path
     from omni.anim.people.settings import PeopleSettings
     carb.settings.get_settings().set(
         PeopleSettings.CHARACTER_PRIM_PATH,
@@ -881,28 +698,23 @@ def bind_animation_graph_to_characters():
             animation_graph_path=Sdf.Path(ag_path),
         )
 
-        # ★ Explicitly point skel:animationGraph rel at the AG. Some
-        #   kit versions don't set the target through ApplyAnimationGraphAPICommand.
         rel = prim.GetRelationship("skel:animationGraph")
         if not rel:
             rel = prim.CreateRelationship("skel:animationGraph", custom=False)
         rel.SetTargets([ag_path])
 
-        # Verify
         targets = rel.GetTargets()
         print(f"[PEOPLE]   {skel_path}  skel:animationGraph → {list(targets)}")
 
     print(f"[PEOPLE] Animation graph bound to {len(skelroots)} SkelRoot(s).")
     _update(30)
 
+
 def attach_behavior_scripts_to_characters():
-    """Attach the omni.anim.people CharacterBehavior script so that GoTo
-    commands we push via CommandTextAPI are actually consumed.
-    Without this, every character just stands in its T-Pose."""
     stage = omni.usd.get_context().get_stage()
     skelroots = CharacterUtil.get_characters_in_stage()
     script_path = BehaviorScriptPaths.behavior_script_path()
-    print(f"[PEOPLE] CharacterBehavior script path: {script_path}")   # ← 加这行
+    print(f"[PEOPLE] CharacterBehavior script path: {script_path}")
     for prim in skelroots:
         skel_path = str(prim.GetPrimPath())
         if not prim.HasAttribute("omni:scripting:scripts"):
@@ -918,60 +730,87 @@ def attach_behavior_scripts_to_characters():
     for prim in CharacterUtil.get_characters_in_stage():
         rel = prim.GetRelationship("skel:animationGraph")
         ag_targets = list(rel.GetTargets()) if rel else []
-        has_ag = len(ag_targets) > 0
         print(f"[Diag] {prim.GetPath()}  typeName={prim.GetTypeName()}  "
               f"AG_targets={ag_targets}  applied={prim.GetAppliedSchemas()}")
 
+
 def _path_is_valid(path) -> bool:
-    """兼容 INavMeshPath 对象和列表两种返回形式"""
     if path is None:
         return False
-    # INavMeshPath 对象：用 get_points() 或 points 属性
     if hasattr(path, 'get_points'):
         pts = path.get_points()
         return pts is not None and len(pts) > 0
     if hasattr(path, 'points'):
         return path.points is not None and len(path.points) > 0
-    # 兼容直接返回列表的情况
     try:
         return len(path) > 0
     except TypeError:
-        # 对象存在但无 len，保守认为有效（说明路径找到了）
         return True
 
-def find_reachable_point(nm, from_xyz, max_attempts=50):
-    """从 from_xyz 出发，找一个 NavMesh 上可达的随机目标点"""
+def spawn_on_navmesh(nm) -> tuple:
+    """找一个离墙足够远、agent 能站稳的 spawn 点。"""
+    for _ in range(50):
+        p = safe_query_random_point(nm)
+        if p is None:
+            continue
+        # 用 query_closest_point 做 snap，确认落在可行走面上
+        try:
+            result = nm.query_closest_point(p, 0.5)
+            snapped = result[0] if result else None
+        except Exception:
+            snapped = p
+        if snapped is None:
+            continue
+        # 验证从 snapped 出发能找到至少一个可达目标
+        target = find_reachable_point(nm, snapped, max_attempts=20, min_dist=1.0)
+        if target is not None:
+            return snapped
+    return safe_query_random_point(nm)  # fallback
+
+def find_reachable_point(nm, from_xyz, max_attempts=50, min_dist=3.0):
     from_pt = carb.Float3(float(from_xyz[0]), float(from_xyz[1]), float(from_xyz[2]))
     for i in range(max_attempts):
         candidate = safe_query_random_point(nm)
         if candidate is None:
             continue
+        dx = float(candidate[0]) - float(from_xyz[0])
+        dy = float(candidate[1]) - float(from_xyz[1])
+        dist = (dx*dx + dy*dy) ** 0.5
+        if dist < min_dist:
+            continue
         to_pt = carb.Float3(float(candidate[0]), float(candidate[1]), float(candidate[2]))
         try:
-            path = nm.query_shortest_path(from_pt, to_pt)
+            path = nm.query_shortest_path(from_pt, to_pt, agent_radius=0.3)
             if _path_is_valid(path):
                 return candidate
         except Exception:
             continue
-    print(f"[NavMesh] WARNING: No reachable point found from {from_xyz[:2]} "
-          f"after {max_attempts} attempts — NavMesh may be disconnected")
-    return safe_query_random_point(nm)  # fallback
+
+    print(f"[NavMesh] WARNING: Relaxing min_dist to 1.0m")
+    for i in range(max_attempts):
+        candidate = safe_query_random_point(nm)
+        if candidate is None:
+            continue
+        dx = float(candidate[0]) - float(from_xyz[0])
+        dy = float(candidate[1]) - float(from_xyz[1])
+        if (dx*dx + dy*dy) ** 0.5 < 1.0:
+            continue
+        to_pt = carb.Float3(float(candidate[0]), float(candidate[1]), float(candidate[2]))
+        try:
+            path = nm.query_shortest_path(from_pt, to_pt, agent_radius=0.3)
+            if _path_is_valid(path):
+                return candidate
+        except Exception:
+            continue
+    return safe_query_random_point(nm)
+
 
 def write_initial_commands_to_scriptdata(char_prims: list[str],
-                                        nm,
-                                        n_waypoints: int = 20):
-    """Write a sequence of GoTo commands into each SkelRoot's
-    omni:scripting:scriptData. CharacterBehavior reads these in
-    init_character() when the timeline starts playing.
-
-    Important: CharacterBehavior strips the agent name prefix itself,
-    so the entries in scriptData should NOT include the name — it reads:
-        cmd_with_name = f"{self.character_name} {cmd.strip()}"
-    i.e., it prepends the name. So we just write "GoTo x y z _" here.
-    """
+                                         nm,
+                                         spawn_positions: dict,
+                                         n_waypoints: int = 20):
     stage = omni.usd.get_context().get_stage()
     for char_prim_path in char_prims:
-        # Find the SkelRoot under /World/Characters/Character/...
         char_prim = stage.GetPrimAtPath(char_prim_path)
         skelroot = None
         for desc in Usd.PrimRange(char_prim):
@@ -982,16 +821,27 @@ def write_initial_commands_to_scriptdata(char_prims: list[str],
             print(f"[CMD] No SkelRoot under {char_prim_path}, skipping")
             continue
 
-        # Build N random waypoints on the ground (low-z navmesh points)
+        current_pos = spawn_positions.get(char_prim_path)
+        if current_pos is None:
+            current_pos = safe_query_random_point(nm)
+        # ★ snap 到 NavMesh 最近点，防止 spawn 落点略微偏离可行走面
+        try:
+            result = nm.query_closest_point(current_pos, 0.5)
+            if result and result[0] is not None:
+                current_pos = result[0]
+        except Exception:
+            pass
+
         commands = []
+        prev_pos = current_pos
         for _ in range(n_waypoints):
-            spawn_pos = safe_query_random_point(nm)  # 或者用实际 spawn 坐标
-            p = find_reachable_point(nm, spawn_pos)
+            p = find_reachable_point(nm, prev_pos)
+            if p is None:
+                continue
             x, y, z = float(p[0]), float(p[1]), float(p[2])
             commands.append(f"GoTo {x} {y} {z} _")
+            prev_pos = p
 
-        # Write into scriptData on the SkelRoot (that's where the behavior
-        # script is attached, so that's where it reads from).
         attr = skelroot.GetAttribute("omni:scripting:scriptData")
         if not attr:
             attr = skelroot.CreateAttribute(
@@ -999,13 +849,13 @@ def write_initial_commands_to_scriptdata(char_prims: list[str],
                 Sdf.ValueTypeNames.StringArray,
             )
         attr.Set(commands)
-        # Sanity: read it back exactly the way CharacterBehavior will.
         readback = skelroot.GetAttribute("omni:scripting:scriptData").Get()
         print(f"[CMD] Readback length = "
               f"{len(readback) if readback else 0}, "
               f"first = {readback[0] if readback else None}")
         print(f"[CMD] Wrote {len(commands)} GoTo commands to {skelroot.GetPath()}")
-        
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # omni.anim.people command API
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1028,7 +878,7 @@ def _get_command_api():
 
 
 def send_goto(cmd_api, char_prim: str, target_xyz) -> bool:
-    agent_name = char_prim.rstrip("/").split("/")[-1]   # ← 加这一行
+    agent_name = char_prim.rstrip("/").split("/")[-1]
     cmd = f"{agent_name} GoTo {float(target_xyz[0])} {float(target_xyz[1])} {float(target_xyz[2])} _"
     try:
         cmd_api(cmd)
@@ -1036,6 +886,7 @@ def send_goto(cmd_api, char_prim: str, target_xyz) -> bool:
     except Exception as e:
         print(f"[CMD] Failed '{cmd}': {e}")
         return False
+
 
 def get_character_position(char_prim: str):
     try:
@@ -1060,8 +911,8 @@ def get_character_position(char_prim: str):
     except Exception:
         return None
 
+
 def frame_viewport_on(prim_path: str):
-    """Frame the active viewport camera on the given prim."""
     try:
         from omni.kit.viewport.utility import get_active_viewport
         vp = get_active_viewport()
@@ -1078,6 +929,8 @@ def frame_viewport_on(prim_path: str):
         print(f"[View] framed on {prim_path}")
     except Exception as e:
         print(f"[View] frame failed: {e}")
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1088,10 +941,13 @@ def main() -> int:
     if not open_stage(ARGS.usda):
         return 1
 
-    stage = omni.usd.get_context().get_stage()
-    # offset_x, offset_y = verify_one_furniture_alignment(stage, ARGS.semantic_map_json)
+    # Resolve cache file paths
+    navvols_usda = _cache_paths(ARGS.usda, ARGS.cache_dir)
 
-    nav_ok, inav = try_bake_navmesh() # offset_x=offset_x, offset_y=offset_y
+    if ARGS.force_rebake:
+        print("[Cache] --force_rebake set: ignoring existing cache.")
+
+    nav_ok, inav = try_bake_navmesh(navvols_usda, ARGS.force_rebake)
     if not nav_ok:
         print("\n[FATAL-ish] NavMesh bake failed — holding scene for inspection.")
         try:
@@ -1117,141 +973,55 @@ def main() -> int:
         print(f"[Check] navmesh post-World: random point {tuple(rp)}")
     except Exception as e:
         print(f"[Check] navmesh post-World probe failed: {e}")
-    # ── 5. Hold ──────────────────────────────────────────────────────────
-    print(f"\n[HOLD] Scene is open. "
-          f"{'Physics ON' if world is not None else 'Physics OFF'}. "
-          f"Ctrl+C to quit.\n")
 
-    last_probe = time.time()
+    # ── Spawn people ──────────────────────────────────────────────────────
+    char_prims: list[str] = []
+    char_spawn_positions: dict[str, tuple] = {}
+
+    char_pool = load_character_assets()
+    if not char_pool:
+        print("[PEOPLE] No character USDs found.")
+    else:
+        print(f"[PEOPLE] {len(char_pool)} character asset(s) available.")
+
+    for i in range(ARGS.num_people):
+        usd = random.choice(char_pool)
+        spawn = spawn_on_navmesh(nm)   # ← 替代 safe_query_random_point(nm)
+        prim = spawn_character(i, usd, spawn)
+        char_prims.append(prim)
+        char_spawn_positions[prim] = spawn
+
+    if char_prims:
+        frame_viewport_on(char_prims[0])
+        _update(5)
+
+    load_default_skeleton_and_animations()
+    _update(30)
+    bind_animation_graph_to_characters()
+    _update(30)
+
+    if char_prims:
+        write_initial_commands_to_scriptdata(char_prims, nm, char_spawn_positions, n_waypoints=3)
+        _update(10)
+
+    attach_behavior_scripts_to_characters()
+    _update(60)
+
+    tl = omni.timeline.get_timeline_interface()
+    tl.set_current_time(0.0)
+    tl.play()
+    _update(300)
+
+    print("\n[HOLD] Press Ctrl+C to quit.\n")
+
     try:
         while simulation_app.is_running():
-            if world is not None:
-                world.step(render=True)
-            else:
-                simulation_app.update()
-
+            simulation_app.update()
     except KeyboardInterrupt:
         print("\n[HOLD] Ctrl+C received, shutting down.")
 
     simulation_app.close()
     return 0
-
-    # Spawn people
-    # char_prims: list[str] = []
-    # if ARGS.num_people > 0:
-    #     char_pool = load_character_assets()
-    #     if not char_pool:
-    #         print("[PEOPLE] No character USDs found.")
-    #     else:
-    #         print(f"[PEOPLE] {len(char_pool)} character asset(s) available.")
-    #         for i in range(ARGS.num_people):
-    #             usd = random.choice(char_pool)
-    #             try:
-    #                 spawn = safe_query_random_point(nm)
-    #             except Exception as e:
-    #                 print(f"[PEOPLE] query_random_point failed for spawn {i}: {e}")
-    #                 break
-    #             try:
-    #                 prim = spawn_character(i, usd, spawn)
-    #                 char_prims.append(prim)
-    #             except Exception as e:
-    #                 print(f"[PEOPLE] spawn_character failed for {i}: {e}")
-
-    # load_default_skeleton_and_animations()
-    # _update(30)
-    # bind_animation_graph_to_characters()
-    # _update(30)
-
-    # # ★ Write scriptData FIRST, THEN attach scripts. Otherwise
-    # #   CharacterBehavior.on_init runs before scriptData exists and
-    # #   caches self.commands = [] permanently.
-    # if char_prims:
-    #     write_initial_commands_to_scriptdata(char_prims, nm, n_waypoints=30)
-    #     _update(10)
-
-    # attach_behavior_scripts_to_characters()
-    # _update(60)
-
-    # if char_prims:
-    #     frame_viewport_on(char_prims[0])
-    #     _update(5)
-
-    # tl = omni.timeline.get_timeline_interface()
-    # tl.set_current_time(0.0)
-    # tl.play()
-    # _update(10)
-
-    # cmd_api = _get_command_api()
-    # if cmd_api is None:
-    #     print("[INFO] CommandTextAPI not available; characters will follow "
-    #           "their initial scriptData commands only (no runtime waypoint updates).")
-    # elif char_prims:
-    #     # scriptData already has the initial waypoints; optionally add an
-    #     # extra live one so movement kicks off as soon as possible.
-    #     for p in char_prims:
-    #         send_goto(cmd_api, p, safe_query_random_point(nm))
-
-    # print("\n[HOLD] Press Ctrl+C to quit.\n")
-    # last_waypoint_t = {p: time.time() for p in char_prims}
-    # last_pos        = {p: None        for p in char_prims}
-    # last_probe      = time.time()
-    # MOVE_EPS        = 0.05
-
-    # try:
-    #     total_dist: dict[str, float] = {p: 0.0 for p in char_prims}
-    #     last_report = time.time()
-    #     REPORT_EVERY = 2.0   # seconds
-        
-    #     while simulation_app.is_running():
-    #         world.step(render=True)
-
-    #         if cmd_api is not None:
-    #             for p in char_prims:
-    #                 pos = get_character_position(p)
-    #                 if pos is not None:
-    #                     prev = last_pos[p]
-    #                     if prev is not None:
-    #                         step = np.linalg.norm(pos - prev)
-    #                         if step > MOVE_EPS:
-    #                             last_waypoint_t[p] = time.time()
-    #                         # accumulate distance per character for reporting
-    #                         total_dist[p] = total_dist.get(p, 0.0) + step
-    #                     last_pos[p] = pos
-
-    #                 if (time.time() - last_waypoint_t[p]) > ARGS.waypoint_timeout:
-    #                     try:
-    #                         pos = last_pos.get(p_char)
-    #                         if pos is not None:
-    #                             new_target = find_reachable_point(nm, pos)
-    #                         else:
-    #                             new_target = safe_query_random_point(nm)
-    #                         send_goto(cmd_api, p_char, new_target)
-    #                         last_waypoint_t[p] = time.time()
-    #                         print(f"[RUN] {p} → new waypoint {tuple(new_target)}")
-    #                     except Exception as e:
-    #                         print(f"[WARN] waypoint reissue for {p}: {e}")
-
-    #         if (time.time() - last_probe) > ARGS.navmesh_probe_interval:
-    #             try:
-    #                 rp = safe_query_random_point(nm)
-    #                 print(f"[probe] navmesh random point: {tuple(rp)}")
-    #             except Exception as e:
-    #                 print(f"[probe] failed: {e}")
-    #             last_probe = time.time()
-
-    #         if (time.time() - last_report) > REPORT_EVERY:
-    #             for p in char_prims:
-    #                 pos = last_pos.get(p)
-    #                 if pos is not None:
-    #                     print(f"[POS] {p}  pos=({pos[0]:+.2f},{pos[1]:+.2f},"
-    #                           f"{pos[2]:+.2f})  total_walked={total_dist[p]:.2f}m")
-    #             last_report = time.time()
-    # except KeyboardInterrupt:
-    #     print("\n[HOLD] Ctrl+C received, shutting down.")
-
-    # tl.stop()
-    # simulation_app.close()
-    # return 0
 
 
 if __name__ == "__main__":

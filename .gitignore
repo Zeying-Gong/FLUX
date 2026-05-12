@@ -36,3 +36,5 @@ v2_generate_social_nav_dataset_from_usd.py
 v2_generate_social_nav_dataset.py
 train_grpo.py
 temp/
+FLUX/baselines/ssw
+ssw

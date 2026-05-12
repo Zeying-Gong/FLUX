@@ -1,0 +1,12 @@
+=== ROBOT SAMPLING: Level 1 (strict) ===
+  [L1 OK attempt=89] geo=6.3m dist_euclid=5.8m island=1 area=7.8m² capacity=1
+=== PEDESTRIAN SAMPLING: 3 peds, island_plan=[1, 0, 0] ===
+--- ped0: target_island=1 same_island=True ---
+  ped0 swapped wpt[0]↔wpt[-1]: last dist 2.5m→5.7m from robot_goal
+  [ped0 OK attempt=1] island=1 dist_to_robot=3.5m chain_len=3
+--- ped1: target_island=0 same_island=False ---
+  [ped1 OK attempt=5] island=0 bg_ped chain_len=3
+--- ped2: target_island=0 same_island=False ---
+  [ped2 OK attempt=40] island=0 bg_ped chain_len=3
+=== DONE: 3/3 peds placed, 2.39s ===
+  [robot_path] len=114 pts
