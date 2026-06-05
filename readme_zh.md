@@ -199,7 +199,55 @@ FLUX/assets/dynbench
     └── Warehouse_multiple_shelves/
 ```
 
+### 🗂️ 数据集生成流程（`sage_utils/`）
 
+`sage_utils/` 目录提供一套**完全离线、CPU 并行**的 episode JSON 生成流程，用于构建社会导航与人员跟踪基准数据集。这些脚本**无需 Isaac Sim 即可运行**，支持大规模快速生成。
+
+#### Episode 生成 — 社会导航
+
+| 脚本 | 说明 |
+|------|------|
+| `sage_utils/generate_episode_fast.py` | 单场景 episode 生成器（纯 Python）。基于 PSDF 避障与可导航岛分配对机器人起/终点及行人位置进行采样。 |
+| `sage_utils/batch_episode_fast.py` | CPU 并行批调度器。使用 `ProcessPoolExecutor` 将多个场景的生成任务并行分发，支持 `--resume` 断点续跑与 `--workers` 进程数配置。 |
+
+```bash
+# 对所有场景生成共 100 个 episode（16 进程并行，自动断点续跑）
+python sage_utils/batch_episode_fast.py \
+    --sem_dir /path/to/semantic_maps \
+    --output_dir /path/to/episodes \
+    --total_episodes 100 --max_people 10 \
+    --resume --workers 16
+```
+
+#### Episode 生成 — 人员跟踪
+
+| 脚本 | 说明 |
+|------|------|
+| `sage_utils/generate_episode_fast_tracking.py` | 跟踪 episode 生成器。为机器人指定一名目标行人及多段路径点链。`--easy_mode` 可放宽距离、视线、岛约束并增加随机种子重试次数，适用于小场景或难以采样的场景。 |
+| `sage_utils/generate_episode_fast_tracking_hard.py` | 严格约束版本，适用于需要高难度跟踪场景的情形（不启用 easy-mode 宽松逻辑）。 |
+| `sage_utils/batch_episode_fast_tracking.py` | 跟踪 episode 并行批调度器。支持 `--easy_mode` 和 `--scene_ids`（仅重跑指定失败场景）。 |
+
+```bash
+# 以 easy-mode 生成 100 个跟踪 episode
+python sage_utils/batch_episode_fast_tracking.py \
+    --sem_dir /path/to/semantic_maps \
+    --output_dir /path/to/tracking_episodes \
+    --total_episodes 100 --max_people 10 \
+    --easy_mode --resume --workers 16
+```
+
+#### 角色外观分配
+
+`sage_utils/clothing_appearance.py` 为 episode 内每名行人分配独立的服装资产与逐部位颜色（取自 CSS-16 色板）。目标行人始终随机染色；干扰行人有 20% 概率保留默认外观。同一 episode 内颜色严格区分（不允许混淆组重叠），从而支持基于自然语言的跟踪指令（例如"跟随穿红色上衣和蓝色裤子的行人"）。
+
+#### 工具模块
+
+| 脚本 | 说明 |
+|------|------|
+| `sage_utils/occupancy_utils.py` | 通过 PhysX 光线投射在碰撞网格上构建 2-D 占用栅格，不依赖 NavMesh 内部接口。 |
+| `sage_utils/navmesh_utils.py` | NavMesh 烘焙辅助工具，支持增量层缓存——后续烘焙命中 Isaac Sim 内部缓存，耗时 < 1 秒。 |
+| `generate_pedestrian_trajectories.py` | 离线行人轨迹生成（需 Isaac Sim headless 模式进行 NavMesh 烘焙）。 |
+| `sage_utils/test_dataset_pipeline.py` | 交互式测试脚本：加载 USDA 场景与预生成 episode JSON，在仿真器中验证角色外观与轨迹。 |
 
 ### 📥 预训练权重
 
