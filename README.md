@@ -198,6 +198,56 @@ FLUX/assets/dynbench
     └── Warehouse_multiple_shelves/
 ```
 
+### 🗂️ Dataset Generation Pipeline (`sage_utils/`)
+
+The `sage_utils/` directory provides a **fully offline, CPU-parallel data pipeline** for generating episode JSON files used in social navigation and person-tracking benchmarks.  These scripts do **not** require Isaac Sim to run, enabling fast and scalable dataset creation.
+
+#### Episode Generation — Social Navigation
+
+| Script | Description |
+|--------|-------------|
+| `sage_utils/generate_episode_fast.py` | Single-scene episode generator (pure Python). Samples robot start/goal pairs and pedestrian placements with PSDF avoidance and navigable-island allocation. |
+| `sage_utils/batch_episode_fast.py` | CPU-parallel batch scheduler. Distributes episode generation across scenes using `ProcessPoolExecutor`; supports `--resume` and configurable `--workers`. |
+
+```bash
+# Generate 100 episodes across all scenes (16 workers, auto-resume)
+python sage_utils/batch_episode_fast.py \
+    --sem_dir /path/to/semantic_maps \
+    --output_dir /path/to/episodes \
+    --total_episodes 100 --max_people 10 \
+    --resume --workers 16
+```
+
+#### Episode Generation — Person Tracking
+
+| Script | Description |
+|--------|-------------|
+| `sage_utils/generate_episode_fast_tracking.py` | Tracking episode generator. Assigns a target pedestrian with a waypoint chain for the robot to follow. `--easy_mode` relaxes placement constraints (distance, LOS, island) for small or difficult scenes and adds seed-retry. |
+| `sage_utils/generate_episode_fast_tracking_hard.py` | Stricter variant for challenging tracking scenarios (no easy-mode relaxation). |
+| `sage_utils/batch_episode_fast_tracking.py` | Parallel batch scheduler for tracking episodes. Supports `--easy_mode` and `--scene_ids` for selective re-generation of failed scenes. |
+
+```bash
+# Generate 100 tracking episodes with easy-mode fallback
+python sage_utils/batch_episode_fast_tracking.py \
+    --sem_dir /path/to/semantic_maps \
+    --output_dir /path/to/tracking_episodes \
+    --total_episodes 100 --max_people 10 \
+    --easy_mode --resume --workers 16
+```
+
+#### Character Appearance Assignment
+
+`sage_utils/clothing_appearance.py` assigns each pedestrian in an episode a unique clothing asset and per-body-part color drawn from a 16-color CSS palette.  The target pedestrian is always recolored; distractor pedestrians have a 20 % chance of keeping the default appearance.  Colors within an episode are guaranteed to be visually distinct (no confusion-group overlap), enabling unambiguous language-grounded tracking instructions (e.g. *"follow the person in a red top and blue trousers"*).
+
+#### Utility Modules
+
+| Script | Description |
+|--------|-------------|
+| `sage_utils/occupancy_utils.py` | Builds a 2-D occupancy grid from the collision mesh via PhysX raycasts. Independent of NavMesh internal APIs. |
+| `sage_utils/navmesh_utils.py` | NavMesh bake helpers with delta-layer caching — subsequent bakes complete in < 1 s by hitting Isaac Sim's internal cache. |
+| `generate_pedestrian_trajectories.py` | Offline pedestrian trajectory generation using NavMesh bake (requires Isaac Sim in headless mode). |
+| `sage_utils/test_dataset_pipeline.py` | Interactive test: loads a USDA scene and a pre-generated episode JSON to verify character appearance and trajectories inside the simulator. |
+
 ### 📥 Pre-trained weights
 
 At the **FLUX repo root** (your host clone; inside the container: `/workspace/FLUX`), create a folder **`checkpoints`** and download **`flux_v1.ckpt`** into it.

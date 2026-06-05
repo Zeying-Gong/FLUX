@@ -1,0 +1,1007 @@
+{
+  "_meta": {
+    "num_assets": 21,
+    "asset_order": [
+      "F_Business_02",
+      "F_Medical_01",
+      "M_Medical_01",
+      "female_adult_police_01_new",
+      "female_adult_police_02",
+      "female_adult_police_03_new",
+      "male_adult_construction_01_new",
+      "male_adult_construction_03",
+      "male_adult_construction_05_new",
+      "male_adult_police_04",
+      "original_female_adult_business_02",
+      "original_female_adult_medical_01",
+      "original_female_adult_police_01",
+      "original_female_adult_police_02",
+      "original_female_adult_police_03",
+      "original_male_adult_construction_01",
+      "original_male_adult_construction_02",
+      "original_male_adult_construction_03",
+      "original_male_adult_construction_05",
+      "original_male_adult_medical_01",
+      "original_male_adult_police_04"
+    ],
+    "palette": {
+      "black": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "silver": [
+        0.753,
+        0.753,
+        0.753
+      ],
+      "gray": [
+        0.502,
+        0.502,
+        0.502
+      ],
+      "white": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "maroon": [
+        0.502,
+        0.0,
+        0.0
+      ],
+      "red": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "purple": [
+        0.502,
+        0.0,
+        0.502
+      ],
+      "fuchsia": [
+        1.0,
+        0.0,
+        1.0
+      ],
+      "green": [
+        0.0,
+        0.502,
+        0.0
+      ],
+      "lime": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "olive": [
+        0.502,
+        0.502,
+        0.0
+      ],
+      "yellow": [
+        1.0,
+        1.0,
+        0.0
+      ],
+      "navy": [
+        0.0,
+        0.0,
+        0.502
+      ],
+      "blue": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "teal": [
+        0.0,
+        0.502,
+        0.502
+      ],
+      "aqua": [
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    "part_to_category": {
+      "shirt": "top",
+      "tshirt": "top",
+      "scrubsshirt": "top",
+      "policeshirt": "top",
+      "labcoat": "top",
+      "jeans": "bottom",
+      "bluejeans": "bottom",
+      "workpants": "bottom",
+      "policepants": "bottom",
+      "scrubspants": "bottom",
+      "sneakers": "shoes",
+      "workboots": "shoes",
+      "tennisshoes": "shoes",
+      "policeshoes": "shoes",
+      "hardhat": "hat",
+      "policehat": "hat",
+      "policecap": "hat",
+      "vest": "vest",
+      "safetyvest": "vest"
+    }
+  },
+  "profiles": {
+    "F_Business_02": {
+      "asset": "F_Business_02",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/F_Business_02/F_Business_02.usd",
+      "parts": {
+        "tennisshoes": {
+          "category": "shoes",
+          "material_name": "opaque__leather__tennisshoes",
+          "default_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "default_color_word": "white",
+          "default_deltaE": 0.0
+        },
+        "bluejeans": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__bluejeans",
+          "default_rgb": [
+            0.0,
+            0.1121,
+            0.2296
+          ],
+          "default_color_word": "black",
+          "default_deltaE": 24.9
+        },
+        "shirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__shirt",
+          "default_rgb": [
+            0.2731,
+            0.2815,
+            0.196
+          ],
+          "default_color_word": "gray",
+          "default_deltaE": 27.6
+        },
+        "vest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__vest",
+          "default_rgb": [
+            0.8616,
+            0.4185,
+            0.9741
+          ],
+          "default_color_word": "fuchsia",
+          "default_deltaE": 35.0
+        }
+      }
+    },
+    "F_Medical_01": {
+      "asset": "F_Medical_01",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/F_Medical_01/F_Medical_01.usd",
+      "parts": {
+        "sneakers": {
+          "category": "shoes",
+          "material_name": "opaque__leather__sneakers",
+          "default_rgb": [
+            0.7185,
+            0.7185,
+            0.7185
+          ],
+          "default_color_word": "silver",
+          "default_deltaE": 3.2
+        },
+        "scrubspants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__scrubspants",
+          "default_rgb": [
+            0.8074,
+            0.3768,
+            0.3768
+          ],
+          "default_color_word": "maroon",
+          "default_deltaE": 33.8
+        },
+        "scrubsshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__scrubsshirt",
+          "default_rgb": [
+            1.0,
+            0.9297,
+            0.463
+          ],
+          "default_color_word": "yellow",
+          "default_deltaE": 38.0
+        }
+      }
+    },
+    "M_Medical_01": {
+      "asset": "M_Medical_01",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/M_Medical_01/M_Medical_01.usd",
+      "parts": {
+        "labcoat": {
+          "category": "top",
+          "material_name": "opaque__fabric__labcoat",
+          "default_rgb": [
+            0.0926,
+            0.0446,
+            0.0446
+          ],
+          "default_color_word": "black",
+          "default_deltaE": 6.5
+        },
+        "scrubspants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__scrubspants",
+          "default_rgb": [
+            0.1,
+            0.0708,
+            0.0
+          ],
+          "default_color_word": "black",
+          "default_deltaE": 10.6
+        },
+        "scrubsshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__scrubsshirt",
+          "default_rgb": [
+            0.3148,
+            0.3148,
+            0.3148
+          ],
+          "default_color_word": "gray",
+          "default_deltaE": 19.4
+        },
+        "sneakers": {
+          "category": "shoes",
+          "material_name": "opaque__leather__sneakers",
+          "default_rgb": [
+            0.2259,
+            0.2109,
+            0.2109
+          ],
+          "default_color_word": "black",
+          "default_deltaE": 23.0
+        }
+      }
+    },
+    "female_adult_police_01_new": {
+      "asset": "female_adult_police_01_new",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/female_adult_police_01_new/female_adult_police_01_new.usd",
+      "parts": {
+        "policepants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__policepants",
+          "default_rgb": [
+            0.3591,
+            0.3591,
+            0.3591
+          ],
+          "default_color_word": "gray",
+          "default_deltaE": 14.7
+        },
+        "policeshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__policeshirt",
+          "default_rgb": [
+            0.0402,
+            0.0512,
+            0.3475
+          ],
+          "default_color_word": "navy",
+          "default_deltaE": 27.5
+        },
+        "policeshoes": {
+          "category": "shoes",
+          "material_name": "opaque__leather__policeshoes",
+          "default_rgb": [
+            0.6834,
+            0.4644,
+            0.4644
+          ],
+          "default_color_word": "gray",
+          "default_deltaE": 23.7
+        }
+      }
+    },
+    "female_adult_police_02": {
+      "asset": "female_adult_police_02",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/female_adult_police_02/female_adult_police_02.usd",
+      "parts": {
+        "policehat": {
+          "category": "hat",
+          "material_name": "opaque__fabric__policehat",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "safetyvest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__safetyvest",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policepants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__policepants",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policeshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__policeshirt",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policeshoes": {
+          "category": "shoes",
+          "material_name": "opaque__leather__policeshoes",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        }
+      }
+    },
+    "female_adult_police_03_new": {
+      "asset": "female_adult_police_03_new",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/female_adult_police_03_new/female_adult_police_03_new.usd",
+      "parts": {
+        "policeshoes": {
+          "category": "shoes",
+          "material_name": "opaque__leather__policeshoes",
+          "default_rgb": [
+            0.2741,
+            0.0487,
+            0.0487
+          ],
+          "default_color_word": "maroon",
+          "default_deltaE": 33.4
+        },
+        "policepants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__policepants",
+          "default_rgb": [
+            0.0533,
+            0.0364,
+            0.2548
+          ],
+          "default_color_word": "navy",
+          "default_deltaE": 40.5
+        },
+        "policeshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__policeshirt",
+          "default_rgb": [
+            0.3017,
+            0.2797,
+            0.4093
+          ],
+          "default_color_word": "gray",
+          "default_deltaE": 30.1
+        }
+      }
+    },
+    "male_adult_construction_01_new": {
+      "asset": "male_adult_construction_01_new",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/male_adult_construction_01_new/male_adult_construction_01_new.usd",
+      "parts": {
+        "vest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__vest",
+          "default_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "default_color_word": "white",
+          "default_deltaE": 0.0
+        },
+        "workpants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__workpants",
+          "default_rgb": [
+            0.0343,
+            0.1892,
+            0.0124
+          ],
+          "default_color_word": "black",
+          "default_deltaE": 36.4
+        },
+        "tshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__tshirt",
+          "default_rgb": [
+            0.9274,
+            0.9421,
+            0.8111
+          ],
+          "default_color_word": "white",
+          "default_deltaE": 18.2
+        },
+        "hardhat": {
+          "category": "hat",
+          "material_name": "opaque__plastic__hardhat",
+          "default_rgb": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "default_color_word": "red",
+          "default_deltaE": 0.0
+        }
+      }
+    },
+    "male_adult_construction_03": {
+      "asset": "male_adult_construction_03",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/male_adult_construction_03/male_adult_construction_03.usd",
+      "parts": {
+        "jeans": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__jeans",
+          "default_rgb": [
+            0.4236,
+            0.2792,
+            0.2792
+          ],
+          "default_color_word": "gray",
+          "default_deltaE": 25.7
+        },
+        "safetyvest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__safetyvest",
+          "default_rgb": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "default_color_word": "black",
+          "default_deltaE": 0.0
+        },
+        "workboots": {
+          "category": "shoes",
+          "material_name": "opaque__leather__workboots",
+          "default_rgb": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "default_color_word": "black",
+          "default_deltaE": 0.0
+        },
+        "shirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__shirt",
+          "default_rgb": [
+            0.3694,
+            0.3694,
+            0.3694
+          ],
+          "default_color_word": "gray",
+          "default_deltaE": 13.6
+        }
+      }
+    },
+    "male_adult_construction_05_new": {
+      "asset": "male_adult_construction_05_new",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/male_adult_construction_05_new/male_adult_construction_05_new.usd",
+      "parts": {
+        "jeans": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__jeans",
+          "default_rgb": [
+            0.4248,
+            0.6089,
+            0.7915
+          ],
+          "default_color_word": "gray",
+          "default_deltaE": 30.4
+        },
+        "tshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__tshirt",
+          "default_rgb": [
+            0.1555,
+            0.0,
+            0.2548
+          ],
+          "default_color_word": "purple",
+          "default_deltaE": 34.9
+        },
+        "safetyvest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__safetyvest",
+          "default_rgb": [
+            0.9575,
+            1.0,
+            0.0
+          ],
+          "default_color_word": "yellow",
+          "default_deltaE": 4.6
+        },
+        "workboots": {
+          "category": "shoes",
+          "material_name": "opaque__leather__workboots",
+          "default_rgb": [
+            1.0,
+            0.6012,
+            0.0
+          ],
+          "default_color_word": "olive",
+          "default_deltaE": 51.8
+        },
+        "hardhat": {
+          "category": "hat",
+          "material_name": "opaque__plastic__hardhat",
+          "default_rgb": [
+            0.9583,
+            1.0,
+            0.0
+          ],
+          "default_color_word": "yellow",
+          "default_deltaE": 4.5
+        }
+      }
+    },
+    "male_adult_police_04": {
+      "asset": "male_adult_police_04",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/male_adult_police_04/male_adult_police_04.usd",
+      "parts": {
+        "policeshoes": {
+          "category": "shoes",
+          "material_name": "opaque__leather__policeshoes",
+          "default_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "default_color_word": "white",
+          "default_deltaE": 0.0
+        },
+        "policepants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__policepants",
+          "default_rgb": [
+            0.8312,
+            0.6638,
+            0.5559
+          ],
+          "default_color_word": "silver",
+          "default_deltaE": 23.9
+        },
+        "policeshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__policeshirt",
+          "default_rgb": [
+            0.3057,
+            0.0,
+            0.0
+          ],
+          "default_color_word": "maroon",
+          "default_deltaE": 25.3
+        }
+      }
+    },
+    "original_female_adult_business_02": {
+      "asset": "original_female_adult_business_02",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/original_female_adult_business_02/female_adult_business_02.usd",
+      "parts": {
+        "tennisshoes": {
+          "category": "shoes",
+          "material_name": "opaque__leather__tennisshoes",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "bluejeans": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__bluejeans",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "shirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__shirt",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "vest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__vest",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        }
+      }
+    },
+    "original_female_adult_medical_01": {
+      "asset": "original_female_adult_medical_01",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/original_female_adult_medical_01/female_adult_medical_01.usd",
+      "parts": {
+        "sneakers": {
+          "category": "shoes",
+          "material_name": "opaque__leather__sneakers",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "scrubspants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__scrubspants",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "scrubsshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__scrubsshirt",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        }
+      }
+    },
+    "original_female_adult_police_01": {
+      "asset": "original_female_adult_police_01",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/original_female_adult_police_01/female_adult_police_01.usd",
+      "parts": {
+        "policepants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__policepants",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policeshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__policeshirt",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policeshoes": {
+          "category": "shoes",
+          "material_name": "opaque__leather__policeshoes",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "safetyvest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__safetyvest",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policehat": {
+          "category": "hat",
+          "material_name": "opaque__fabric__policehat",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        }
+      }
+    },
+    "original_female_adult_police_02": {
+      "asset": "original_female_adult_police_02",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/original_female_adult_police_02/female_adult_police_02.usd",
+      "parts": {
+        "policehat": {
+          "category": "hat",
+          "material_name": "opaque__fabric__policehat",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "safetyvest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__safetyvest",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policepants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__policepants",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policeshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__policeshirt",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policeshoes": {
+          "category": "shoes",
+          "material_name": "opaque__leather__policeshoes",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        }
+      }
+    },
+    "original_female_adult_police_03": {
+      "asset": "original_female_adult_police_03",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/original_female_adult_police_03/female_adult_police_03.usd",
+      "parts": {
+        "policeshoes": {
+          "category": "shoes",
+          "material_name": "opaque__leather__policeshoes",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policepants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__policepants",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policeshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__policeshirt",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "safetyvest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__safetyvest",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policecap": {
+          "category": "hat",
+          "material_name": "opaque__fabric__policecap",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        }
+      }
+    },
+    "original_male_adult_construction_01": {
+      "asset": "original_male_adult_construction_01",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/original_male_adult_construction_01/male_adult_construction_01.usd",
+      "parts": {
+        "vest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__vest",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "workpants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__workpants",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "tshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__tshirt",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "hardhat": {
+          "category": "hat",
+          "material_name": "opaque__plastic__hardhat",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        }
+      }
+    },
+    "original_male_adult_construction_02": {
+      "asset": "original_male_adult_construction_02",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/original_male_adult_construction_02/male_adult_construction_02.usd",
+      "parts": {
+        "hardhat": {
+          "category": "hat",
+          "material_name": "opaque__plastic__hardhat",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "safetyvest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__safetyvest",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "tshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__tshirt",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "workpants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__workpants",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "workboots": {
+          "category": "shoes",
+          "material_name": "opaque__leather__workboots",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        }
+      }
+    },
+    "original_male_adult_construction_03": {
+      "asset": "original_male_adult_construction_03",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/original_male_adult_construction_03/male_adult_construction_03.usd",
+      "parts": {
+        "hardhat": {
+          "category": "hat",
+          "material_name": "opaque__plastic__hardhat",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "jeans": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__jeans",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "safetyvest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__safetyvest",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "workboots": {
+          "category": "shoes",
+          "material_name": "opaque__leather__workboots",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "shirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__shirt",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        }
+      }
+    },
+    "original_male_adult_construction_05": {
+      "asset": "original_male_adult_construction_05",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/original_male_adult_construction_05/male_adult_construction_05.usd",
+      "parts": {
+        "jeans": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__jeans",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "tshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__tshirt",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "safetyvest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__safetyvest",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "workboots": {
+          "category": "shoes",
+          "material_name": "opaque__leather__workboots",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "hardhat": {
+          "category": "hat",
+          "material_name": "opaque__plastic__hardhat",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        }
+      }
+    },
+    "original_male_adult_medical_01": {
+      "asset": "original_male_adult_medical_01",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/original_male_adult_medical_01/male_adult_medical_01.usd",
+      "parts": {
+        "labcoat": {
+          "category": "top",
+          "material_name": "opaque__fabric__labcoat",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "scrubspants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__scrubspants",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "scrubsshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__scrubsshirt",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "sneakers": {
+          "category": "shoes",
+          "material_name": "opaque__leather__sneakers",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        }
+      }
+    },
+    "original_male_adult_police_04": {
+      "asset": "original_male_adult_police_04",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/original_male_adult_police_04/male_adult_police_04.usd",
+      "parts": {
+        "policehat": {
+          "category": "hat",
+          "material_name": "opaque__fabric__policehat",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "safetyvest": {
+          "category": "vest",
+          "material_name": "opaque__fabric__safetyvest",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policeshoes": {
+          "category": "shoes",
+          "material_name": "opaque__leather__policeshoes",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policepants": {
+          "category": "bottom",
+          "material_name": "opaque__fabric__policepants",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        },
+        "policeshirt": {
+          "category": "top",
+          "material_name": "opaque__fabric__policeshirt",
+          "default_rgb": null,
+          "default_color_word": null,
+          "default_deltaE": null
+        }
+      }
+    }
+  }
+}

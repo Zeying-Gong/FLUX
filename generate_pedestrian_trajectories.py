@@ -166,7 +166,7 @@ def add_exclude_volumes_from_semantic_map(stage, semantic_map_json,
         items = _json.load(f)
 
     exclude_label_set = ["table", "chair", "sofa", "bed", "wardrobe",
-                            "desk", "counter", "cabinet"]
+                            "car", "desk", "counter", "cabinet"]
 
     # ★ 用 mask_coords_m 算全局边界，和 trajectory_2d_to_3d.py 完全一致
     all_y, all_x = [], []

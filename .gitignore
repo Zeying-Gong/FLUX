@@ -38,3 +38,14 @@ train_grpo.py
 temp/
 FLUX/baselines/ssw
 ssw
+
+# 排除大型数据目录
+assets/isaacsim_assets/
+sage_utils/sage3d_human_episodes/
+
+# 排除生成的预览图片目录
+sage_utils/clothing_previews/
+sage_utils/palette_previews/
+sage_utils/recolor_check/
+sage_utils/debug_vln_vis/
+*.png

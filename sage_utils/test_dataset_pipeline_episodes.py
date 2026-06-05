@@ -2,9 +2,14 @@
 test_dataset_pipeline.py
 ────────────────────────
 Load a USDA scene + a pre-generated episode JSON and run the people
-simulation interactively.
+simulation.  After all characters finish their commands, the simulation
+ends automatically.
 
-Episode resolution
+Supports batch processing of multiple episodes via:
+    --episode_start_index  START
+    --episode_end_index    END
+
+Episode resolution (single episode mode, without --episode_start_index/--episode_end_index)
 ------------------
 Given  --usda /workspace/SAGE-3D_Official/SAGE-3D_data/usda/839873.usda
 
@@ -28,9 +33,19 @@ Usage
         --usda /workspace/SAGE-3D_Official/SAGE-3D_data/usda/839873.usda \
         --episode_json /workspace/SAGE-3D_Official/SAGE-3D_data/episodes/839873/episode_0.json
 
+    # Batch run episodes 0 to 5 (inclusive)
+    python test_dataset_pipeline.py \
+        --usda /workspace/SAGE-3D_Official/SAGE-3D_data/usda/839873.usda \
+        --episode_start_index 0 --episode_end_index 5
+
+    # Run only episode 3
+    python test_dataset_pipeline.py \
+        --usda /workspace/SAGE-3D_Official/SAGE-3D_data/usda/839873.usda \
+        --episode_start_index 3
+
     # Custom episodes root (overrides the auto-derived path)
     python test_dataset_pipeline.py \
-        --usda ... --episodes_root /my/episodes
+        --usda ... --episodes_root /my/episodes --episode_start_index 0 --episode_end_index 2
 """
 from __future__ import annotations
 import argparse
@@ -57,6 +72,13 @@ def parse_args():
                         "(e.g. .../episodes/).  Defaults to "
                         "<usda_parent>/../episodes/.")
 
+    # Batch range
+    p.add_argument("--episode_start_index", type=int, default=None,
+                   help="Start index for batch episode execution (inclusive).")
+    p.add_argument("--episode_end_index", type=int, default=None,
+                   help="End index for batch episode execution (inclusive). "
+                        "If omitted and start is given, only that episode is run.")
+
     # NavMesh
     p.add_argument("--collision_root",          default="/World/scene_collision")
     p.add_argument("--volume_padding",          type=float, default=1.2)
@@ -69,10 +91,7 @@ def parse_args():
 
     # Misc
     p.add_argument("--seed",              type=int, default=0)
-    p.add_argument("--semantic_map_json", default=None,
-                    help="[DEPRECATED] No longer used. Furniture avoidance is "
-                            "done at episode planning time via ESDF/PSDF; the "
-                            "NavMesh now only carves out walls and unable-areas.")
+    p.add_argument("--semantic_map_json", default=None)
     p.add_argument("--cache_dir",         default=None)
     p.add_argument("--force_rebake",      action="store_true")
     return p.parse_args()
@@ -82,7 +101,7 @@ ARGS = parse_args()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# SimulationApp
+# SimulationApp – created once, shared across episodes
 # ═══════════════════════════════════════════════════════════════════════════
 from isaacsim import SimulationApp
 
@@ -137,33 +156,35 @@ from isaacsim.replicator.agent.core.stage_util import CharacterUtil
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Episode resolution
+# Episode resolution helpers
 # ═══════════════════════════════════════════════════════════════════════════
-def _resolve_episode_json() -> str | None:
-    """Return path to the episode JSON to use, or None if not found."""
-    # 1. Explicit override
-    if ARGS.episode_json:
-        if os.path.exists(ARGS.episode_json):
-            return ARGS.episode_json
-        print(f"[Episode] --episode_json not found: {ARGS.episode_json}")
-        return None
-
-    # 2. Auto-derive directory from scene stem
-    scene_id = os.path.splitext(os.path.basename(ARGS.usda))[0]   # "839873"
+def _get_episode_dir() -> str | None:
+    """Return the directory where episode JSONs are expected."""
+    scene_id = os.path.splitext(os.path.basename(ARGS.usda))[0]
     if ARGS.episodes_root:
         ep_dir = os.path.join(ARGS.episodes_root, scene_id)
     else:
         usda_dir = os.path.dirname(os.path.abspath(ARGS.usda))
         parent   = os.path.dirname(usda_dir)
         ep_dir   = os.path.join(parent, "episodes", scene_id)
+    return ep_dir
 
+
+def _resolve_single_episode() -> str | None:
+    """Original single‑episode resolution (no batch mode)."""
+    if ARGS.episode_json:
+        if os.path.exists(ARGS.episode_json):
+            return ARGS.episode_json
+        print(f"[Episode] --episode_json not found: {ARGS.episode_json}")
+        return None
+
+    ep_dir = _get_episode_dir()
     print(f"[Episode] Looking for episodes in: {ep_dir}")
 
     if not os.path.isdir(ep_dir):
         print(f"[Episode] Directory not found — will run random-walk fallback.")
         return None
 
-    # Collect episode_*.json and sort by episode id number
     candidates = glob.glob(os.path.join(ep_dir, "episode_*.json"))
     if not candidates:
         print(f"[Episode] No episode_*.json files found — will run random-walk fallback.")
@@ -176,10 +197,49 @@ def _resolve_episode_json() -> str | None:
             return 99999
 
     candidates.sort(key=_ep_id)
-    chosen = candidates[0]
+    chosen = candidates[2]  # original behavior
     print(f"[Episode] Auto-selected: {chosen}  "
           f"(total available: {len(candidates)})")
     return chosen
+
+
+def _resolve_batch_episodes() -> list[str]:
+    """Return a sorted list of episode JSON paths for the given index range."""
+    start = ARGS.episode_start_index
+    end   = ARGS.episode_end_index
+
+    # Determine actual start/end
+    if start is None and end is None:
+        return []   # should not happen, caller checks
+    if start is None:
+        start = 0
+    if end is None:
+        end = start
+
+    if start > end:
+        print(f"[Batch] Invalid range: start={start} > end={end}")
+        return []
+
+    ep_dir = _get_episode_dir()
+    if not os.path.isdir(ep_dir):
+        print(f"[Batch] Episode directory not found: {ep_dir}")
+        return []
+
+    all_jsons = glob.glob(os.path.join(ep_dir, "episode_*.json"))
+    # Filter by index
+    selected = []
+    for path in all_jsons:
+        name = os.path.basename(path)
+        stem = os.path.splitext(name)[0]   # episode_XX
+        try:
+            idx = int(stem.split("_")[1])
+        except (IndexError, ValueError):
+            continue
+        if start <= idx <= end:
+            selected.append((idx, path))
+
+    selected.sort(key=lambda x: x[0])
+    return [p for _, p in selected]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -325,16 +385,46 @@ def _write_episode_commands(stage, spawn_positions: dict, commands_dict: dict):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Main
+# Auto‑finish helper
 # ═══════════════════════════════════════════════════════════════════════════
-def main() -> int:
-    random.seed(ARGS.seed)
-    np.random.seed(ARGS.seed)
+def _all_characters_finished(char_prims: list[str]) -> bool:
+    """Return True if every character's behavior script has finished."""
+    stage = omni.usd.get_context().get_stage()
+    if stage is None:
+        return False
 
-    # ── Resolve episode ────────────────────────────────────────────────────
-    episode_json_path = _resolve_episode_json()
+    for p in char_prims:
+        prim = stage.GetPrimAtPath(p)
+        if not prim.IsValid():
+            continue
+
+        skelroot = None
+        for desc in Usd.PrimRange(prim):
+            if desc.GetTypeName() == "SkelRoot":
+                skelroot = desc
+                break
+        if skelroot is None:
+            return False
+
+        state_attr = skelroot.GetAttribute("omni:scripting:scriptState")
+        if not state_attr:
+            return False
+        state = state_attr.Get()
+        if state != "finished":
+            return False
+    return True
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Single episode runner (called once per episode, may be reused)
+# ═══════════════════════════════════════════════════════════════════════════
+def run_one_episode(episode_json_path: str | None) -> bool:
+    """
+    Run a single episode (or random walk if json_path is None).
+    Returns True if characters finished normally, False on error/timeout.
+    """
+    # ── Load episode data ─────────────────────────────────────────────────
     episode: dict | None = None
-
     if episode_json_path:
         with open(episode_json_path, encoding="utf-8") as f:
             raw = json.load(f)
@@ -342,26 +432,17 @@ def main() -> int:
         if episode is None:
             print(f"[Episode] WARNING: 'episode' key missing in {episode_json_path}, "
                   "falling back to random walk.")
-            episode = None
         else:
             ep_id      = episode.get("episode_id", "?")
             num_chars  = episode["characters"].get("num_characters", "?")
             print(f"[Episode] Loaded episode {ep_id}  "
                   f"({num_chars} character(s))  ← {episode_json_path}")
 
-    # ── Open scene ─────────────────────────────────────────────────────────
+    # ── Open scene ────────────────────────────────────────────────────────
     if not open_stage(ARGS.usda):
-        return 1
+        return False
 
-# ── NavMesh ────────────────────────────────────────────────────────────
-    # NOTE: We intentionally pass semantic_map_json=None.
-    # Furniture avoidance is enforced at the *episode planning* stage
-    # (generate_episode_fast.py uses ESDF over wall+unable-area mask, so the
-    # predicomputed paths in `pathData` already steer around furniture).
-    # The behavior-script patch reads `omni:scripting:pathData` and bypasses
-    # NavMesh re-routing, so we don't need to carve furniture out of the
-    # NavMesh itself.  This saves baking time and avoids coordinate-frame
-    # mismatch issues.
+    # ── NavMesh ───────────────────────────────────────────────────────────
     navvols_usda = cache_paths(ARGS.usda, ARGS.cache_dir)
     print(f"[Cache] NavVols USDA : {navvols_usda}")
 
@@ -373,25 +454,17 @@ def main() -> int:
         volume_padding         = ARGS.volume_padding,
         fallback_size          = ARGS.fallback_size,
         warmup_frames          = ARGS.warmup_frames,
-        semantic_map_json      = None,   # ← furniture handled at planning stage
+        semantic_map_json      = ARGS.semantic_map_json,
     )
     if not nav_ok:
-        print("\n[FATAL-ish] NavMesh bake failed — holding for inspection.")
-        try:
-            while simulation_app.is_running():
-                simulation_app.update()
-        except KeyboardInterrupt:
-            pass
-        simulation_app.close()
-        return 2
+        print("[FATAL-ish] NavMesh bake failed — cannot run this episode.")
+        return False
 
     nm = inav.get_navmesh()
-
-    # ── Hide NavMesh volumes ───────────────────────────────────────────────
     _hide_navmesh_volumes()
     _update(10)
 
-    # ── Physics world ──────────────────────────────────────────────────────
+    # ── Physics world ─────────────────────────────────────────────────────
     print("\n[World] Creating World + physicsScene...")
     from isaacsim.core.api import World
     world = World(physics_dt=1.0/60.0, rendering_dt=1.0/30.0)
@@ -404,13 +477,13 @@ def main() -> int:
     if rp:
         print(f"[Check] NavMesh post-World: {tuple(rp)}")
 
-    # ── Character pool ─────────────────────────────────────────────────────
+    # ── Character pool ────────────────────────────────────────────────────
     char_pool = load_character_assets()
     print(f"[PEOPLE] {len(char_pool)} asset(s) available.")
 
-    # ── Spawn + command setup ──────────────────────────────────────────────
+    # ── Spawn + command setup ─────────────────────────────────────────────
     if episode is not None:
-
+        # Optional: check spawn points vs navmesh
         spawn_positions = episode["characters"]["spawn_positions"]
         for char_name, sp_data in spawn_positions.items():
             pos = sp_data["pos"]
@@ -420,25 +493,17 @@ def main() -> int:
             print(f"[NavMesh Check] {char_name} spawn {pos} → "
                   f"closest NavMesh point: {snapped}")
             if snapped:
-                # 测试能否从 snapped 点到场景中心
                 center = carb.Float3(0.0, 5.0, 0.0)
                 path = nm.query_shortest_path(snapped, center, agent_radius=0.5)
                 print(f"[NavMesh Check] path to center: "
                       f"{'OK' if path else 'FAILED'}")
 
-        # ── Episode mode ──────────────────────────────────────────────────
         print("\n[Mode] EPISODE — spawning from JSON data.")
-        ## dynamic avoidance
-        # settings = carb.settings.get_settings()
-        # settings.set(PeopleSettings.DYNAMIC_AVOIDANCE_ENABLED, True)
         char_prims = _setup_characters_from_episode(episode, char_pool)
-
     else:
-        # ── Random-walk fallback ──────────────────────────────────────────
         print("\n[Mode] RANDOM WALK — no episode JSON available.")
-        char_prims:           list[str]        = []
+        char_prims: list[str] = []
         char_spawn_positions: dict[str, tuple] = {}
-
         for i in range(ARGS.num_people):
             usd   = random.choice(char_pool)
             spawn = spawn_on_navmesh(nm)
@@ -459,26 +524,76 @@ def main() -> int:
         attach_behavior_scripts_to_characters(simulation_app)
         _update(60)
 
-    # ── Frame viewport on first character ─────────────────────────────────
+    # ── Frame viewport on first character ────────────────────────────────
     if char_prims:
         frame_viewport_on(char_prims[0])
         _update(5)
 
-    # ── Play ───────────────────────────────────────────────────────────────
+    # ── Play and wait for finish ──────────────────────────────────────────
     tl = omni.timeline.get_timeline_interface()
     tl.set_current_time(0.0)
     tl.play()
-    # _update(300)
+    _update(60)   # let scripts start
 
-    print("\n[HOLD] Press Ctrl+C to quit.\n")
-    try:
-        while simulation_app.is_running():
-            simulation_app.update()
-    except KeyboardInterrupt:
-        print("\n[HOLD] Ctrl+C received, shutting down.")
+    print("\n[HOLD] Waiting for all characters to finish their commands...\n")
+    timeout_frames = 3600   # ~60 seconds
+    finished_normally = False
 
-    simulation_app.close()
-    return 0
+    for _ in range(timeout_frames):
+        if _all_characters_finished(char_prims):
+            print("[Done] All characters have finished their commands.")
+            finished_normally = True
+            break
+        simulation_app.update()
+    else:
+        print("[Timeout] Characters did not finish within the time limit.")
+
+    tl.stop()
+    return finished_normally
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Main
+# ═══════════════════════════════════════════════════════════════════════════
+def main() -> int:
+    random.seed(ARGS.seed)
+    np.random.seed(ARGS.seed)
+
+    # Determine if batch mode is requested
+    batch_mode = (ARGS.episode_start_index is not None) or (ARGS.episode_end_index is not None)
+
+    if batch_mode:
+        episode_paths = _resolve_batch_episodes()
+        if not episode_paths:
+            print("[Batch] No episodes found in the specified range. Exiting.")
+            simulation_app.close()
+            return 1
+
+        total = len(episode_paths)
+        print(f"\n[Batch] Running {total} episode(s).\n")
+        success_count = 0
+
+        for idx, ep_path in enumerate(episode_paths, start=1):
+            print(f"\n{'='*60}")
+            print(f"[Batch] Episode {idx}/{total}: {os.path.basename(ep_path)}")
+            print(f"{'='*60}\n")
+            ok = run_one_episode(ep_path)
+            if ok:
+                success_count += 1
+                print(f"[Batch] Episode {os.path.basename(ep_path)} finished successfully.")
+            else:
+                print(f"[Batch] Episode {os.path.basename(ep_path)} FAILED or timed out.")
+
+        print(f"\n[Batch] Summary: {success_count}/{total} episode(s) succeeded.\n")
+        simulation_app.close()
+        return 0 if success_count == total else 1
+
+    else:
+        # Single episode mode (original behavior)
+        episode_json_path = _resolve_single_episode()
+        ok = run_one_episode(episode_json_path)
+        simulation_app.close()
+        return 0 if ok else 1
 
 
 if __name__ == "__main__":

@@ -69,10 +69,7 @@ def parse_args():
 
     # Misc
     p.add_argument("--seed",              type=int, default=0)
-    p.add_argument("--semantic_map_json", default=None,
-                    help="[DEPRECATED] No longer used. Furniture avoidance is "
-                            "done at episode planning time via ESDF/PSDF; the "
-                            "NavMesh now only carves out walls and unable-areas.")
+    p.add_argument("--semantic_map_json", default=None)
     p.add_argument("--cache_dir",         default=None)
     p.add_argument("--force_rebake",      action="store_true")
     return p.parse_args()
@@ -139,6 +136,57 @@ from isaacsim.replicator.agent.core.stage_util import CharacterUtil
 # ═══════════════════════════════════════════════════════════════════════════
 # Episode resolution
 # ═══════════════════════════════════════════════════════════════════════════
+
+def _auto_stop_simulation(app, char_prims: list[str], episode, max_frames: int = 18000):
+    import omni.usd
+    from pxr import Usd
+
+    print(f"[AutoStop] Waiting for all characters to finish commands. max_frames={max_frames}")
+
+    stage = omni.usd.get_context().get_stage()
+
+    def _find_skelroot(prim_path: str):
+        prim = stage.GetPrimAtPath(prim_path)
+        if not prim or not prim.IsValid():
+            return None
+        if prim.GetTypeName() == "SkelRoot":
+            return prim
+        for desc in Usd.PrimRange(prim):
+            if desc.GetTypeName() == "SkelRoot":
+                return desc
+        return None
+
+    skelroots = [_find_skelroot(pp) for pp in char_prims]
+    skelroots = [s for s in skelroots if s is not None]
+    print(f"[AutoStop] Tracking {len(skelroots)} SkelRoot(s).")
+
+    frame = 0
+    try:
+        while app.is_running() and frame < max_frames:
+            app.update()
+            frame += 1
+
+            if frame % 30 != 0:   # 每 30 帧检查一次
+                continue
+
+            def _is_done(sr) -> bool:
+                attr = sr.GetAttribute("omni:scripting:commandsDone")
+                if not attr or not attr.IsValid():
+                    return False
+                val = attr.Get()
+                return val is True
+
+            all_done = all(_is_done(sr) for sr in skelroots)
+            if all_done:
+                print(f"[AutoStop] All characters done at frame {frame}.")
+                break
+
+    except KeyboardInterrupt:
+        print("[AutoStop] Ctrl+C received.")
+
+    if frame >= max_frames:
+        print(f"[AutoStop] Hit max_frames={max_frames}, force-stopping.")
+
 def _resolve_episode_json() -> str | None:
     """Return path to the episode JSON to use, or None if not found."""
     # 1. Explicit override
@@ -353,15 +401,7 @@ def main() -> int:
     if not open_stage(ARGS.usda):
         return 1
 
-# ── NavMesh ────────────────────────────────────────────────────────────
-    # NOTE: We intentionally pass semantic_map_json=None.
-    # Furniture avoidance is enforced at the *episode planning* stage
-    # (generate_episode_fast.py uses ESDF over wall+unable-area mask, so the
-    # predicomputed paths in `pathData` already steer around furniture).
-    # The behavior-script patch reads `omni:scripting:pathData` and bypasses
-    # NavMesh re-routing, so we don't need to carve furniture out of the
-    # NavMesh itself.  This saves baking time and avoids coordinate-frame
-    # mismatch issues.
+    # ── NavMesh ────────────────────────────────────────────────────────────
     navvols_usda = cache_paths(ARGS.usda, ARGS.cache_dir)
     print(f"[Cache] NavVols USDA : {navvols_usda}")
 
@@ -373,7 +413,7 @@ def main() -> int:
         volume_padding         = ARGS.volume_padding,
         fallback_size          = ARGS.fallback_size,
         warmup_frames          = ARGS.warmup_frames,
-        semantic_map_json      = None,   # ← furniture handled at planning stage
+        semantic_map_json      = ARGS.semantic_map_json,
     )
     if not nav_ok:
         print("\n[FATAL-ish] NavMesh bake failed — holding for inspection.")
@@ -419,12 +459,6 @@ def main() -> int:
             snapped = result[0] if result else None
             print(f"[NavMesh Check] {char_name} spawn {pos} → "
                   f"closest NavMesh point: {snapped}")
-            if snapped:
-                # 测试能否从 snapped 点到场景中心
-                center = carb.Float3(0.0, 5.0, 0.0)
-                path = nm.query_shortest_path(snapped, center, agent_radius=0.5)
-                print(f"[NavMesh Check] path to center: "
-                      f"{'OK' if path else 'FAILED'}")
 
         # ── Episode mode ──────────────────────────────────────────────────
         print("\n[Mode] EPISODE — spawning from JSON data.")
@@ -468,14 +502,8 @@ def main() -> int:
     tl = omni.timeline.get_timeline_interface()
     tl.set_current_time(0.0)
     tl.play()
-    # _update(300)
 
-    print("\n[HOLD] Press Ctrl+C to quit.\n")
-    try:
-        while simulation_app.is_running():
-            simulation_app.update()
-    except KeyboardInterrupt:
-        print("\n[HOLD] Ctrl+C received, shutting down.")
+    _auto_stop_simulation(simulation_app, char_prims, episode)
 
     simulation_app.close()
     return 0

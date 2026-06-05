@@ -138,61 +138,155 @@ def size_navmesh_volume(stage, volume_path: Sdf.Path,
 # ── exclude volumes from semantic map ──────────────────────────────────────
 
 def add_exclude_volumes_from_semantic_map(app, stage, semantic_map_json: str,
-                                          flip_x=True, flip_y=True,
-                                          negate_xy=True) -> int:
+                                          negate_xy: bool = True,
+                                          z_floor: float = -0.05,
+                                          z_min_top: float = 1.85,
+                                          xy_padding: float = 0.10,
+                                          author_to_root: bool = True) -> int:
+    """Create NavMeshVolume(volume_type=1) prims to exclude furniture footprints.
+
+    Coordinate transform
+    --------------------
+    `semantic_map_builder.py` writes `bbox_m` and `mask_coords_m` in a
+    *mirrored* frame: both axes are flipped about the centre of the occupancy
+    map. The exact reverse mapping (semantic-map → InteriorGS world) is:
+
+        world_x = (x_min + x_max) - mirrored_x
+        world_y = (y_min + y_max) - mirrored_y
+
+    where `x_min, x_max, y_min, y_max` come from the JSON header (occupancy
+    map extent). This replaces the old hand-tuned `flip_x / flip_y` knobs,
+    which approximated the same flip but used the *bounding box of present
+    instances* instead of the *full occupancy map extent* — leading to a
+    residual offset whenever furniture didn't fill the whole map.
+
+    The optional `negate_xy` then maps InteriorGS world → Isaac stage world.
+    Keep it True unless your USDA conversion preserved the original origin.
+
+    Z range
+    -------
+    Each exclude volume is forced from `z_floor` up to at least `z_min_top`
+    (default 1.85m, slightly above the configured `agentMinHeight=1.8`).
+    This prevents agents from "tunneling" under tables/counters even when
+    sub-furniture clearance technically exceeds agent height.
+
+    Args:
+        app, stage:        Kit app + USD stage handles.
+        semantic_map_json: Path to the JSON written by `semantic_map_builder.py`.
+                           New format ({"meta":..., "instances":[...]}) is
+                           preferred; old format (bare list) is auto-detected
+                           and falls back to legacy mask-stat behaviour.
+        negate_xy:         If True, also negate XY (InteriorGS → Isaac world).
+        z_floor:           Bottom Z of every exclude volume (m).
+        z_min_top:         Force volume top to at least this Z (m).
+        xy_padding:        Inflate each footprint by this much (m) per side.
+        author_to_root:    Author the volume edits to the root layer so they
+                           survive the Sdf.CopySpec cache step.
+
+    Returns:
+        Number of exclude volumes created.
+    """
     import json as _json
+
     with open(semantic_map_json) as f:
-        items = _json.load(f)
+        raw = _json.load(f)
 
-    exclude_label_set = ["table", "chair", "sofa", "bed", "wardrobe",
-                         "desk", "counter", "cabinet"]
-    all_y, all_x = [], []
-    for inst in items:
-        for y, x in inst.get("mask_coords_m", []):
-            try:
-                all_y.append(float(y)); all_x.append(float(x))
-            except (ValueError, TypeError):
-                continue
-    if not all_x:
-        print("[Exclude] ERROR: no mask_coords_m found")
-        return 0
+    # ── parse new vs legacy JSON layout ────────────────────────────────────
+    meta = None
+    if isinstance(raw, dict) and "instances" in raw:
+        meta  = raw.get("meta", None)
+        items = raw["instances"]
+    else:
+        items = raw  # legacy: bare list
 
-    min_x, max_x = min(all_x), max(all_x)
-    min_y, max_y = min(all_y), max(all_y)
-    print(f"[Exclude] map bounds: x∈[{min_x:.3f},{max_x:.3f}] y∈[{min_y:.3f},{max_y:.3f}]")
+    exclude_label_set = {"table", "chair", "sofa", "bed", "wardrobe",
+                         "desk", "counter", "cabinet"}
 
-    def sm_to_isaac(sm_x, sm_y):
-        px, py = sm_x, sm_y
-        if flip_x:  px = (min_x + max_x) - px
-        if flip_y:  py = (min_y + max_y) - py
-        if negate_xy: px, py = -px, -py
-        return px, py
+    # ── determine flip centre ──────────────────────────────────────────────
+    if meta is not None and all(k in meta for k in ("x_min","x_max","y_min","y_max")):
+        flip_cx = float(meta["x_min"]) + float(meta["x_max"])
+        flip_cy = float(meta["y_min"]) + float(meta["y_max"])
+        print(f"[Exclude] Using JSON header for flip centre: "
+              f"x_sum={flip_cx:.3f}, y_sum={flip_cy:.3f}")
+    else:
+        # Fallback: derive from mask_coords_m statistics (legacy behaviour).
+        all_y, all_x = [], []
+        for inst in items:
+            for y, x in inst.get("mask_coords_m", []):
+                try:
+                    all_y.append(float(y)); all_x.append(float(x))
+                except (ValueError, TypeError):
+                    continue
+        if not all_x:
+            print("[Exclude] ERROR: no header and no mask_coords_m available.")
+            return 0
+        flip_cx = min(all_x) + max(all_x)
+        flip_cy = min(all_y) + max(all_y)
+        print(f"[Exclude] No JSON header; falling back to mask stats: "
+              f"x_sum={flip_cx:.3f}, y_sum={flip_cy:.3f} "
+              "(may be slightly off if furniture doesn't fill the map).")
 
-    mpu  = UsdGeom.GetStageMetersPerUnit(stage)
-    heu  = 0.5 / mpu
+    def sm_to_isaac(sm_x: float, sm_y: float) -> tuple[float, float]:
+        # Step 1: undo mirror about occupancy-map centre.
+        wx = flip_cx - sm_x
+        wy = flip_cy - sm_y
+        # Step 2: InteriorGS world → Isaac stage world (origin reflection).
+        if negate_xy:
+            wx, wy = -wx, -wy
+        return wx, wy
+
+    # ── stage helpers ──────────────────────────────────────────────────────
+    mpu = UsdGeom.GetStageMetersPerUnit(stage)
+    heu = 0.5 / mpu                      # half-extent in stage units (NavMeshVolume native = 1m cube)
     bbox = compute_scene_bbox(stage)
     created = skipped = 0
 
-    for item in items:
+    edit_target_ctx = None
+    if author_to_root:
+        # Author every edit straight to root layer so the cache step (Sdf.CopySpec
+        # from root layer) captures volume_type and the transform.
+        edit_target_ctx = Usd.EditContext(stage, stage.GetRootLayer())
+
+    def _do_create(item):
+        nonlocal created, skipped
         label = str(item.get("category_label", "")).lower()
         if not any(k in label for k in exclude_label_set):
-            continue
-        x_l, y_b, x_r, y_t = [float(v) for v in item["bbox_m"]]
-        z_min, z_max = float(item["min_z_m"]), float(item["max_z_m"])
-        corners_isaac = [sm_to_isaac(cx, cy)
-                         for cx, cy in [(x_l,y_b),(x_l,y_t),(x_r,y_b),(x_r,y_t)]]
-        ix_vals = [c[0] for c in corners_isaac]
-        iy_vals = [c[1] for c in corners_isaac]
-        cx = 0.5*(min(ix_vals)+max(ix_vals))
-        cy = 0.5*(min(iy_vals)+max(iy_vals))
-        hx = 0.5*(max(ix_vals)-min(ix_vals)) + 0.10
-        hy = 0.5*(max(iy_vals)-min(iy_vals)) + 0.10
+            return
+        try:
+            x_l, y_b, x_r, y_t = [float(v) for v in item["bbox_m"]]
+            z_min = float(item["min_z_m"])
+            z_max = float(item["max_z_m"])
+        except (KeyError, ValueError, TypeError):
+            skipped += 1
+            return
+
+        # Mirror-undo + optional negate for all four corners (semantic-map
+        # frame → Isaac world). bbox_m is axis-aligned in the mirrored frame;
+        # applying the linear flip keeps it axis-aligned in world frame, but
+        # min/max may swap, so recompute after transform.
+        corners_world = [sm_to_isaac(cx, cy)
+                         for cx, cy in ((x_l,y_b),(x_l,y_t),(x_r,y_b),(x_r,y_t))]
+        ix = [c[0] for c in corners_world]
+        iy = [c[1] for c in corners_world]
+        cx = 0.5 * (min(ix) + max(ix))
+        cy = 0.5 * (min(iy) + max(iy))
+        hx = 0.5 * (max(ix) - min(ix)) + xy_padding
+        hy = 0.5 * (max(iy) - min(iy)) + xy_padding
+
+        # Scene-bbox sanity filter (drop volumes far outside the stage).
         if bbox:
             bmin, bmax = bbox
-            if not (bmin[0]-1 <= cx <= bmax[0]+1 and bmin[1]-1 <= cy <= bmax[1]+1):
-                skipped += 1; continue
-        hz  = 0.5*(z_max+0.05 - max(z_min-0.05,-0.01))
-        cz  = 0.5*(z_max+0.05 + max(z_min-0.05,-0.01))
+            margin = 1.0
+            if not (bmin[0]-margin <= cx <= bmax[0]+margin and
+                    bmin[1]-margin <= cy <= bmax[1]+margin):
+                skipped += 1
+                return
+
+        # Z range: floor → max(furniture_top, agent_head_clearance)
+        bottom = z_floor
+        top    = max(z_max + 0.05, z_min_top)
+        hz     = 0.5 * (top - bottom)
+        cz     = 0.5 * (top + bottom)
 
         existing = {p.GetPath() for p in stage.Traverse()
                     if p.GetName().startswith("NavMeshVolume")}
@@ -204,14 +298,41 @@ def add_exclude_volumes_from_semantic_map(app, stage, semantic_map_json: str,
                      if p.GetName().startswith("NavMeshVolume")
                      and p.GetPath() not in existing]
         if not new_prims:
-            continue
+            print(f"[Exclude] Failed to create volume for {item.get('item_id','?')}.")
+            return
+        vol_path = new_prims[0]
+
+        # Explicitly assert volume_type=1 on the prim so Sdf.CopySpec can find it
+        # on the root layer (CreateNavMeshVolumeCommand may not author it there).
+        vol_prim = stage.GetPrimAtPath(vol_path)
+        for attr_name in ("volumeType", "volume_type"):
+            vt = vol_prim.GetAttribute(attr_name)
+            if vt and vt.IsValid():
+                try:
+                    vt.Set(1)
+                except Exception:
+                    pass
+                break
+
         scale = Gf.Vec3d(hx/heu, hy/heu, hz/heu)
-        mat   = Gf.Matrix4d(1.0)
+        mat = Gf.Matrix4d(1.0)
         mat.SetScale(scale)
         mat = mat * Gf.Matrix4d(1.0).SetTranslate(Gf.Vec3d(cx, cy, cz))
-        omni.kit.commands.execute("TransformPrim", path=new_prims[0],
+        omni.kit.commands.execute("TransformPrim", path=vol_path,
                                   new_transform_matrix=mat)
         created += 1
+        if created <= 5 or created % 10 == 0:
+            print(f"[Exclude] #{created}  label={label:10s}  "
+                  f"centre=({cx:+.2f},{cy:+.2f},{cz:+.2f})  "
+                  f"half=({hx:.2f},{hy:.2f},{hz:.2f})")
+
+    if edit_target_ctx is not None:
+        with edit_target_ctx:
+            for item in items:
+                _do_create(item)
+    else:
+        for item in items:
+            _do_create(item)
 
     _update(app, 10)
     print(f"[Exclude] Created {created}, skipped {skipped}.")
@@ -379,7 +500,16 @@ def spawn_on_navmesh(nm) -> tuple:
             return snapped
     return safe_query_random_point(nm)
 
-
+def _wait_navmesh_ready(inav, app, max_frames: int = 120):
+    """Pump update loop until get_navmesh() returns a usable mesh, or timeout."""
+    for i in range(max_frames):
+        nm = inav.get_navmesh()
+        if nm is not None:
+            rp = safe_query_random_point(nm)
+            if rp is not None:
+                return nm
+        app.update()
+    return None
 # ── main bake entry point ───────────────────────────────────────────────────
 
 def bake_navmesh(app, navvols_usda: str, force_rebake: bool,
@@ -403,19 +533,58 @@ def bake_navmesh(app, navvols_usda: str, force_rebake: bool,
         print(f"[Cache] Restoring NavMeshVolumes from delta: {navvols_usda}")
         stage = omni.usd.get_context().get_stage()
         ok = restore_navmesh_volumes_as_sublayer(app, stage, navvols_usda)
+        print(f"[Cache] restore_navmesh_volumes_as_sublayer returned: {ok}")
         if ok:
+            # 把 sublayer compose 时间给足
+            _update(app, 60)                                          # ★ 加这行
+            
+            # ★ 诊断：数一下 stage 上真有几个 NavMeshVolume，状态如何
+            from pxr import UsdGeom
+            vol_count = 0
+            vol_visible = 0
+            for prim in stage.Traverse():
+                if prim.GetTypeName() == "NavMeshVolume":
+                    vol_count += 1
+                    imageable = UsdGeom.Imageable(prim)
+                    vis = imageable.ComputeVisibility()
+                    if vis != UsdGeom.Tokens.invisible:
+                        vol_visible += 1
+                    print(f"  [diag] NavMeshVolume: {prim.GetPath()} "
+                        f"vis={vis} active={prim.IsActive()}")
+            print(f"[Cache] Found {vol_count} NavMeshVolume(s), "
+                f"{vol_visible} visible.")
+            
             prev_vis = set_subtree_visibility(stage, collision_root, visible=True)
-            _update(app, 5)
+            
+            # ★ 把 NavMeshVolume 也强制设为 visible（关键）
+            for prim in stage.Traverse():
+                if prim.GetTypeName() == "NavMeshVolume":
+                    UsdGeom.Imageable(prim).MakeVisible()
+            
+            _update(app, 30)                                          # ★ 30 帧更稳
             print("[NavMesh] Baking (volumes restored, expect cache hit)...")
             inav.start_navmesh_baking_and_wait()
+            
+            # ★ 关键：bake 之后再 pump 帧给 NavMesh 系统写入数据的机会
+            _update(app, 30)                                          # ★ 加这行
+            
             nm = inav.get_navmesh()
-            rp = safe_query_random_point(nm)
-            if prev_vis == "invisible":
-                set_subtree_visibility(stage, collision_root, visible=False)
-                _update(app, 2)
-            if rp is not None:
-                print(f"[Cache] NavMesh OK. Sample point: {tuple(rp)}")
-                return True, inav
+            print(f"[Cache] get_navmesh() returned: "
+                f"{type(nm).__name__ if nm is not None else 'None'}")
+            
+            # ★ 即使 nm 不是 None 也未必 ready，再 sample 一下验证
+            if nm is not None:
+                rp = safe_query_random_point(nm)
+                print(f"[Cache] safe_query_random_point: {rp}")
+                if rp is not None:
+                    if prev_vis == "invisible":
+                        set_subtree_visibility(stage, collision_root, visible=False)
+                        _update(app, 2)
+                    print(f"[Cache] NavMesh OK. Sample point: {tuple(rp)}")
+                    return True, inav
+            else:
+                print("[Cache] get_navmesh() returned None right after bake.")
+            
         print("[Cache] Restore failed — falling back to full bake.")
 
     # ── full bake ──────────────────────────────────────────────────────────
@@ -455,7 +624,9 @@ def bake_navmesh(app, navvols_usda: str, force_rebake: bool,
 
     print("[NavMesh] Baking...")
     inav.start_navmesh_baking_and_wait()
-    nm = inav.get_navmesh()
+    nm = _wait_navmesh_ready(inav, app, max_frames=120)
+    if nm is None:
+        print("[Cache] NavMesh not ready within 120 frames after bake.")
     rp = safe_query_random_point(nm)
     print(f"[NavMesh] OK. Sample point: {tuple(rp)}")
 

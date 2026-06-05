@@ -1,0 +1,287 @@
+{
+  "summary": {
+    "num_characters": 21,
+    "errored": [],
+    "no_materials": [],
+    "naming_inconsistent": [],
+    "part_frequency": {
+      "safetyvest": 26,
+      "policepants": 8,
+      "policeshirt": 8,
+      "policeshoes": 8,
+      "policeradio": 8,
+      "hardhat": 7,
+      "vest": 6,
+      "policehat": 6,
+      "whitemaleskin": 6,
+      "tshirt": 5,
+      "workboots": 5,
+      "shirt": 4,
+      "idbadge": 4,
+      "sneakers": 4,
+      "scrubspants": 4,
+      "scrubsshirt": 4,
+      "asianfemaleskin": 4,
+      "gloves": 4,
+      "jeans": 4,
+      "workpants": 3,
+      "blackmaleskin": 3,
+      "tennisshoes": 2,
+      "bluejeans": 2,
+      "skin": 2,
+      "labcoat": 2,
+      "stethoscope": 2,
+      "malecaucasianskin": 2,
+      "blackfemaleskin": 2,
+      "hispanicfemaleskin": 2,
+      "policecap": 2,
+      "boots": 2,
+      "pants": 2,
+      "earprotection": 2,
+      "sunglasses": 2,
+      "workgloves": 1
+    },
+    "shader_id_frequency": {
+      "MDL:@OmniPBR.mdl@": 158
+    },
+    "color_input_frequency": {
+      "diffuse_tint": 44,
+      "diffuse_color_constant": 27
+    },
+    "parts_per_character_unique": {
+      "tennisshoes": [
+        "F_Business_02",
+        "original_female_adult_business_02"
+      ],
+      "bluejeans": [
+        "F_Business_02",
+        "original_female_adult_business_02"
+      ],
+      "shirt": [
+        "F_Business_02",
+        "male_adult_construction_03",
+        "original_female_adult_business_02",
+        "original_male_adult_construction_03"
+      ],
+      "vest": [
+        "F_Business_02",
+        "male_adult_construction_01_new",
+        "original_female_adult_business_02",
+        "original_male_adult_construction_01"
+      ],
+      "skin": [
+        "F_Business_02",
+        "original_female_adult_business_02"
+      ],
+      "idbadge": [
+        "F_Medical_01",
+        "M_Medical_01",
+        "original_female_adult_medical_01",
+        "original_male_adult_medical_01"
+      ],
+      "sneakers": [
+        "F_Medical_01",
+        "M_Medical_01",
+        "original_female_adult_medical_01",
+        "original_male_adult_medical_01"
+      ],
+      "scrubspants": [
+        "F_Medical_01",
+        "M_Medical_01",
+        "original_female_adult_medical_01",
+        "original_male_adult_medical_01"
+      ],
+      "scrubsshirt": [
+        "F_Medical_01",
+        "M_Medical_01",
+        "original_female_adult_medical_01",
+        "original_male_adult_medical_01"
+      ],
+      "asianfemaleskin": [
+        "F_Medical_01",
+        "female_adult_police_02",
+        "original_female_adult_medical_01",
+        "original_female_adult_police_02"
+      ],
+      "labcoat": [
+        "M_Medical_01",
+        "original_male_adult_medical_01"
+      ],
+      "stethoscope": [
+        "M_Medical_01",
+        "original_male_adult_medical_01"
+      ],
+      "malecaucasianskin": [
+        "M_Medical_01",
+        "original_male_adult_medical_01"
+      ],
+      "blackfemaleskin": [
+        "female_adult_police_01_new",
+        "original_female_adult_police_01"
+      ],
+      "policepants": [
+        "female_adult_police_01_new",
+        "female_adult_police_02",
+        "female_adult_police_03_new",
+        "male_adult_police_04",
+        "original_female_adult_police_01",
+        "original_female_adult_police_02",
+        "original_female_adult_police_03",
+        "original_male_adult_police_04"
+      ],
+      "policeshirt": [
+        "female_adult_police_01_new",
+        "female_adult_police_02",
+        "female_adult_police_03_new",
+        "male_adult_police_04",
+        "original_female_adult_police_01",
+        "original_female_adult_police_02",
+        "original_female_adult_police_03",
+        "original_male_adult_police_04"
+      ],
+      "policeshoes": [
+        "female_adult_police_01_new",
+        "female_adult_police_02",
+        "female_adult_police_03_new",
+        "male_adult_police_04",
+        "original_female_adult_police_01",
+        "original_female_adult_police_02",
+        "original_female_adult_police_03",
+        "original_male_adult_police_04"
+      ],
+      "safetyvest": [
+        "female_adult_police_01_new",
+        "female_adult_police_02",
+        "female_adult_police_03_new",
+        "male_adult_construction_03",
+        "male_adult_construction_05_new",
+        "male_adult_police_04",
+        "original_female_adult_police_01",
+        "original_female_adult_police_02",
+        "original_female_adult_police_03",
+        "original_male_adult_construction_02",
+        "original_male_adult_construction_03",
+        "original_male_adult_construction_05",
+        "original_male_adult_police_04"
+      ],
+      "policeradio": [
+        "female_adult_police_01_new",
+        "female_adult_police_02",
+        "female_adult_police_03_new",
+        "male_adult_police_04",
+        "original_female_adult_police_01",
+        "original_female_adult_police_02",
+        "original_female_adult_police_03",
+        "original_male_adult_police_04"
+      ],
+      "policehat": [
+        "female_adult_police_01_new",
+        "female_adult_police_02",
+        "male_adult_police_04",
+        "original_female_adult_police_01",
+        "original_female_adult_police_02",
+        "original_male_adult_police_04"
+      ],
+      "gloves": [
+        "female_adult_police_02",
+        "male_adult_construction_01_new",
+        "original_female_adult_police_02",
+        "original_male_adult_construction_01"
+      ],
+      "hispanicfemaleskin": [
+        "female_adult_police_03_new",
+        "original_female_adult_police_03"
+      ],
+      "policecap": [
+        "female_adult_police_03_new",
+        "original_female_adult_police_03"
+      ],
+      "whitemaleskin": [
+        "male_adult_construction_01_new",
+        "male_adult_construction_03",
+        "male_adult_police_04",
+        "original_male_adult_construction_01",
+        "original_male_adult_construction_03",
+        "original_male_adult_police_04"
+      ],
+      "workpants": [
+        "male_adult_construction_01_new",
+        "original_male_adult_construction_01",
+        "original_male_adult_construction_02"
+      ],
+      "tshirt": [
+        "male_adult_construction_01_new",
+        "male_adult_construction_05_new",
+        "original_male_adult_construction_01",
+        "original_male_adult_construction_02",
+        "original_male_adult_construction_05"
+      ],
+      "boots": [
+        "male_adult_construction_01_new",
+        "original_male_adult_construction_01"
+      ],
+      "hardhat": [
+        "male_adult_construction_01_new",
+        "male_adult_construction_03",
+        "male_adult_construction_05_new",
+        "original_male_adult_construction_01",
+        "original_male_adult_construction_02",
+        "original_male_adult_construction_03",
+        "original_male_adult_construction_05"
+      ],
+      "pants": [
+        "male_adult_construction_01_new",
+        "original_male_adult_construction_01"
+      ],
+      "earprotection": [
+        "male_adult_construction_03",
+        "original_male_adult_construction_03"
+      ],
+      "jeans": [
+        "male_adult_construction_03",
+        "male_adult_construction_05_new",
+        "original_male_adult_construction_03",
+        "original_male_adult_construction_05"
+      ],
+      "workboots": [
+        "male_adult_construction_03",
+        "male_adult_construction_05_new",
+        "original_male_adult_construction_02",
+        "original_male_adult_construction_03",
+        "original_male_adult_construction_05"
+      ],
+      "blackmaleskin": [
+        "male_adult_construction_05_new",
+        "original_male_adult_construction_02",
+        "original_male_adult_construction_05"
+      ],
+      "sunglasses": [
+        "male_adult_police_04",
+        "original_male_adult_police_04"
+      ],
+      "workgloves": [
+        "original_male_adult_construction_02"
+      ]
+    }
+  },
+  "per_character": [
+    {
+      "character": "F_Business_02",
+      "usd_path": "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/People/Characters/F_Business_02/F_Business_02.usd",
+      "looks_scopes": [
+        "/Root/female_adult_business_02/Looks"
+      ],
+      "materials": [
+        {
+          "name": "opaque__leather__tennisshoes",
+          "path": "/Root/female_adult_business_02/Looks/opaque__leather__tennisshoes",
+          "shaders": [
+            {
+              "shader_prim": "/Root/female_adult_business_02/Looks/opaque__leather__tennisshoes/Shader",
+              "shader_id": null,
+              "mdl_source_asset": "@OmniPBR.mdl@",
+              "color_inputs": [
+                {
+                  "name": "diffuse_tint",
+                  "type": "color3f",
+                  "value": 
