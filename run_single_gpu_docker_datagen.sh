@@ -73,7 +73,7 @@ for combo in $COMBOS; do
         $PYTHON "$SCRIPT_PY" \
           --episode_dir "$SCENE_DIR/$scene" \
           --robot_type "$robot" --camera_type "$cam" \
-          --max_steps 600 --character_speed 1.0 \
+          --max_steps 300 --character_speed 1.0 \
           --save_images --start_idx $batch_start --end_idx $batch_end \
           --headless \
           "${VIDEO_ARGS[@]}" \

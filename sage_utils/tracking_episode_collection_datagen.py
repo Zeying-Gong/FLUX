@@ -40,7 +40,7 @@ def parse_args():
                         "of --episode_dir when omitted.")
     p.add_argument("--start_idx", type=int, default=0)
     p.add_argument("--end_idx",   type=int, default=-1)
-    p.add_argument("--max_steps", type=int, default=600)
+    p.add_argument("--max_steps", type=int, default=300)
     p.add_argument("--collision_root",  default="/World/scene_collision")
     p.add_argument("--volume_padding",  type=float, default=1.2)
     p.add_argument("--fallback_size",   type=float, default=100.0)
@@ -72,6 +72,8 @@ def parse_args():
     p.add_argument("--loss_dist_thresh",      type=float, default=5.0)
     p.add_argument("--save_images", action="store_true")
     p.add_argument("--save_video", action="store_true",
+                   default=os.environ.get("SAVE_VIDEO", "0").strip().lower()
+                   in {"1", "true", "yes", "on"},
                    help="Encode saved RGB frames into an episode MP4")
     p.add_argument("--save_image_every", type=int, default=1)
     p.add_argument("--image_save_dir",   type=str, default=None)
