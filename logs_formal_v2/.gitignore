@@ -1,0 +1,7 @@
+# 只保留脚本和文档，排除海量数据
+collect_*.log
+go2_zed/
+go2_realsense_d435i/
+go2_realsense_d435i_archives/
+*.csv
+*.tar.gz
