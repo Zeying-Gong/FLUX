@@ -102,14 +102,32 @@ def _disable_character_physics(app, char_prim_path: str):
     _update(app, 2)
 
 def spawn_character(app, idx: int, usd_path: str, spawn_xyz) -> str:
+    from pxr import Usd
+
     loc  = carb.Float3(float(spawn_xyz[0]), float(spawn_xyz[1]), float(spawn_xyz[2]))
+    parent_path = str(PrimPaths.characters_parent_path())
+    stage = omni.usd.get_context().get_stage()
+    parent = stage.GetPrimAtPath(parent_path)
+
+    # 记录 spawn 前已有的 prim 列表
+    before = {str(c.GetPath()) for c in parent.GetChildren()} if parent else set()
+
     name = CharacterUtil.get_character_name_by_index(idx)
     CharacterUtil.load_character_usd_to_stage(usd_path, loc, 0.0, name)
     _update(app, 5)
-    prim_path = f"{PrimPaths.characters_parent_path()}/{name}"
-    
+
+    # 找到新增的 prim（load_character_usd_to_stage 可能忽略 name 参数用内部计数器）
+    after = {str(c.GetPath()) for c in parent.GetChildren()} if parent else set()
+    new_prims = after - before
+    if new_prims:
+        # 取第一个新增的 prim
+        prim_path = sorted(new_prims)[0]
+    else:
+        # fallback：使用 name 对应的路径
+        prim_path = f"{parent_path}/{name}"
+
     # ★ 禁用角色物理碰撞，让 animation graph 纯运动学驱动
-    # _disable_character_physics(app, prim_path)
+    _disable_character_physics(app, prim_path)
 
     print(f"[PEOPLE] Spawned {prim_path}  at={tuple(spawn_xyz)}")
     return prim_path

@@ -22,7 +22,7 @@ _CLOTHING_PROFILES = None
 _RUN_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 def _default_log_root() -> str:
-    return f"/workspace/FLUX/logs_formal_v2/tracking_{_RUN_TIMESTAMP}"
+    return f"/workspace/FLUX/logs/tracking_{_RUN_TIMESTAMP}"
 
 def parse_args():
     p = argparse.ArgumentParser(description="Tracking episode data collection")
@@ -61,7 +61,7 @@ def parse_args():
     p.add_argument("--control_gain_linear",  type=float, default=1.0)
     p.add_argument("--control_gain_angular", type=float, default=3.0)
     p.add_argument("--max_linear_vel",       type=float, default=1.2)
-    p.add_argument("--max_angular_vel",      type=float, default=4.0)
+    p.add_argument("--max_angular_vel",      type=float, default=2.5)
     p.add_argument("--physics_dt",  type=float, default=1.0 / 60.0)
     p.add_argument("--decimation",  type=int,   default=9)
     p.add_argument("--tracking_dist_min",     type=float, default=1.0)
@@ -79,7 +79,7 @@ def parse_args():
     p.add_argument("--profiles_json",
                    default="/workspace/FLUX/sage_utils/character_clothing_profiles.json",
                    help="Profiles JSON for asset-name -> usd_path lookup.")
-    p.add_argument("--robot_type", choices=["dingo", "go2", "g1"], default="go2",
+    p.add_argument("--robot_type", choices=["dingo", "go2", "g1"], default="dingo",
                    help="Robot type: dingo (differential drive), "
                         "go2 (Unitree Go2 quadruped, kinematic), "
                         "g1 (Unitree G1 humanoid, kinematic)")
@@ -89,47 +89,28 @@ def parse_args():
                         "zed (1280×720, 90°×60°)")
 
     # ── Data quality filtering (for oracle training) ────────────────────
-    p.add_argument("--min_tracking_rate", type=float, default=0.0,
-                   help="Min tracking rate to save per-step data (default 0.0 = save all)")
-    p.add_argument("--max_collisions", type=int, default=999,
-                   help="Max collisions allowed to save data (default 999)")
-    p.add_argument("--allow_recovery", action="store_true", default=True,
+    p.add_argument("--min_tracking_rate", type=float, default=0.8,
+                   help="Min tracking rate to save per-step data (default 0.8)")
+    p.add_argument("--max_collisions", type=int, default=0,
+                   help="Max collisions allowed to save data (default 0)")
+    p.add_argument("--allow_recovery", action="store_true", default=False,
                    help="If set, allow episodes with recovery events in saved data")
-    p.add_argument("--max_final_dist", type=float, default=100.0,
-                   help="Max final distance to target (default: 100.0)")
-    p.add_argument("--allowed_end_reasons", type=str,
-                   default="max_steps,char_done,had_recovery",
-                   help="Comma-separated done_reasons that count as success")
-    p.add_argument("--min_visible_rate", type=float, default=0.0,
-                   help="Min fraction of frames where target is in camera view "
-                        "(uv_u >= 0) to save data (default 0.0 = save all)")
-    p.add_argument("--max_consecutive_lost", type=int, default=5,
-                   help="Max consecutive frames target can be out of camera "
-                        "before episode is aborted (default 5)")
-    p.add_argument("--early_abort_min_steps", type=int, default=30,
-                   help="Minimum steps before checking early abort "
-                        "based on running tracking rate (default 30)")
-    p.add_argument("--early_abort_tracking_rate", type=float, default=0.0,
-                   help="If >0, abort episode early when running tracking rate "
-                        "stays below this threshold after --early_abort_min_steps "
-                        "(default 0.0 = disabled)")
-    p.add_argument("--character_speed", type=float, default=0.5,
-                   help="Character walk speed fraction [0-1]. "
-                        "1.0 = full animation speed (~1.2 m/s typical). "
-                        "0.5 = half speed (~0.6 m/s). (default 0.5)")
-    # ── Resume / skip completed episodes ──────────────────────────────
-    p.add_argument("--resume", action="store_true", default=False,
-                   help="If set, skip episodes whose output (frames/frame_data.npz) "
-                        "already exists.")
+    p.add_argument("--max_final_dist", type=float, default=-1,
+                   help="Max final distance to target (default: tracking_dist_max)")
+    p.add_argument("--allowed_end_reasons", type=str, default="max_steps,char_done",
+                   help="Comma-separated done_reasons that count as success "
+                        "(default: max_steps,char_done)")
     return p.parse_args()
 
 
 ARGS = parse_args()
 
-# ── Resolve default paths ───────────────────────────────────────────
-# Output structure: {base}/{robot}_{camera}/{scene_id}/episode_X/
-# Will be fully resolved in main() after scene_id is known
+# ── Resolve default paths with timestamp ────────────────────────────
 _LOG_ROOT = _default_log_root()
+if ARGS.image_save_dir is None:
+    ARGS.image_save_dir = f"{_LOG_ROOT}/episodes"
+if ARGS.output_metrics is None:
+    ARGS.output_metrics = f"{_LOG_ROOT}/metrics.csv"
 
 # ── Robot-type presets ──────────────────────────────────────────────────────
 _ROBOT_PRESETS = {
@@ -169,7 +150,7 @@ ROBOT_DRIVE_MODE   = _preset["drive_mode"]   # "diff_drive" or "kinematic"
 _ROBOT_CAMERA_LINK = _preset["camera_link"]  # link name under /World/Robot/
 
 FOLLOW_DIST       = ARGS.follow_distance
-TRACKING_DIST_MIN = max(FOLLOW_DIST - 1.0, 0.5)
+TRACKING_DIST_MIN = max(FOLLOW_DIST - 1.0, 1.0)
 
 from isaacsim import SimulationApp
 
@@ -291,14 +272,14 @@ _apply_camera_preset(ARGS.camera_type)
 
 REPLAN_PERIOD     = 10
 REPLAN_TARGET_THR = 0.5
-LOOKAHEAD_DIST    = 0.6
+LOOKAHEAD_DIST    = 1.0
 WAYPOINT_REACH    = 0.3
 MAX_PLAN_FAILS    = 5
 NM_AGENT_RADIUS   = 0.25
 
 STUCK_WINDOW          = 8
-STUCK_POS_THRESH      = 0.12
-STUCK_YAW_THRESH_DEG  = 10.0
+STUCK_POS_THRESH      = 0.05
+STUCK_YAW_THRESH_DEG  = 5.0
 
 # ── Character-done detection ────────────────────────────────────────
 # Primary: read omni:scripting:commandsDone written by CharacterBehavior when its
@@ -311,12 +292,12 @@ DONE_GRACE_STEPS = 30   # extra steps after done flag set (~3 s at 10 Hz control
 SIDESTEP_LINEAR       = 0.35   # forward speed used while turning to dodge (m/s)
 SIDESTEP_CHECK_DIST   = 0.55   # how far ahead to probe occ before choosing side (m)
 STUCK_CMD_THRESH      = 0.5
-RECOVERY_DURATION     = 12
+RECOVERY_DURATION     = 8
 RECOVERY_LINEAR       = -0.4
-RECOVERY_ANGULAR_MAG  = 0.8
-MAX_RECOVERIES        = 5
+RECOVERY_ANGULAR_MAG  = 1.2
+MAX_RECOVERIES        = 3
 
-DIRECT_DEADZONE_ANG  = 5.0    # yaw error below which angular=0
+DIRECT_DEADZONE_ANG  = 15.0   # yaw error below which angular=0 (was 15°)
 DIRECT_DEADZONE_ANG_TIGHT = 8.0   # secondary tight zone for prev_angular reset
 
 LOS_RAY_Z_OFFSET    = 0.9
@@ -327,8 +308,8 @@ VANTAGE_RADII          = [1.5, 2.0, 2.5]
 VANTAGE_NUM_SAMPLES    = 12
 VANTAGE_MIN_ROBOT_DIST = 0.5
 
-SMOOTH_ALPHA_NORMAL = 0.70   # more responsive for quicker turning
-SMOOTH_ALPHA_TRACK  = 0.55   # less damping so robot turns faster
+SMOOTH_ALPHA_NORMAL = 0.55   # higher = more responsive (was 0.4)
+SMOOTH_ALPHA_TRACK  = 0.30   # more damped for TRACK mode to prevent yaw oscillation
 
 # ── Oracle target evasion & LoS parameters ─────────────────────────
 TARGET_EVADE_LOOKAHEAD_S  = 2.0   # seconds ahead to predict target position
@@ -1168,18 +1149,17 @@ def open_stage(usda_path: str) -> bool:
 def _add_static_colliders():
     """Ensure collision meshes are invisible to renderer but detectable by PhysX.
 
-    Important: RGB and depth share the SAME RTX render product (both come from
-    RTX ray tracing).  MakeInvisible() removes meshes from ALL RTX passes at once
-    (beauty + depth together).  Therefore cam.get_depth() cannot see
-    MakeInvisible'd meshes.
-
-    Depth must be acquired via PhysX raycasting (independent of render visibility).
-    PhysX sees any mesh with CollisionAPI regardless of MakeInvisible().
+    Isaac Sim has two independent pipelines:
+      - RTX render pipeline → RGB (reads visual mesh / 3DGS)
+      - PhysX raycasting     → Depth (reads collision mesh)
 
     3DGS scenes have separate proxy collision meshes at /World/scene_collision.
     These must be:
       1. Invisible to the renderer (MakeInvisible) — so RGB shows clean 3DGS.
       2. Have CollisionAPI — so PhysX can raycast them for depth.
+
+    makeInvisible() only affects render visibility; PhysX collision detection
+    is unaffected, so depth remains full-scene.
     """
     from pxr import Usd, UsdGeom, UsdPhysics
     stage = omni.usd.get_context().get_stage()
@@ -1209,9 +1189,6 @@ def _add_static_colliders():
           f"{sum(1 for p in Usd.PrimRange(scene_coll) if p.IsA(UsdGeom.Mesh) and p.HasAPI(UsdPhysics.CollisionAPI))}")
 
 
-
-
-
 def hide_navmesh_volumes():
     stage = omni.usd.get_context().get_stage()
     if stage is None:
@@ -1225,7 +1202,7 @@ def hide_navmesh_volumes():
 
 
 def clear_all_characters():
-    """Remove character prims (except Biped_Setup) and force GPU cleanup."""
+    """Remove character prims (except Biped_Setup)."""
     stage = omni.usd.get_context().get_stage()
     root = stage.GetPrimAtPath(CHARACTERS_ROOT)
     if root and root.IsValid():
@@ -1236,8 +1213,6 @@ def clear_all_characters():
             stage.RemovePrim(prim.GetPath())
             removed.append(prim.GetName())
         print(f"[Clear] Removed character prims: {removed}")
-        for _ in range(10):
-            simulation_app.update()
 
 
 def add_robot_and_articulation(
@@ -1510,9 +1485,6 @@ def spawn_characters_from_episode(
     _write_episode_commands(commands_dict)
     update_sim(30)
 
-    # 控制角色行走速度（通过动画图 Walk 变量）
-    _set_character_speeds(char_paths, ARGS.character_speed)
-
     return char_paths
 
 def recolor_episode_characters(episode: dict,
@@ -1537,43 +1509,6 @@ def recolor_episode_characters(episode: dict,
               f"| {status}")
     # return
 
-def _set_character_speeds(char_paths: Dict[str, str], speed_frac: float):
-    """Override the animation graph 'Walk' variable on each character.
-
-    The character behavior script drives Walk→1.0 every frame (full animation
-    speed).  Call this AFTER each simulation step to clamp Walk back down,
-    effectively slowing the character's baked walk animation.
-    """
-    if speed_frac >= 0.99:
-        return
-    try:
-        import omni.anim.graph.core as ag
-    except ImportError:
-        return
-    stage = omni.usd.get_context().get_stage()
-    for char_name, prim_path in char_paths.items():
-        prim = stage.GetPrimAtPath(prim_path)
-        if not prim or not prim.IsValid():
-            continue
-        for desc in prim.GetChildren():
-            if desc.GetTypeName() not in ("SkelRoot", "Xform"):
-                continue
-            skel = desc if desc.GetTypeName() == "SkelRoot" else None
-            if skel is None:
-                for child in desc.GetChildren():
-                    if child.GetTypeName() == "SkelRoot":
-                        skel = child
-                        break
-            if skel is None:
-                continue
-            try:
-                graph = ag.get_animation_graph(skel.GetPath())
-                if graph:
-                    graph.set_variable("Walk", float(speed_frac))
-            except Exception:
-                pass
-
-
 def _write_episode_commands(commands_dict: dict):
     stage = omni.usd.get_context().get_stage()
     parent_path = str(PrimPaths.characters_parent_path())
@@ -1591,35 +1526,22 @@ def _write_episode_commands(commands_dict: dict):
                 skelroot = desc
                 break
         if skelroot is None:
-            # Fallback: search the entire stage for a SkelRoot that is a
-            # descendant of this character prim (robust against USD nesting
-            # changes on re-spawn).
+            # Fallback: SkelRoot may have been created at a sibling path
+            # (e.g. Character_01) due to USD naming conflicts on re-spawn.
+            from isaacsim.replicator.agent.core.utils import CharacterUtil
             from sage_utils.people_utils import PrimPaths as _PP
             biped_prefix = str(_PP.biped_prim_path())
             candidates = [
-                p for p in stage.Traverse()
-                if p.GetTypeName() == "SkelRoot"
-                and str(p.GetPath()).startswith(str(char_prim.GetPath()))
-                and not str(p.GetPath()).startswith(biped_prefix)
+                sr for sr in CharacterUtil.get_characters_in_stage()
+                if not str(sr.GetPath()).startswith(biped_prefix)
             ]
             if candidates:
                 skelroot = candidates[0]
                 print(f"[Episode] WARN: SkelRoot not under {prim_path}, "
                       f"using fallback {skelroot.GetPath()}")
             else:
-                # One more try: scan the whole stage excluding Biped_Setup
-                candidates = [
-                    p for p in stage.Traverse()
-                    if p.GetTypeName() == "SkelRoot"
-                    and not str(p.GetPath()).startswith(biped_prefix)
-                ]
-                if candidates:
-                    skelroot = candidates[0]
-                    print(f"[Episode] WARN: SkelRoot not under {prim_path}, "
-                          f"using global fallback {skelroot.GetPath()}")
-                else:
-                    print(f"[WARN] No SkelRoot found for {prim_path}, skip")
-                    continue
+                print(f"[WARN] No SkelRoot found anywhere for {prim_path}, skip")
+                continue
 
         command_strings: List[str] = []
         path_data: Dict[int, list] = {}
@@ -1662,12 +1584,13 @@ def _read_commands_done(char_prim_path: str, step: int = -1) -> bool:
             return False
         skelroot = _find_skelroot(prim)
         if skelroot is None:
-            # Fallback: search the entire stage for a SkelRoot under this prim
-            stage = omni.usd.get_context().get_stage()
+            # Fallback: SkelRoot may be at a sibling path
+            from isaacsim.replicator.agent.core.utils import CharacterUtil
+            from sage_utils.people_utils import PrimPaths as _PP
+            biped_prefix = str(_PP.biped_prim_path())
             candidates = [
-                p for p in stage.Traverse()
-                if p.GetTypeName() == "SkelRoot"
-                and str(p.GetPath()).startswith(str(prim.GetPath()))
+                sr for sr in CharacterUtil.get_characters_in_stage()
+                if not str(sr.GetPath()).startswith(biped_prefix)
             ]
             skelroot = candidates[0] if candidates else prim
         attr = skelroot.GetAttribute("omni:scripting:commandsDone")
@@ -2026,71 +1949,115 @@ def resolve_wheel_dof_order(robot) -> Tuple[int, int]:
 
 def _get_full_scene_depth(cam: IsaacCamera, occ=None,
                            robot_pos=None, robot_yaw=None) -> np.ndarray:
-    """Composite depth: RTX (characters) + PhysX (static scene background).
-
-    - RTX depth (cam.get_depth) is pixel-exact on rendered characters — their
-      skinned meshes are unaffected by MakeInvisible on /World/scene_collision.
-    - PhysX raycast fills the 3DGS background where RTX has no valid data
-      (the static collision mesh is MakeInvisible'd in RTX but raycastable).
-
-    This avoids any proxy collision geometry for characters and gives both
-    accurate character silhouette and full-scene background depth.
-    """
-    H, W = CAM_H, CAM_W
-    rtx = None
+    """Get depth (meters).  Priority: cam.get_depth() first, occ ray-march fallback."""
     try:
-        d = cam.get_depth()
-        if d is not None:
-            rtx = np.nan_to_num(np.asarray(d, dtype=np.float32),
-                                nan=0.0, posinf=0.0, neginf=0.0)
+        depth_raw = cam.get_depth()
+        if depth_raw is not None:
+            return np.nan_to_num(np.asarray(depth_raw, dtype=np.float32),
+                                 nan=0.0, posinf=0.0, neginf=0.0)
     except Exception:
         pass
-    physx = None
-    if robot_pos is not None:
+    if occ is not None and robot_pos is not None:
         try:
-            physx = _raycast_depth_from_physx(robot_pos, robot_yaw)
+            return _raycast_depth_from_occ(occ, robot_pos, robot_yaw)
         except Exception:
             pass
-    if rtx is None and physx is None:
-        return np.zeros((H, W), dtype=np.float32)
-    if rtx is None:
-        return physx
-    if physx is None:
-        return rtx
-    valid = (rtx > 0.01) & np.isfinite(rtx)
-    out = np.where(valid, rtx, physx).astype(np.float32)
-    return out
+    return np.zeros((CAM_H, CAM_W), dtype=np.float32)
 
 
-def _raycast_depth_from_physx(robot_pos, robot_yaw, step_px=8, max_d=15.0) -> np.ndarray:
-    """PhysX raycast against collision meshes (ignores render visibility).
+def _debug_depth(cam, occ, robot_pos, robot_yaw, save_dir="/tmp/depth_debug"):
+    """One-shot diagnostic: compare multiple depth sources side by side."""
+    import os
+    from PIL import Image
+    from pxr import Usd, UsdGeom, UsdPhysics
+    os.makedirs(save_dir, exist_ok=True)
 
-    Subsamples at step_px, then fills missing via nearest-neighbor interpolation.
-    Returns (CAM_H, CAM_W) float32 depth in meters, 0 = background.
-    """
+    # 1. cam.get_depth()
+    try:
+        d_raw = cam.get_depth()
+        if d_raw is not None:
+            d = np.nan_to_num(np.asarray(d_raw, dtype=np.float32), nan=0, posinf=0, neginf=0)
+            v = 100.0 * np.count_nonzero(d) / d.size
+            print(f"[DepthDBG] cam.get_depth(): valid={v:.1f}%  max={d.max():.2f}m  mean_nonzero={d[d>0].mean() if d[d>0].size else 0:.2f}m")
+            Image.fromarray(_colormap_depth(d)).save(f"{save_dir}/depth_cam_raw.png")
+    except Exception as e:
+        print(f"[DepthDBG] cam.get_depth() exception: {e}")
+
+    # 2. cam.get_distance_to_image_plane()
+    try:
+        d2 = cam.get_distance_to_image_plane()
+        if d2 is not None:
+            d2 = np.nan_to_num(np.asarray(d2, dtype=np.float32), nan=0, posinf=0, neginf=0)
+            v2 = 100.0 * np.count_nonzero(d2) / d2.size
+            print(f"[DepthDBG] get_distance_to_image_plane(): valid={v2:.1f}%  max={d2.max():.2f}m")
+            Image.fromarray(_colormap_depth(d2)).save(f"{save_dir}/depth_distance_plane.png")
+    except Exception as e:
+        print(f"[DepthDBG] get_distance_to_image_plane() exception: {e}")
+
+    # 3. occ ray-march
+    if occ is not None and robot_pos is not None:
+        try:
+            d3 = _raycast_depth_from_occ(occ, robot_pos, robot_yaw)
+            v3 = 100.0 * np.count_nonzero(d3) / d3.size
+            print(f"[DepthDBG] occ raycast: valid={v3:.1f}%  max={d3.max():.2f}m")
+            Image.fromarray(_colormap_depth(d3)).save(f"{save_dir}/depth_occ_raycast.png")
+        except Exception as e:
+            print(f"[DepthDBG] occ raycast exception: {e}")
+
+    # 4. Collision mesh status
+    try:
+        stage = omni.usd.get_context().get_stage()
+        scene_coll = stage.GetPrimAtPath("/World/scene_collision")
+        if scene_coll and scene_coll.IsValid():
+            imageable = UsdGeom.Imageable(scene_coll)
+            vis = imageable.ComputeVisibility(Usd.TimeCode.Default())
+            mc = sum(1 for p in Usd.PrimRange(scene_coll) if p.IsA(UsdGeom.Mesh))
+            cc = sum(1 for p in Usd.PrimRange(scene_coll) if p.IsA(UsdGeom.Mesh) and p.HasAPI(UsdPhysics.CollisionAPI))
+            print(f"[DepthDBG] /World/scene_collision: visibility={vis}  meshes={mc}  with_CollisionAPI={cc}")
+        else:
+            print("[DepthDBG] /World/scene_collision NOT FOUND")
+            world_prim = stage.GetPrimAtPath("/World")
+            if world_prim:
+                children = [str(c.GetPath()) for c in world_prim.GetChildren()]
+                print(f"[DepthDBG] /World children: {children}")
+    except Exception as e:
+        print(f"[DepthDBG] collision mesh check exception: {e}")
+
+    print(f"[DepthDBG] Debug images saved to {save_dir}")
+
+
+def _raycast_depth_from_occ(occ, robot_pos, robot_yaw) -> np.ndarray:
     from scipy.ndimage import distance_transform_edt
-    sq = _get_physx_sq()
+    grid, max_x, max_y, scale = occ
     H, W = CAM_H, CAM_W
     depth = np.full((H, W), np.inf, dtype=np.float32)
     t = _preset.get("cam_trans", [0.0, 0.0, 0.3])
     cy, sy = math.cos(robot_yaw), math.sin(robot_yaw)
-    ox = float(robot_pos[0]) + t[0]*cy - t[1]*sy
-    oy = float(robot_pos[1]) + t[0]*sy + t[1]*cy
-    oz = float(robot_pos[2]) + t[2]
-    origin = carb.Float3(ox, oy, oz)
-    fx, fy, cx, cyi = _CAM_FX, _CAM_FY, _CAM_CX, _CAM_CY
+    cam_px = float(robot_pos[0]) + float(t[0]) * cy - float(t[1]) * sy
+    cam_py = float(robot_pos[1]) + float(t[0]) * sy + float(t[1]) * cy
+    cam_pz = float(robot_pos[2]) + float(t[2])
+    fx, fy, cx, cy_i = _CAM_FX, _CAM_FY, _CAM_CX, _CAM_CY
+    # Debug first call
+    if not hasattr(_raycast_depth_from_occ, "_debugged"):
+        _raycast_depth_from_occ._debugged = True
+    step_px = max(1, W // 40, H // 40)
+    hit_count = 0
     for v in range(0, H, step_px):
         for u in range(0, W, step_px):
             dx_c = 1.0
             dy_c = -(u - cx) / fx
-            dz_c = -(v - cyi) / fy
+            dz_c = -(v - cy_i) / fy
             n = math.sqrt(dx_c*dx_c + dy_c*dy_c + dz_c*dz_c)
-            dx = (dx_c*cy - dy_c*sy) / n
-            dy = (dx_c*sy + dy_c*cy) / n
-            dz = dz_c / n
-            hit = sq.raycast_closest(origin, carb.Float3(dx, dy, dz), max_d)
-            if hit and hit.get("hit", False):
-                depth[v, u] = float(hit["distance"]) / n
+            if n < 1e-8: continue
+            dx_w = (dx_c * cy - dy_c * sy) / n
+            dy_w = (dx_c * sy + dy_c * cy) / n
+            dz_w = dz_c / n
+            dist = _march_occ(cam_px, cam_py, cam_pz, dx_w, dy_w, dz_w,
+                              grid, max_x, max_y, scale, max_d=15.0)
+            if dist > 0:
+                depth[v, u] = dist
+                hit_count += 1
+    # Fill via nearest neighbor
     mask = np.isfinite(depth)
     if not mask.any():
         return np.zeros((H, W), dtype=np.float32)
@@ -2100,68 +2067,25 @@ def _raycast_depth_from_physx(robot_pos, robot_yaw, step_px=8, max_d=15.0) -> np
     return depth
 
 
-def _debug_depth_compare(cam, occ, robot_pos, robot_yaw, save_dir="/tmp/depth_debug"):
-    """One-shot diagnostic: compare RTX depth vs PhysX depth vs composite."""
-    import os
-    from PIL import Image
-    from pxr import Usd, UsdGeom
-    os.makedirs(save_dir, exist_ok=True)
-
-    stage = omni.usd.get_context().get_stage()
-
-    # 1. RTX depth (cam.get_depth) — valid on rendered surfaces (characters, 3DGS)
-    rtx = None
-    try:
-        d = cam.get_depth()
-        if d is not None:
-            rtx = np.nan_to_num(np.asarray(d, dtype=np.float32), nan=0, posinf=0, neginf=0)
-            v = 100.0 * np.count_nonzero(rtx) / rtx.size
-            print(f"[DepthDBG] RTX cam.get_depth():        valid={v:.1f}%  max={rtx.max():.2f}m  "
-                  f"mean={rtx[rtx>0].mean() if rtx[rtx>0].size else 0:.2f}m")
-            Image.fromarray(_colormap_depth(rtx)).save(f"{save_dir}/depth_rtx.png")
-    except Exception as e:
-        print(f"[DepthDBG] RTX get_depth() exception: {e}")
-
-    # 2. PhysX raycast depth — static scene collision meshes only (image-plane Z)
-    physx = None
-    try:
-        physx = _raycast_depth_from_physx(robot_pos, robot_yaw, step_px=4)
-        v = 100.0 * np.count_nonzero(physx) / physx.size
-        print(f"[DepthDBG] PhysX raycast depth:          valid={v:.1f}%  max={physx.max():.2f}m  "
-              f"mean={physx[physx>0].mean() if physx[physx>0].size else 0:.2f}m")
-        Image.fromarray(_colormap_depth(physx)).save(f"{save_dir}/depth_physx.png")
-    except Exception as e:
-        print(f"[DepthDBG] PhysX raycast exception: {e}")
-
-    # 3. Composite depth
-    if rtx is not None and physx is not None:
-        valid_rtx = (rtx > 0.01) & np.isfinite(rtx)
-        composite = np.where(valid_rtx, rtx, physx).astype(np.float32)
-        print(f"[DepthDBG] Composite depth:              valid=100.0%  "
-              f"mean={composite[composite>0].mean():.2f}m  "
-              f"rtx_pixels={valid_rtx.sum()} / {valid_rtx.size} ({100*valid_rtx.sum()/valid_rtx.size:.1f}%)")
-        Image.fromarray(_colormap_depth(composite)).save(f"{save_dir}/depth_composite.png")
-
-    # 4. Scene geometry status
-    try:
-        from pxr import UsdPhysics
-        scene_coll = stage.GetPrimAtPath("/World/scene_collision")
-        if scene_coll and scene_coll.IsValid():
-            vis = UsdGeom.Imageable(scene_coll).ComputeVisibility(Usd.TimeCode.Default())
-            mc = sum(1 for p in Usd.PrimRange(scene_coll) if p.IsA(UsdGeom.Mesh))
-            cc = sum(1 for p in Usd.PrimRange(scene_coll) if p.IsA(UsdGeom.Mesh) and p.HasAPI(UsdPhysics.CollisionAPI))
-            print(f"[DepthDBG] /World/scene_collision:    visibility={vis}  meshes={mc}  with_CollisionAPI={cc}")
-        else:
-            print("[DepthDBG] /World/scene_collision NOT FOUND")
-    except Exception as e:
-        print(f"[DepthDBG] scene collision check exception: {e}")
-
-    print(f"[DepthDBG] Debug images saved to {save_dir}")
+def _march_occ(ox, oy, oz, dx, dy, dz, grid, mx, my, sc, max_d=15.0):
+    h, w = grid.shape
+    step = sc * 0.5
+    for d in range(1, int(max_d / step) + 1):
+        px = ox + dx * d * step
+        py = oy + dy * d * step
+        pz = oz + dz * d * step
+        if pz > 2.0 or pz < -0.1:
+            continue
+        ix = int(round((mx + px) / sc))
+        iy = int(round((my + py) / sc))
+        if 0 <= ix < w and 0 <= iy < h and grid[iy, ix] == 1:
+            return d * step
+    return -1.0
 
 
 def save_rgb_depth(cam: IsaacCamera, step_idx: int, save_dir: str, episode_id: int,
                    target_bbox=None, is_first_episode_frame: bool = False,
-                   robot_pos=None, robot_yaw=None):
+                   occ=None, robot_pos=None, robot_yaw=None):
     """Save per-step images.
 
     Output structure:
@@ -2184,7 +2108,8 @@ def save_rgb_depth(cam: IsaacCamera, step_idx: int, save_dir: str, episode_id: i
         if rgb_raw is None:
             return None
         rgb   = np.asarray(rgb_raw)
-        depth = _get_full_scene_depth(cam, robot_pos=robot_pos,
+        depth = _get_full_scene_depth(cam, occ=occ,
+                                       robot_pos=robot_pos,
                                        robot_yaw=robot_yaw)
         if depth is None:
             print(f"[WARN] step={step_idx} depth is None, saving RGB only")
@@ -2202,11 +2127,10 @@ def save_rgb_depth(cam: IsaacCamera, step_idx: int, save_dir: str, episode_id: i
         depth_mm = (depth * 1000.0).clip(0, 65535).astype(np.uint16)
         Image.fromarray(depth_mm, mode="I;16").save(
             os.path.join(depth_mm_dir, f"{step_idx:05d}.png"))
-        # Depth color-mapped visualization — only first frame for inspection
-        if is_first_episode_frame:
-            _depth_viz = _colormap_depth(depth)
-            Image.fromarray(_depth_viz).save(
-                os.path.join(depth_viz_dir, f"{step_idx:05d}.png"))
+        # Depth color-mapped visualization — for human inspection
+        _depth_viz = _colormap_depth(depth)
+        Image.fromarray(_depth_viz).save(
+            os.path.join(depth_viz_dir, f"{step_idx:05d}.png"))
         # Bbox crop: only on first frame (visual navigation target)
         if target_bbox is not None and is_first_episode_frame:
             save_bbox_crop(rgb, target_bbox, step_idx, save_dir, episode_id)
@@ -2427,8 +2351,10 @@ def compute_character_bbox_2d(char_prim_path: str,
             uv = world_to_camera_uv(c, robot_pos, robot_yaw)
             if uv is not None:
                 u, v = uv
-                uv_list.append((u, v))
+                if 0 <= u <= CAM_W and 0 <= v <= CAM_H:
+                    uv_list.append((u, v))
         if len(uv_list) < 2:
+            # Fallback: project center point and use nominal size
             center_uv = world_to_camera_uv(
                 np.array([(bmin[0]+bmax[0])/2, (bmin[1]+bmax[1])/2,
                           (bmin[2]+bmax[2])/2], dtype=np.float64),
@@ -2436,18 +2362,11 @@ def compute_character_bbox_2d(char_prim_path: str,
             if center_uv is None:
                 return None
             cu, cv = center_uv
-            half = 100.0
+            half = 30.0  # 30 px nominal half-size
             return (cu - half, cv - half * CAM_H / CAM_W, cu + half, cv + half * CAM_H / CAM_W)
         xs = [p[0] for p in uv_list]
         ys = [p[1] for p in uv_list]
-        # Clamp to image bounds so crop doesn't get oversized
-        x1 = max(0, min(xs))
-        y1 = max(0, min(ys))
-        x2 = min(CAM_W - 1, max(xs))
-        y2 = min(CAM_H - 1, max(ys))
-        if x2 - x1 < 20 or y2 - y1 < 20:
-            return None
-        return (x1, y1, x2, y2)
+        return (min(xs), min(ys), max(xs), max(ys))
     except Exception as e:
         print(f"[BBox2D] WARN: {e}")
         return None
@@ -2538,8 +2457,7 @@ def record_step(ep_data: dict, step: int, robot_pos, robot_yaw,
     ep_data["ped_min_dist"].append(float(ped_min))
 
 
-def save_episode_npz(ep_data: dict, ep_id: int, save_dir: str,
-                      episode_dict: Optional[dict] = None):
+def save_episode_npz(ep_data: dict, ep_id: int, save_dir: str):
     if not ep_data or len(ep_data["step"]) == 0:
         return
     out_dir = os.path.join(save_dir, f"episode_{ep_id:04d}", "frames")
@@ -2556,115 +2474,12 @@ def save_episode_npz(ep_data: dict, ep_id: int, save_dir: str,
     arrays["action"] = np.stack([
         arrays["action_linear"], arrays["action_angular"],
     ], axis=-1)
-    # ── Task description: "Track a {gender} wearing {color} {clothing}, ..." ─
-    task_desc = ""
-    if episode_dict is not None:
-        appearance = episode_dict.get("appearance", {})
-        by_char = appearance.get("by_character", {})
-        for cname, cinfo in by_char.items():
-            asset = cinfo.get("asset", "")
-            gender = "person"
-            if asset.startswith("F_"):
-                gender = "woman"
-            elif asset.startswith("M_"):
-                gender = "man"
-            parts = cinfo.get("parts", {})
-            clothing_items = []
-            color_map = {}
-            for pname, pinfo in parts.items():
-                cat = pinfo.get("category", "")
-                color_word = pinfo.get("color_word", "")
-                clothing_items.append((cat, color_word))
-            # Group by category, prefer specific items
-            top_items = [c for c in clothing_items if c[0] == "top"]
-            bottom_items = [c for c in clothing_items if c[0] == "bottom"]
-            shoe_items = [c for c in clothing_items if c[0] == "shoes"]
-            hat_items = [c for c in clothing_items if c[0] == "hat"]
-            desc_parts = []
-            if hat_items:
-                desc_parts.append(f"{hat_items[0][1]} hat")
-            if top_items:
-                desc_parts.append(f"{top_items[0][1]} top")
-            if bottom_items:
-                desc_parts.append(f"{bottom_items[0][1]} pants")
-            if shoe_items:
-                desc_parts.append(f"{shoe_items[0][1]} shoes")
-            task_desc = f"Track a {gender} wearing " + ", ".join(desc_parts)
-    arrays["task_description"] = np.frombuffer(task_desc.encode("utf-8"), dtype=np.uint8)
-
-    # ── Goal (first-frame only, for one-shot target specification) ─────
-    T = len(arrays['step'])
-    arrays["goal_uv"] = np.array([arrays["target_uv_u"][0],
-                                   arrays["target_uv_v"][0]], dtype=np.float64)
-    arrays["goal_bbox"] = np.array([arrays["target_bbox_x1"][0],
-                                     arrays["target_bbox_y1"][0],
-                                     arrays["target_bbox_x2"][0],
-                                     arrays["target_bbox_y2"][0]], dtype=np.float64)
-    arrays["goal_rel_xyz"] = np.array([arrays["target_rel_x"][0],
-                                        arrays["target_rel_y"][0],
-                                        arrays["target_rel_z"][0]], dtype=np.float64)
-
-    # ── Robot + target trajectories ────────────────────────────────────
-    arrays["robot_trajectory"] = np.stack([
-        arrays["robot_pos_x"], arrays["robot_pos_y"], arrays["robot_pos_z"],
-    ], axis=-1)
-    arrays["target_trajectory"] = np.stack([
-        arrays["target_pos_x"], arrays["target_pos_y"], arrays["target_pos_z"],
-    ], axis=-1)
-
     npz_path = os.path.join(out_dir, "frame_data.npz")
     np.savez_compressed(npz_path, **arrays)
     print(f"[Data] Saved {len(arrays['step'])} frames to {npz_path}")
 
-    # ── JSON preview for quick inspection ──────────────────────────────
-    preview = {
-        "episode_id": ep_id,
-        "num_steps": int(T),
-        "task_description": task_desc,
-        "fields_in_npz": list(arrays.keys()),
-        "observation.state_columns": [
-            "robot_x", "robot_y", "robot_z", "robot_yaw",
-            "target_rel_x", "target_rel_y", "target_rel_z",
-            "target_dist", "target_bearing_deg"
-        ],
-        "action_columns": ["linear_vel", "angular_vel"],
-        "target_uv_first": [float(arrays["target_uv_u"][0]), float(arrays["target_uv_v"][0])],
-        "target_uv_last": [float(arrays["target_uv_u"][-1]), float(arrays["target_uv_v"][-1])],
-        "target_bbox_first": [int(arrays["target_bbox_x1"][0]), int(arrays["target_bbox_y1"][0]),
-                              int(arrays["target_bbox_x2"][0]), int(arrays["target_bbox_y2"][0])],
-        "tracking_rate": float(np.mean(arrays["target_visible"])),
-        "avg_heading_error_deg": float(np.mean(arrays["heading_error_deg"])),
-        "initial_dist_m": float(arrays["target_dist"][0]),
-        "final_dist_m": float(arrays["target_dist"][-1]),
-        "robot_start_pos": [float(arrays["robot_pos_x"][0]), float(arrays["robot_pos_y"][0]), float(arrays["robot_pos_z"][0])],
-        "target_start_pos": [float(arrays["target_pos_x"][0]), float(arrays["target_pos_y"][0]), float(arrays["target_pos_z"][0])],
-    }
-    # Add pedestrian path waypoints from episode JSON
-    if episode_dict is not None:
-        commands = episode_dict.get("characters", {}).get("commands", {})
-        ped_paths = {}
-        for cname, cmds in commands.items():
-            if cname == "Character":  # target character, skip (already tracked)
-                continue
-            paths = []
-            for cmd in cmds:
-                if cmd.get("cmd") == "GoTo":
-                    paths.append(cmd.get("path", []))
-            if paths:
-                ped_paths[cname] = paths
-        if ped_paths:
-            preview["pedestrian_waypoints"] = ped_paths
-    preview_path = os.path.join(out_dir, "preview.json")
-    with open(preview_path, "w") as f:
-        json.dump(preview, f, indent=2)
-
     # Save camera info sidecar (for LeRobot compat)
     _save_camera_info(save_dir, ep_id)
-    # Save task description as sidecar text (one per episode)
-    if task_desc:
-        task_path = os.path.join(os.path.dirname(out_dir), f"task_description_ep{ep_id:04d}.txt")
-        with open(task_path, "w") as f:
-            f.write(task_desc + "\n")
 
 
 def _save_camera_info(save_dir: str, ep_id: int):
@@ -2779,11 +2594,6 @@ def extract_ep_id(p: str) -> int:
     except: return 999999
 
 
-def _episode_completed(ep_id: int) -> bool:
-    out_dir = os.path.join(ARGS.image_save_dir, f"episode_{ep_id:04d}", "frames")
-    return os.path.isfile(os.path.join(out_dir, "frame_data.npz"))
-
-
 def setup_episode_full(
     episode: dict,
     char_pool: List[str],
@@ -2794,15 +2604,7 @@ def setup_episode_full(
     update_sim(10)
 
     char_paths = spawn_characters_from_episode(episode, char_pool, _CLOTHING_PROFILES,
-                                                skip_skeleton=False)
-    update_sim(60)
-    # ── Verify each character prim is valid ─────────────────────────────
-    stage = omni.usd.get_context().get_stage()
-    for cname, cpath in char_paths.items():
-        prim = stage.GetPrimAtPath(cpath)
-        valid = prim and prim.IsValid()
-        if not valid:
-            print(f"[Setup] WARN: '{cname}' at {cpath} NOT FOUND")
+                                                skip_skeleton=True)
     target_prim_path = resolve_target_character(episode, char_paths)
     if target_prim_path is None:
         return char_paths, None
@@ -2867,16 +2669,6 @@ def main() -> int:
             f"2D_Semantic_Map_{scene_id}_Complete.json",
         )
         print(f"[Paths] semantic_map_json auto-derived: '{sem_map_json}'")
-
-    # ── Build structured output path: {robot}_{camera}/{scene_id}/ ──────
-    _robot_camera = f"{ARGS.robot_type}_{ARGS.camera_type}"
-    _out_root = os.path.join(os.path.dirname(_LOG_ROOT), _robot_camera)
-    os.makedirs(_out_root, exist_ok=True)
-    if ARGS.image_save_dir is None:
-        ARGS.image_save_dir = os.path.join(_out_root, scene_id)
-    if ARGS.output_metrics is None:
-        ARGS.output_metrics = os.path.join(_out_root, "metrics.csv")
-    print(f"[Paths] Output: {_out_root}/{scene_id}/")
 
     try:
         usda_path, ep_dir = resolve_scene_paths(
@@ -2971,7 +2763,7 @@ def main() -> int:
     world.reset()
     update_sim(10)
 
-    # setup_robot_contact_sensor(world)  # disabled for depth verification test
+    setup_robot_contact_sensor(world)
 
     # For kinematic robots: build rest pose (needs dof_names, available after reset),
     # apply it immediately, and sync desired-state globals to the first episode start.
@@ -2988,23 +2780,11 @@ def main() -> int:
     init_quat = np.array(
         [math.cos(first_start_yaw / 2.0), 0.0, 0.0,
          math.sin(first_start_yaw / 2.0)], dtype=np.float32)
-    _pose_ok = False
-    for _ in range(5):
-        try:
-            robot.set_world_pose(
-                position=np.array([init_xy[0], init_xy[1], ARGS.robot_z_height],
-                                  dtype=np.float32),
-                orientation=init_quat,
-            )
-            _pose_ok = True
-            break
-        except Exception as e:
-            print(f"[Robot] set_world_pose retry: {e}")
-            world.step(render=False)
-    if not _pose_ok:
-        print("[FATAL] Could not set robot pose after multiple attempts.")
-        simulation_app.close()
-        return 1
+    robot.set_world_pose(
+        position=np.array([init_xy[0], init_xy[1], ARGS.robot_z_height],
+                          dtype=np.float32),
+        orientation=init_quat,
+    )
     nd = int(robot.num_dof)
     try:
         robot.set_joint_velocities(np.zeros(nd, dtype=np.float32))
@@ -3015,7 +2795,7 @@ def main() -> int:
         robot.set_angular_velocity(np.zeros(3, dtype=np.float32))
     except Exception:
         pass
-    for _ in range(60):
+    for _ in range(10):
         world.step(render=False)
     init_pos, init_yaw = get_robot_pose(robot)
     print(f"[Robot] settled at {init_pos.tolist()}, "
@@ -3058,10 +2838,6 @@ def main() -> int:
     for ep_idx, ep_path in enumerate(selected):
         ep_id = extract_ep_id(ep_path)
         print(f"\n{'='*60}\nEpisode {ep_id}\n{'='*60}")
-
-        if ARGS.resume and _episode_completed(ep_id):
-            print(f"[Resume] EP{ep_id} already has output, skipping.")
-            continue
 
         is_first = (ep_idx == 0)
 
@@ -3197,18 +2973,6 @@ def main() -> int:
 
             robot_pos, robot_yaw   = get_robot_pose(robot)
             target_pos, _ = get_character_pose(target_prim_path)
-
-            # ── Override character walk speed (behavior script resets to 1.0) ─
-            if step > 0:
-                _set_character_speeds(char_paths, ARGS.character_speed)
-
-            # ── Depth debug on first frame and step 20 (characters moving) ─
-            if ARGS.save_images:
-                if step == 0:
-                    _debug_depth_compare(cam, occ, robot_pos, robot_yaw)
-                elif step == 20:
-                    _debug_depth_compare(cam, occ, robot_pos, robot_yaw,
-                                         save_dir="/tmp/depth_debug_step20")
 
             # ── Save positions for next recording ────────────────────────
             _rec["robot_pos"] = robot_pos.copy()
@@ -3370,20 +3134,6 @@ def main() -> int:
                 _viz_mode = "RECOVERY"
                 lin = pursuit_state["recovery_linear"]
                 ang = pursuit_state["recovery_angular"]
-                # If recovery has been spinning without actual heading change
-                # (e.g. physically blocked), double the remaining steps to give
-                # more time to escape.
-                _recover_start = pursuit_state.get("_recovery_start_yaw")
-                _recover_total = pursuit_state.get("_recovery_total", 12)
-                if _recover_start is not None:
-                    _yaw_changed = abs(math.degrees(math.atan2(
-                        math.sin(robot_yaw - _recover_start),
-                        math.cos(robot_yaw - _recover_start))))
-                    _recover_elapsed = _recover_total - pursuit_state["recovery_steps_left"]
-                    if _recover_elapsed >= 3 and _yaw_changed < 3.0 and abs(ang) > 0.1:
-                        pursuit_state["recovery_steps_left"] = min(
-                            pursuit_state["recovery_steps_left"] + 6, RECOVERY_DURATION)
-                        pursuit_state["_recovery_start_yaw"] = robot_yaw
                 _apply_drive(robot, lin, ang)
 
                 pursuit_state["prev_linear"]  = lin
@@ -3401,7 +3151,7 @@ def main() -> int:
                     update_chase_camera(robot)
                     simulation_app.update()
                 if ARGS.save_images and step % ARGS.save_image_every == 0:
-                    save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, robot_pos=robot_pos, robot_yaw=robot_yaw)
+                    save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, occ=occ, robot_pos=robot_pos, robot_yaw=robot_yaw)
                     save_occ_debug(occ, robot_pos, robot_yaw, target_pos,
                                    pursuit_state.get("last_goal"), pursuit_state.get("path"),
                                    step, ARGS.image_save_dir, ep_id, _viz_mode)
@@ -3503,8 +3253,6 @@ def main() -> int:
                     pursuit_state["recovery_linear"]    = recovery_lin
                     pursuit_state["recovery_angular"]   = ang_sign * RECOVERY_ANGULAR_MAG
                     pursuit_state["pose_history"].clear()
-                    pursuit_state["_recovery_start_yaw"] = robot_yaw
-                    pursuit_state["_recovery_total"]  = _adaptive_dur
                     print(f"[EP{ep_id}] step={step} STUCK detected "
                           f"(pos_delta={pos_delta:.3f}m, "
                           f"yaw_delta={yaw_delta:.1f}deg, "
@@ -3531,37 +3279,11 @@ def main() -> int:
                       f"by {blocker_prim} at {hit_dist:.2f}m "
                       f"(full_dist={float(np.linalg.norm(target_pos[:2]-robot_pos[:2])):.2f}m)")
 
-            # ── Consecutive out-of-frame detection ──────────────────────
-            _target_in_frame = abs(_tgt_ang) <= _CAM_FOV_HALF_DEG
-            if not _target_in_frame:
-                _consecutive_lost = getattr(pursuit_state, "_consecutive_lost", 0) + 1
-                pursuit_state["_consecutive_lost"] = _consecutive_lost
-                if _consecutive_lost >= ARGS.max_consecutive_lost:
-                    print(f"[EP{ep_id}] step={step} Target out of frame for "
-                          f"{_consecutive_lost} consecutive steps, aborting.")
-                    done_reason = "target_lost"
-                    _stop_drive(robot)
-                    break
-            else:
-                pursuit_state["_consecutive_lost"] = 0
-
             in_window = (TRACKING_DIST_MIN <= dist_to_target
                          <= ARGS.tracking_dist_max)
             in_view   = (angle_err_deg <= ARGS.tracking_angle_thresh)
             if in_window and in_view and visible:
                 tracking_steps += 1
-                # ── Early abort: running tracking rate too low ──────────
-                if (ARGS.early_abort_tracking_rate > 0
-                        and step >= ARGS.early_abort_min_steps):
-                    _running_rate = tracking_steps / (step + 1)
-                    if _running_rate < ARGS.early_abort_tracking_rate:
-                        print(f"[EP{ep_id}] step={step} early abort: running "
-                              f"tracking_rate={_running_rate:.3f} < "
-                              f"{ARGS.early_abort_tracking_rate}")
-                        done_reason = "low_tracking"
-                        _stop_drive(robot)
-                        break
-
 
             # ── Oracle evasion: step aside when target walks toward robot ──
             # Multi-horizon scan: when target is already close, a single 2-second
@@ -3670,7 +3392,7 @@ def main() -> int:
                                 update_chase_camera(robot)
                                 simulation_app.update()
                             if ARGS.save_images and step % ARGS.save_image_every == 0:
-                                save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, robot_pos=robot_pos, robot_yaw=robot_yaw)
+                                save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, occ=occ, robot_pos=robot_pos, robot_yaw=robot_yaw)
                                 save_occ_debug(occ, robot_pos, robot_yaw, target_pos,
                                                evade_goal, evade_path,
                                                 step, ARGS.image_save_dir, ep_id, "EVADE")
@@ -3747,7 +3469,7 @@ def main() -> int:
                             simulation_app.update()
 
                         if ARGS.save_images and step % ARGS.save_image_every == 0:
-                            save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, robot_pos=robot_pos, robot_yaw=robot_yaw)
+                            save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, occ=occ, robot_pos=robot_pos, robot_yaw=robot_yaw)
                             save_occ_debug(occ, robot_pos, robot_yaw, target_pos,
                                            pursuit_state.get("last_goal"), pursuit_state.get("path"),
                                             step, ARGS.image_save_dir, ep_id, _viz_mode)
@@ -3789,7 +3511,7 @@ def main() -> int:
                         update_chase_camera(robot)
                         simulation_app.update()
                     if ARGS.save_images and step % ARGS.save_image_every == 0:
-                        save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, robot_pos=robot_pos, robot_yaw=robot_yaw)
+                        save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, occ=occ, robot_pos=robot_pos, robot_yaw=robot_yaw)
                     _rec["linear"] = linear
                     _rec["angular"] = angular
                     _rec["mode"] = _viz_mode
@@ -3832,7 +3554,7 @@ def main() -> int:
                     track_linear = float(np.clip(
                         ARGS.control_gain_linear * dist_err * 0.40,
                         _lin_lo,
-                        ARGS.max_linear_vel))
+                        ARGS.max_linear_vel * 0.25))
                 else:
                     track_linear = 0.0
 
@@ -3869,7 +3591,7 @@ def main() -> int:
                     update_chase_camera(robot)
                     simulation_app.update()
                 if ARGS.save_images and step % ARGS.save_image_every == 0:
-                    save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, robot_pos=robot_pos, robot_yaw=robot_yaw)
+                    save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, occ=occ, robot_pos=robot_pos, robot_yaw=robot_yaw)
                     save_occ_debug(occ, robot_pos, robot_yaw, target_pos,
                                    pursuit_state.get("last_goal"), pursuit_state.get("path"),
                                     step, ARGS.image_save_dir, ep_id, _viz_mode)
@@ -3951,7 +3673,7 @@ def main() -> int:
                         update_chase_camera(robot)
                         simulation_app.update()
                     if ARGS.save_images and step % ARGS.save_image_every == 0:
-                        save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, robot_pos=robot_pos, robot_yaw=robot_yaw)
+                        save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, occ=occ, robot_pos=robot_pos, robot_yaw=robot_yaw)
                         save_occ_debug(occ, robot_pos, robot_yaw, target_pos,
                                        None, None,
                                        step, ARGS.image_save_dir, ep_id, _viz_mode)
@@ -3963,86 +3685,11 @@ def main() -> int:
                 path_end_dist = 0.0
             else:
                 _viz_mode = "APPROACH"
-                # Pure proportional control toward target, avoiding obstacles
-                # via occ grid proximity check.  No navmesh path planning.
-                pursuit_state["path"] = None
+                nav_goal = snap_to_navmesh(nm, target_pos, search_radius=2.0)
+                if nav_goal is None:
+                    nav_goal = target_pos.copy()
                 path_end_dist = TRACKING_DIST_MIN
 
-            if _viz_mode == "APPROACH":
-                # Direct steering toward target with occ-based obstacle avoidance
-                _dx_t = float(target_pos[0] - robot_pos[0])
-                _dy_t = float(target_pos[1] - robot_pos[1])
-                _target_yaw = math.atan2(_dy_t, _dx_t)
-                _yaw_err = math.atan2(math.sin(_target_yaw - robot_yaw),
-                                       math.cos(_target_yaw - robot_yaw))
-
-                # Check occ grid for nearby obstacles and steer away
-                _obs_steer = 0.0
-                _probe = 0.30
-                for _side_deg in range(-170, 180, 20):
-                    _sa = robot_yaw + math.radians(_side_deg)
-                    _sx = float(robot_pos[0]) + _probe * math.cos(_sa)
-                    _sy = float(robot_pos[1]) + _probe * math.sin(_sa)
-                    if not _occ_is_free(occ, _sx, _sy):
-                        _obs_steer += -math.sin(math.radians(_side_deg)) * 0.8
-                # Kinematic robots: stronger turn when blocked
-                if ROBOT_DRIVE_MODE == "kinematic" and occ is not None:
-                    _front_x = float(robot_pos[0]) + 0.25 * math.cos(robot_yaw)
-                    _front_y = float(robot_pos[1]) + 0.25 * math.sin(robot_yaw)
-                    if not _occ_is_free(occ, _front_x, _front_y):
-                        _obs_steer += 0.6  # bias right turn when front blocked
-
-                angular = float(np.clip(
-                    ARGS.control_gain_angular * _yaw_err + _obs_steer,
-                    -ARGS.max_angular_vel, ARGS.max_angular_vel))
-
-                _dist_err = dist_to_target - path_end_dist
-                # If obstacle ahead, slow down
-                _obs_ahead = 0
-                if occ is not None:
-                    for _sd in [-20, -10, 0, 10, 20]:
-                        _sa = robot_yaw + math.radians(_sd)
-                        _sx = float(robot_pos[0]) + 0.5 * math.cos(_sa)
-                        _sy = float(robot_pos[1]) + 0.5 * math.sin(_sa)
-                        if not _occ_is_free(occ, _sx, _sy):
-                            _obs_ahead += 1
-                _speed_scale = max(0.2, 1.0 - _obs_ahead * 0.2)
-                linear = float(np.clip(
-                    ARGS.control_gain_linear * _dist_err * 0.5 * _speed_scale,
-                    0.0, ARGS.max_linear_vel * 0.7))
-
-                # LoS blend toward target
-                angular = _los_blend_angular(
-                    robot_pos, robot_yaw, target_pos, angular,
-                    weight=0.7)
-                linear, angular = smooth_cmd(
-                    pursuit_state, linear, angular, SMOOTH_ALPHA_NORMAL)
-                linear, angular = apply_ped_reactive_avoidance(
-                    robot_pos, robot_yaw, linear, angular,
-                    char_paths, target_prim_path)
-                if linear < 0 and not _backward_clear(robot_pos, robot_yaw, occ):
-                    linear = 0.0
-                _apply_drive(robot, linear, angular)
-                pursuit_state["_last_mode"] = "APPROACH"
-
-                print(f"[EP{ep_id}] step={step} APPROACH "
-                      f"dist={dist_to_target:.3f}m yaw_err={math.degrees(_yaw_err):+.1f}° "
-                      f"obs_steer={_obs_steer:+.3f} lin={linear:.3f} ang={angular:.3f}")
-                for _ in range(ARGS.decimation):
-                    world.step(render=False)
-                    if ROBOT_DRIVE_MODE == "kinematic":
-                        kinematic_move(robot, linear, angular)
-                    update_chase_camera(robot)
-                    simulation_app.update()
-                if ARGS.save_images and step % ARGS.save_image_every == 0:
-                    save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, robot_pos=robot_pos, robot_yaw=robot_yaw)
-                _rec["linear"] = linear
-                _rec["angular"] = angular
-                _rec["mode"] = _viz_mode
-                step += 1
-                continue
-
-            # ── STANDOFF navmesh path planning (kept for close-range positioning) ──
             need_replan = (
                 pursuit_state["path"] is None
                 or (step - pursuit_state["last_plan_step"]) >= REPLAN_PERIOD
@@ -4085,7 +3732,7 @@ def main() -> int:
                             update_chase_camera(robot)
                             simulation_app.update()
                         if ARGS.save_images and step % ARGS.save_image_every == 0:
-                            save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, robot_pos=robot_pos, robot_yaw=robot_yaw)
+                            save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, occ=occ, robot_pos=robot_pos, robot_yaw=robot_yaw)
                             save_occ_debug(occ, robot_pos, robot_yaw, target_pos,
                                            None, None,
                                             step, ARGS.image_save_dir, ep_id, "STANDOFF-PF")
@@ -4110,7 +3757,7 @@ def main() -> int:
                         update_chase_camera(robot)
                         simulation_app.update()
                     if ARGS.save_images and step % ARGS.save_image_every == 0:
-                        save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, robot_pos=robot_pos, robot_yaw=robot_yaw)
+                        save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, occ=occ, robot_pos=robot_pos, robot_yaw=robot_yaw)
                         save_occ_debug(occ, robot_pos, robot_yaw, target_pos,
                                        pursuit_state.get("last_goal"), None,
                                        step, ARGS.image_save_dir, ep_id, "PLAN-FAIL")
@@ -4163,7 +3810,7 @@ def main() -> int:
                 update_chase_camera(robot)
                 simulation_app.update()
             if ARGS.save_images and step % ARGS.save_image_every == 0:
-                save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, robot_pos=robot_pos, robot_yaw=robot_yaw)
+                save_rgb_depth(cam, step, ARGS.image_save_dir, ep_id, target_bbox=_rec.get("target_bbox"), is_first_episode_frame=_is_ep_first_frame, occ=occ, robot_pos=robot_pos, robot_yaw=robot_yaw)
                 save_occ_debug(occ, robot_pos, robot_yaw, target_pos,
                                pursuit_state.get("last_goal"), pursuit_state.get("path"),
                                step, ARGS.image_save_dir, ep_id, _viz_mode)
@@ -4187,27 +3834,19 @@ def main() -> int:
         tracking_rate  = tracking_steps / max(episode_length, 1)
         had_recovery   = pursuit_state["any_recovery"]
 
-        # ── In-frame rate: fraction of frames where target projects into image ─
-        uv_u = np.array(ep_data.get("target_uv_u", []), dtype=np.float32)
-        in_frame_count = int((uv_u >= 0).sum()) if len(uv_u) > 0 else 0
-        visible_rate = in_frame_count / max(episode_length, 1)
-
         # ── Save per-step frame data as NPZ (only for high-quality episodes) ──
         _max_final = (ARGS.max_final_dist if ARGS.max_final_dist > 0
                       else ARGS.tracking_dist_max)
         _allowed_reasons = [s.strip() for s in ARGS.allowed_end_reasons.split(",")]
         ep_ok = (distances and tracking_rate >= ARGS.min_tracking_rate
-                 and visible_rate >= ARGS.min_visible_rate
                  and collision_count <= ARGS.max_collisions
                  and (ARGS.allow_recovery or not had_recovery)
                  and distances[-1] <= _max_final
                  and done_reason in _allowed_reasons)
         if ep_ok:
-            save_episode_npz(ep_data, ep_id, ARGS.image_save_dir,
-                              episode_dict=episode)
+            save_episode_npz(ep_data, ep_id, ARGS.image_save_dir)
         else:
             print(f"[Data] EP{ep_id} SKIPPED (tracking_rate={tracking_rate:.3f}, "
-                  f"visible_rate={visible_rate:.3f}, "
                   f"collisions={collision_count}, recovery={had_recovery}, "
                   f"final_dist={distances[-1] if distances else -1:.2f}, "
                   f"reason={done_reason})")
@@ -4242,38 +3881,12 @@ def main() -> int:
         # Wrap post-episode physics cleanup to prevent segfault from killing data save.
         try:
             _stop_drive(robot)
-            for _ in range(20):
+            for _ in range(5):
                 world.step(render=False)
                 update_chase_camera(robot)
                 simulation_app.update()
         except Exception as e:
             print(f"[Cleanup] EP{ep_id} post cleanup exception: {e}")
-
-        # ── Aggressive GPU cleanup to mitigate VRAM leak ──
-        try:
-            import gc; gc.collect()
-            for _ in range(15):
-                simulation_app.update()
-            gc.collect()
-        except Exception as e:
-            print(f"[Cleanup] EP{ep_id} gpu_cleanup exception: {e}")
-
-        # Periodically recreate policy camera to flush render targets
-        if (ep_idx + 1) % 5 == 0 and ep_idx < len(selected) - 1:
-            print(f"[Cleanup] EP{ep_id} recreating policy camera (flush render targets)...")
-            try:
-                old_cam = cam
-                stage = omni.usd.get_context().get_stage()
-                cam_prim = stage.GetPrimAtPath(CAMERA_PRIM_PATH)
-                if cam_prim:
-                    stage.RemovePrim(cam_prim.GetPath())
-                for _ in range(10):
-                    simulation_app.update()
-                cam = spawn_policy_camera()
-                print(f"[Cleanup] EP{ep_id} camera recreated successfully.")
-                del old_cam
-            except Exception as e:
-                print(f"[Cleanup] EP{ep_id} camera recreation failed: {e}, keeping old camera.")
 
     if all_metrics:
         out_dir = os.path.dirname(os.path.abspath(ARGS.output_metrics)) or "."
@@ -4291,10 +3904,6 @@ def main() -> int:
         print("[Metrics] No episodes were collected.")
 
     print("\n[Finished] Cleaning up...")
-    import gc; gc.collect()
-    for _ in range(20):
-        simulation_app.update()
-    gc.collect()
     try:    tl.stop()
     except: pass
     sys.stdout.flush()
