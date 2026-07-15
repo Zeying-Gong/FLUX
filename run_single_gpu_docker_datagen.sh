@@ -7,6 +7,7 @@ S=$2
 E=$3
 ROBOT_ONLY=$4
 CAM_ONLY=$5
+CHARACTER_SPEED="${CHARACTER_SPEED:-0.5}"
 
 NUM_EPISODES=100
 BATCH_SIZE=10
@@ -73,7 +74,7 @@ for combo in $COMBOS; do
         $PYTHON "$SCRIPT_PY" \
           --episode_dir "$SCENE_DIR/$scene" \
           --robot_type "$robot" --camera_type "$cam" \
-          --max_steps 300 --character_speed 1.0 \
+          --max_steps 300 --character_speed "$CHARACTER_SPEED" \
           --save_images --start_idx $batch_start --end_idx $batch_end \
           --headless \
           "${VIDEO_ARGS[@]}" \

@@ -118,7 +118,7 @@ def parse_args():
                    help="If >0, abort episode early when running tracking rate "
                         "stays below this threshold after --early_abort_min_steps "
                         "(default 0.0 = disabled)")
-    p.add_argument("--character_speed", type=float, default=1.0,
+    p.add_argument("--character_speed", type=float, default=0.5,
                    help="Character walk speed fraction [0-1]. "
                         "1.0 = full animation speed (~1.2 m/s typical). "
                         "0.5 = half speed (~0.6 m/s). (default 0.5)")

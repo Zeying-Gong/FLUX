@@ -8,6 +8,7 @@ SCENE_ID="${SCENE_ID:-0001_839920}"
 GPU_ID="${GPU_ID:-0}"
 MAX_STEPS="${MAX_STEPS:-300}"
 SAVE_VIDEO="${SAVE_VIDEO:-0}"
+CHARACTER_SPEED="${CHARACTER_SPEED:-0.5}"
 SAGE3D_DIR="${SAGE3D_DIR:-/mnt/ssd1/zeyingg/SAGE-3D_Official}"
 ISAAC_CACHE_DIR="${ISAAC_CACHE_DIR:-$HOME/.cache/flux-isaac-sim}"
 RUN_TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
@@ -41,6 +42,7 @@ LOG_FILE="$HOST_RUN_DIR/console.log"
   echo "gpu_id=$GPU_ID"
   echo "max_steps=$MAX_STEPS"
   echo "save_video=$SAVE_VIDEO"
+  echo "character_speed=$CHARACTER_SPEED"
   echo "repo_dir=$REPO_DIR"
   echo "sage3d_dir=$SAGE3D_DIR"
   echo "cache_dir=$ISAAC_CACHE_DIR"
@@ -76,7 +78,7 @@ docker run --rm -i \
     --start_idx 0 \
     --end_idx 1 \
     --max_steps $MAX_STEPS \
-    --character_speed 1.0 \
+    --character_speed $CHARACTER_SPEED \
     --save_images \
     --image_save_dir $CONTAINER_RUN_DIR/$SCENE_ID \
     --headless" 2>&1 | tee "$LOG_FILE"
