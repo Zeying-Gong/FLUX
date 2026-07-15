@@ -1,0 +1,14 @@
+run_name=go2_zed_datagen_0001_839920_20260715_102444
+scene_id=0001_839920
+gpu_id=0
+max_steps=300
+save_video=1
+character_speed=0.5
+render_warmup_frames=180
+repo_dir=/mnt/nvme1/zeyingg/FLUX
+sage3d_dir=/mnt/ssd1/zeyingg/SAGE-3D_Official
+cache_dir=/home/zeyingg/.cache/flux-isaac-sim
+git_commit=47f539641c382c3f648230f7eaf2357954c45b84
+started_at=2026-07-15T10:24:44+08:00
+finished_at=2026-07-15T10:30:11+08:00
+exit_code=0
