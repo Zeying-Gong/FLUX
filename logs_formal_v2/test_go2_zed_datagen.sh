@@ -9,6 +9,7 @@ GPU_ID="${GPU_ID:-0}"
 MAX_STEPS="${MAX_STEPS:-300}"
 SAVE_VIDEO="${SAVE_VIDEO:-0}"
 CHARACTER_SPEED="${CHARACTER_SPEED:-0.5}"
+RENDER_WARMUP_FRAMES="${RENDER_WARMUP_FRAMES:-180}"
 SAGE3D_DIR="${SAGE3D_DIR:-/mnt/ssd1/zeyingg/SAGE-3D_Official}"
 ISAAC_CACHE_DIR="${ISAAC_CACHE_DIR:-$HOME/.cache/flux-isaac-sim}"
 RUN_TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
@@ -43,6 +44,7 @@ LOG_FILE="$HOST_RUN_DIR/console.log"
   echo "max_steps=$MAX_STEPS"
   echo "save_video=$SAVE_VIDEO"
   echo "character_speed=$CHARACTER_SPEED"
+  echo "render_warmup_frames=$RENDER_WARMUP_FRAMES"
   echo "repo_dir=$REPO_DIR"
   echo "sage3d_dir=$SAGE3D_DIR"
   echo "cache_dir=$ISAAC_CACHE_DIR"
@@ -56,6 +58,7 @@ docker run --rm -i \
   -e ACCEPT_EULA=Y \
   -e PRIVACY_CONSENT=Y \
   -e SAVE_VIDEO="$SAVE_VIDEO" \
+  -e RENDER_WARMUP_FRAMES="$RENDER_WARMUP_FRAMES" \
   --entrypoint bash \
   --runtime=nvidia \
   --gpus "device=$GPU_ID" \

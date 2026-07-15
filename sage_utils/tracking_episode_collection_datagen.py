@@ -45,6 +45,12 @@ def parse_args():
     p.add_argument("--volume_padding",  type=float, default=1.2)
     p.add_argument("--fallback_size",   type=float, default=100.0)
     p.add_argument("--warmup_frames",   type=int,   default=60)
+    p.add_argument(
+        "--render_warmup_frames",
+        type=int,
+        default=int(os.environ.get("RENDER_WARMUP_FRAMES", "180")),
+        help="Maximum rendered updates to wait for the visual background",
+    )
     p.add_argument("--cache_dir",       default=None)
     p.add_argument("--force_rebake",    action="store_true")
     p.add_argument("--semantic_maps_root",
@@ -1202,7 +1208,7 @@ def _add_static_colliders():
         print("[Colliders] /World/scene_collision not found.")
         return
 
-    # 1. Keep invisible to renderer (so RGB shows 3DGS, not proxy mesh)
+    # Keep invisible to renderer so RGB comes from the 3DGS visual layer.
     UsdGeom.Imageable(scene_coll).MakeInvisible()
 
     # 2. Ensure all meshes have CollisionAPI (for PhysX depth detection)
@@ -1217,7 +1223,7 @@ def _add_static_colliders():
             except Exception:
                 pass
 
-    print(f"[Colliders] scene_collision invisible (RGB clean), "
+    print(f"[Colliders] scene_collision invisible (3DGS RGB), "
           f"CollisionAPI ensured on {count} new meshes, "
           f"total meshes with CollisionAPI under /World: "
           f"{sum(1 for p in Usd.PrimRange(scene_coll) if p.IsA(UsdGeom.Mesh) and p.HasAPI(UsdPhysics.CollisionAPI))}")
@@ -1376,6 +1382,49 @@ def spawn_policy_camera() -> IsaacCamera:
         simulation_app.update()
     print(f"[Camera] Policy camera initialized at {cam_prim_path}")
     return cam
+
+
+def wait_for_visual_background(cam: IsaacCamera, max_updates: int) -> bool:
+    """Wait until the camera contains substantial non-black background pixels."""
+    max_updates = max(0, int(max_updates))
+    if max_updates == 0:
+        return True
+
+    last_coverage = 0.0
+    for update_idx in range(1, max_updates + 1):
+        simulation_app.update()
+        try:
+            rgb = cam.get_rgb()
+            if rgb is None:
+                continue
+            frame = np.asarray(rgb)[..., :3]
+            if frame.size == 0:
+                continue
+            # Missing 3DGS backgrounds are emitted as nearly black pixels.
+            intensity = np.max(frame.astype(np.float32), axis=-1)
+            black_threshold = 0.02 if float(np.max(intensity)) <= 1.5 else 5.0
+            last_coverage = float(np.mean(intensity > black_threshold))
+            if last_coverage >= 0.35:
+                print(
+                    f"[RenderWarmup] background ready after {update_idx} updates; "
+                    f"nonblack_coverage={last_coverage:.3f}"
+                )
+                return True
+        except Exception as exc:
+            if update_idx == max_updates:
+                print(f"[RenderWarmup] camera read failed: {exc}")
+
+        if update_idx % 60 == 0:
+            print(
+                f"[RenderWarmup] waiting {update_idx}/{max_updates}; "
+                f"nonblack_coverage={last_coverage:.3f}"
+            )
+
+    print(
+        f"[RenderWarmup] WARNING: visual background not ready after "
+        f"{max_updates} updates; nonblack_coverage={last_coverage:.3f}"
+    )
+    return False
 
 
 _CHASE_CAM_STATE = {
@@ -3318,6 +3367,8 @@ def main() -> int:
     for _ in range(30):
         update_chase_camera(robot)
         simulation_app.update()
+
+    wait_for_visual_background(cam, ARGS.render_warmup_frames)
 
     print("[Pre-spawn] Initial scene ready. Entering episode loop...")
 
