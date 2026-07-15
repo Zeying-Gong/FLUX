@@ -1,0 +1,1098 @@
+Loading user config located at: '/isaac-sim/kit/data/Kit/isaacsim.exp.action_and_event_data_generation.base/0.1/user.config.json'
+[Info] [carb] Logging to file: /isaac-sim/kit/logs/Kit/isaacsim.exp.action_and_event_data_generation.base/0.1/kit_20260715_022445.log
+2026-07-15T02:24:45Z [3ms] [Warning] [carb.crashreporter-breakpad.plugin] [previous crash] preventing upload of minidump due to user opt-out: '/isaac-sim/kit/data/Kit/isaacsim.exp.action_and_event_data_generation.base/0.1/16312e4a-1b5e-4e79-4aeee3be-679997a5.dmp'
+2026-07-15T02:24:45Z [5ms] [Warning] [carb.crashreporter-breakpad.plugin] [previous crash] preventing upload of minidump due to user opt-out: '/isaac-sim/kit/data/Kit/isaacsim.exp.action_and_event_data_generation.base/0.1/7e7cbb25-6731-4ad9-700e9285-891a82a8.dmp'
+2026-07-15T02:24:45Z [6ms] [Warning] [carb.crashreporter-breakpad.plugin] [previous crash] preventing upload of minidump due to user opt-out: '/isaac-sim/kit/data/Kit/isaacsim.exp.action_and_event_data_generation.base/0.1/4fdc90bc-90b3-4bf5-56dc8195-9a588649.dmp'
+2026-07-15T02:24:45Z [7ms] [Warning] [carb.crashreporter-breakpad.plugin] [previous crash] preventing upload of minidump due to user opt-out: '/isaac-sim/kit/data/Kit/isaacsim.exp.action_and_event_data_generation.base/0.1/d3464416-ed15-4a05-3d6c5183-b2e4027d.dmp'
+2026-07-15T02:24:45Z [7ms] [Warning] [carb.crashreporter-breakpad.plugin] [previous crash] preventing upload of minidump due to user opt-out: '/isaac-sim/kit/data/Kit/isaacsim.exp.action_and_event_data_generation.base/0.1/ed9f3fad-c3a8-4ed5-f632dd87-8e60a014.dmp'
+2026-07-15T02:24:45Z [8ms] [Warning] [carb.crashreporter-breakpad.plugin] [previous crash] preventing upload of minidump due to user opt-out: '/isaac-sim/kit/data/Kit/isaacsim.exp.action_and_event_data_generation.base/0.1/d0fb3baa-28ae-40f4-c10653a1-01a2db17.dmp'
+2026-07-15T02:24:45Z [9ms] [Warning] [carb.crashreporter-breakpad.plugin] [previous crash] preventing upload of minidump due to user opt-out: '/isaac-sim/kit/data/Kit/isaacsim.exp.action_and_event_data_generation.base/0.1/59610738-3a0d-4525-4e70ae99-c45dbf88.dmp'
+2026-07-15T02:24:45Z [9ms] [Warning] [carb.crashreporter-breakpad.plugin] [previous crash] preventing upload of minidump due to user opt-out: '/isaac-sim/kit/data/Kit/isaacsim.exp.action_and_event_data_generation.base/0.1/f96e9fb7-d8fb-43cd-7a9840ac-d5e8c499.dmp'
+[0.170s] [ext: omni.kit.async_engine-0.0.3] startup
+[1.897s] [ext: omni.metrics.core-0.0.3] startup
+[1.897s] [ext: omni.client.lib-1.1.0] startup
+[1.924s] [ext: omni.blobkey-1.1.2] startup
+[1.925s] [ext: omni.stats-1.0.1] startup
+[1.926s] [ext: omni.datastore-0.0.0] startup
+[1.936s] [ext: omni.client-1.3.0] startup
+[1.944s] [ext: omni.ujitso.default-1.0.0] startup
+[1.948s] [ext: omni.hsscclient-1.1.2] startup
+[1.956s] [ext: omni.gpu_foundation.shadercache.vulkan-1.0.0] startup
+[1.960s] [ext: omni.assets.plugins-0.0.0] startup
+[1.962s] [ext: omni.gpu_foundation-0.0.0] startup
+[1.978s] [ext: carb.windowing.plugins-1.0.0] startup
+2026-07-15T02:24:47Z [1,912ms] [Warning] [carb.windowing-glfw.plugin] GLFW initialization failed.
+2026-07-15T02:24:47Z [1,912ms] [Warning] [carb] Failed to startup plugin carb.windowing-glfw.plugin (interfaces: [carb::windowing::IGLContext v1.0],[carb::windowing::IWindowing v1.5]) (impl: carb.windowing-glfw.plugin)
+[1.980s] [ext: omni.kit.renderer.init-0.0.0] startup
+2026-07-15T02:24:47Z [1,983ms] [Warning] [omni.platforminfo.plugin] failed to open the default display.  Can't verify X Server version.
+
+|---------------------------------------------------------------------------------------------|
+| Driver Version: 550.107.02    | Graphics API: Vulkan
+|=============================================================================================|
+| GPU | Name                             | Active | LDA | GPU Memory | Vendor-ID | LUID       |
+|     |                                  |        |     |            | Device-ID | UUID       |
+|     |                                  |        |     |            | Bus-ID    |            |
+|---------------------------------------------------------------------------------------------|
+| 0   | NVIDIA GeForce RTX 3090          | Yes: 0 |     | 24822   MB | 10de      | 0          |
+|     |                                  |        |     |            | 2204      | b5ad68f9.. |
+|     |                                  |        |     |            | 81        |            |
+|=============================================================================================|
+| OS: 24.04.2 LTS (Noble Numbat) ubuntu, Version: 24.04.2, Kernel: 6.8.0-124-generic
+| Processor: AMD EPYC 7542 32-Core Processor
+| Cores: 32 | Logical Cores: 64
+|---------------------------------------------------------------------------------------------|
+| Total Memory (MB): 257584 | Free Memory: 18134
+| Total Page/Swap (MB): 286101 | Free Page/Swap: 0
+|---------------------------------------------------------------------------------------------|
+2026-07-15T02:24:48Z [2,712ms] [Warning] [gpu.foundation.plugin] IOMMU is enabled.
+[3.354s] [ext: omni.kit.pipapi-0.0.0] startup
+[3.357s] [ext: omni.kit.pip_archive-0.0.0] startup
+[3.357s] [ext: omni.services.pip_archive-0.16.0] startup
+[3.358s] [ext: omni.kit.telemetry-0.5.2] startup
+[3.421s] [ext: omni.kit.loop-isaac-1.3.7] startup
+[3.424s] [ext: omni.kit.test-2.0.1] startup
+[3.539s] [ext: omni.pip.compute-1.6.3] startup
+[3.540s] [ext: omni.materialx.libs-1.0.7] startup
+[3.554s] [ext: omni.pip.cloud-1.4.3] startup
+[3.561s] [ext: omni.isaac.core_archive-3.0.0] startup
+[3.562s] [ext: omni.usd.config-1.0.6] startup
+[3.575s] [ext: omni.gpucompute.plugins-0.0.0] startup
+[3.577s] [ext: omni.usd.libs-1.0.1] startup
+[3.724s] [ext: omni.isaac.ml_archive-3.0.4] startup
+[3.725s] [ext: omni.mdl-56.0.3] startup
+[3.772s] [ext: omni.iray.libs-0.0.0] startup
+[3.783s] [ext: omni.mdl.neuraylib-0.2.12] startup
+[3.788s] [ext: omni.kit.usd.mdl-1.1.5] startup
+[3.976s] [ext: omni.appwindow-1.1.10] startup
+2026-07-15T02:24:49Z [3,911ms] [Warning] [carb.windowing-glfw.plugin] GLFW initialization failed.
+2026-07-15T02:24:49Z [3,911ms] [Warning] [carb] Failed to startup plugin carb.windowing-glfw.plugin (interfaces: [carb::windowing::IGLContext v1.0],[carb::windowing::IWindowing v1.5]) (impl: carb.windowing-glfw.plugin)
+[3.982s] [ext: omni.kit.renderer.core-1.1.0] startup
+2026-07-15T02:24:49Z [3,929ms] [Warning] [carb.windowing-glfw.plugin] GLFW initialization failed.
+2026-07-15T02:24:49Z [3,929ms] [Warning] [carb] Failed to startup plugin carb.windowing-glfw.plugin (interfaces: [carb::windowing::IGLContext v1.0],[carb::windowing::IWindowing v1.5]) (impl: carb.windowing-glfw.plugin)
+2026-07-15T02:24:49Z [3,941ms] [Warning] [carb.windowing-glfw.plugin] GLFW initialization failed.
+2026-07-15T02:24:49Z [3,941ms] [Warning] [carb] Failed to startup plugin carb.windowing-glfw.plugin (interfaces: [carb::windowing::IGLContext v1.0],[carb::windowing::IWindowing v1.5]) (impl: carb.windowing-glfw.plugin)
+[4.012s] [ext: omni.kit.renderer.capture-0.0.0] startup
+[4.017s] [ext: omni.kit.renderer.imgui-2.0.5] startup
+2026-07-15T02:24:49Z [3,957ms] [Warning] [carb.windowing-glfw.plugin] GLFW initialization failed.
+2026-07-15T02:24:49Z [3,957ms] [Warning] [carb] Failed to startup plugin carb.windowing-glfw.plugin (interfaces: [carb::windowing::IGLContext v1.0],[carb::windowing::IWindowing v1.5]) (impl: carb.windowing-glfw.plugin)
+2026-07-15T02:24:49Z [3,959ms] [Warning] [carb.windowing-glfw.plugin] GLFW initialization failed.
+2026-07-15T02:24:49Z [3,959ms] [Warning] [carb] Failed to startup plugin carb.windowing-glfw.plugin (interfaces: [carb::windowing::IGLContext v1.0],[carb::windowing::IWindowing v1.5]) (impl: carb.windowing-glfw.plugin)
+2026-07-15T02:24:49Z [3,961ms] [Warning] [carb.windowing-glfw.plugin] GLFW initialization failed.
+2026-07-15T02:24:49Z [3,961ms] [Warning] [carb] Failed to startup plugin carb.windowing-glfw.plugin (interfaces: [carb::windowing::IGLContext v1.0],[carb::windowing::IWindowing v1.5]) (impl: carb.windowing-glfw.plugin)
+[4.168s] [ext: omni.ui-2.27.1] startup
+[4.187s] [ext: omni.kit.mainwindow-1.0.3] startup
+[4.189s] [ext: carb.audio-0.1.0] startup
+[4.201s] [ext: omni.uiaudio-1.0.0] startup
+[4.202s] [ext: omni.kit.uiapp-0.0.0] startup
+[4.203s] [ext: omni.usd.schema.metrics.assembler-107.3.1] startup
+[4.209s] [ext: omni.usd.schema.anim-0.0.0] startup
+[4.245s] [ext: omni.anim.behavior.schema-107.3.0] startup
+[4.252s] [ext: omni.usd.schema.geospatial-0.0.0] startup
+[4.257s] [ext: omni.usd.schema.audio-0.0.0] startup
+[4.262s] [ext: omni.usd.schema.semantics-0.0.0] startup
+[4.266s] [ext: omni.usd_resolver-1.0.0] startup
+[4.273s] [ext: usdrt.scenegraph-7.6.1] startup
+[4.351s] [ext: omni.kit.actions.core-1.0.0] startup
+[4.356s] [ext: omni.timeline-1.0.14] startup
+[4.359s] [ext: omni.usd.core-1.5.3] startup
+[4.363s] [ext: omni.resourcemonitor-107.0.1] startup
+[4.367s] [ext: omni.activity.core-1.0.3] startup
+[4.370s] [ext: omni.kit.audiodeviceenum-1.0.2] startup
+[4.372s] [ext: omni.hydra.usdrt_delegate-7.5.1] startup
+[4.384s] [ext: omni.graph.exec-0.9.6] startup
+[4.385s] [ext: omni.kit.window.popup_dialog-2.0.24] startup
+[4.393s] [ext: omni.kit.exec.core-0.13.4] startup
+[4.396s] [ext: omni.kit.widget.nucleus_connector-2.0.1] startup
+[4.418s] [ext: omni.kit.usd_undo-0.1.8] startup
+[4.419s] [ext: omni.kit.commands-1.4.10] startup
+[4.428s] [ext: omni.hydra.scene_delegate-0.3.4] startup
+[4.437s] [ext: omni.usd-1.13.10] startup
+[4.514s] [ext: omni.kit.asset_converter-5.0.17] startup
+[4.534s] [ext: omni.usd.schema.omniscripting-1.0.0] startup
+[4.542s] [ext: omni.usd.schema.render_settings.rtx-0.0.0] startup
+[4.544s] [ext: omni.anim.navigation.schema-107.3.3] startup
+[4.550s] [ext: isaacsim.robot.schema-3.6.0] startup
+[4.564s] [ext: omni.usd.schema.omnigraph-1.0.0] startup
+[4.575s] [ext: omni.usd.schema.isaac-3.0.5] startup
+[4.575s] [ext: omni.usd.schema.omni_sensors-0.0.0] startup
+[4.576s] [ext: omni.inspect-1.0.2] startup
+[4.578s] [ext: omni.kit.notification_manager-1.0.10] startup
+[4.581s] [ext: omni.graph.core-2.184.5] startup
+[4.586s] [ext: isaacsim.core.deprecation_manager-0.2.7] startup
+[4.587s] [ext: omni.usd.schema.omni_lens_distortion-0.0.0] startup
+[4.588s] [ext: omni.usd.schema.physx-107.3.26] startup
+[4.653s] [ext: omni.anim.graph.schema-107.3.3] startup
+[4.664s] [ext: omni.usd.schema.flow-107.1.1] startup
+[4.665s] [ext: omni.kvdb-107.3.26] startup
+[4.668s] [ext: omni.usdphysics-107.3.26] startup
+[4.671s] [ext: omni.physx.foundation-107.3.26] startup
+[4.674s] [ext: omni.localcache-107.3.26] startup
+[4.677s] [ext: omni.convexdecomposition-107.3.26] startup
+[4.681s] [ext: omni.physx.cooking-107.3.26] startup
+[4.686s] [ext: omni.physx-107.3.26] startup
+[4.703s] [ext: omni.physics-107.3.26] startup
+[4.709s] [ext: omni.ujitso.client-0.0.0] startup
+[4.710s] [ext: omni.physics.physx-107.3.26] startup
+2026-07-15T02:24:50Z [4,644ms] [Warning] [carb] Acquiring non optional plugin interface which is not listed as dependency: [omni::physx::IPhysxBenchmarks v1.0] (plugin: <default plugin>), by client: omni.physics.physx.plugin. Add it to CARB_PLUGIN_IMPL_DEPS() macro of a client.
+[4.712s] [ext: omni.kit.numpy.common-0.1.3] startup
+[4.715s] [ext: omni.kit.usd.layers-2.2.11] startup
+[4.730s] [ext: omni.volume-0.5.2] startup
+[4.735s] [ext: omni.physics.stageupdate-107.3.26] startup
+[4.738s] [ext: isaacsim.core.version-2.0.6] startup
+[4.739s] [ext: omni.isaac.dynamic_control-2.0.7] startup
+2026-07-15T02:24:50Z [4,698ms] [Warning] [omni.isaac.dynamic_control] omni.isaac.dynamic_control is deprecated as of Isaac Sim 4.5. No action is needed from end-users.
+[4.767s] [ext: omni.anim.navigation.core-107.3.8] startup
+[4.778s] [ext: isaacsim.storage.native-1.5.1] startup
+[4.781s] [ext: omni.physics.tensors-107.3.26] startup
+[4.790s] [ext: omni.kit.widget.graph-2.0.0] startup
+[4.801s] [ext: omni.kit.widget.searchfield-1.1.8] startup
+[4.803s] [ext: omni.kit.graph.delegate.default-1.2.3] startup
+[4.804s] [ext: omni.kit.graph.usd.commands-1.3.1] startup
+[4.809s] [ext: omni.kit.graph.editor.core-1.5.3] startup
+[4.814s] [ext: omni.kit.mesh.raycast-107.0.1] startup
+[4.820s] [ext: omni.kit.widget.options_menu-1.1.6] startup
+[4.826s] [ext: omni.kit.helper.file_utils-0.1.9] startup
+[4.829s] [ext: omni.kit.menu.core-1.1.2] startup
+[4.830s] [ext: omni.kit.widget.path_field-2.0.11] startup
+[4.831s] [ext: omni.kit.widget.options_button-1.0.3] startup
+[4.832s] [ext: omni.kit.property.adapter.core-1.0.2] startup
+[4.837s] [ext: omni.ui.scene-1.11.5] startup
+[4.846s] [ext: omni.kit.widget.filebrowser-2.12.3] startup
+[4.856s] [ext: omni.kit.widget.context_menu-1.2.5] startup
+[4.858s] [ext: omni.kit.widget.browser_bar-2.0.10] startup
+[4.859s] [ext: omni.kit.clipboard-1.0.5] startup
+[4.860s] [ext: omni.kit.property.adapter.usd-1.0.2] startup
+[4.862s] [ext: omni.kit.window.filepicker-2.13.4] startup
+[4.891s] [ext: omni.kit.property.adapter.fabric-1.0.3] startup
+[4.893s] [ext: omni.kit.stage_template.core-1.1.22] startup
+[4.894s] [ext: omni.kit.window.file_exporter-1.0.33] startup
+2026-07-15T02:24:50Z [4,830ms] [Warning] [carb.omniclient.plugin]  Main: provider_file: failed to initialize a new INotify instance.  Directory change notifications will be disabled.
+[4.898s] [ext: omni.kit.window.file_importer-1.1.18] startup
+[4.900s] [ext: omni.kit.widget.filter-1.1.4] startup
+[4.901s] [ext: omni.kit.window.content_browser_registry-0.0.6] startup
+[4.902s] [ext: omni.kit.window.drop_support-1.0.5] startup
+[4.903s] [ext: omni.kit.window.file-2.0.5] startup
+[4.909s] [ext: omni.kit.menu.utils-2.0.5] startup
+[4.923s] [ext: omni.kit.hotkeys.core-1.3.10] startup
+[4.924s] [ext: omni.index.libs-380600.8087.0] startup
+[4.924s] [ext: omni.graph.tools-1.79.2] startup
+[4.973s] [ext: omni.kit.window.content_browser-3.1.3] startup
+[4.997s] [ext: omni.index-1.0.1] startup
+[4.998s] [ext: omni.hydra.rtx.shadercache.vulkan-1.0.0] startup
+[5.000s] [ext: omni.kit.widget.highlight_label-1.0.3] startup
+[5.002s] [ext: omni.kit.context_menu-1.8.6] startup
+[5.005s] [ext: omni.kit.widget.searchable_combobox-1.0.6] startup
+[5.007s] [ext: omni.hydra.rtx-1.0.0] startup
+2026-07-15T02:24:50Z [4,970ms] [Warning] [omni.log] Source: omni.hydra was already registered.
+[5.072s] [ext: omni.kit.window.property-1.12.1] startup
+[5.077s] [ext: omni.kit.widget.stage-3.1.4] startup
+[5.095s] [ext: omni.kit.widget.settings-1.2.6] startup
+[5.099s] [ext: omni.kit.hydra_texture-1.4.6] startup
+[5.106s] [ext: omni.kit.property.usd-4.5.12] startup
+[5.125s] [ext: omni.graph-1.141.2] startup
+[5.216s] [ext: omni.kit.window.preferences-1.8.0] startup
+[5.224s] [ext: omni.kit.widget.material_preview-1.0.16] startup
+[5.230s] [ext: omni.kit.material.library-2.0.7] startup
+[5.243s] [ext: omni.graph.scriptnode-1.50.0] startup
+[5.246s] [ext: omni.kit.window.material_graph-1.9.1] startup
+[5.314s] [ext: omni.kit.primitive.mesh-1.0.17] startup
+[5.327s] [ext: omni.kit.viewport.scene_camera_model-1.0.6] startup
+[5.337s] [ext: omni.kit.viewport.legacy_gizmos-1.0.19] startup
+[5.341s] [ext: omni.kit.raycast.query-1.1.0] startup
+[5.351s] [ext: omni.kit.widget.viewport-107.1.3] startup
+[5.361s] [ext: omni.kit.viewport.registry-104.0.6] startup
+[5.364s] [ext: omni.hydra.engine.stats-1.0.3] startup
+[5.370s] [ext: omni.kit.widget.stage_icons-1.0.8] startup
+[5.373s] [ext: omni.kit.viewport.window-107.2.0] startup
+[5.406s] [ext: omni.kit.window.stage-2.6.1] startup
+[5.416s] [ext: omni.kit.menu.create-2.0.1] startup
+[5.420s] [ext: omni.kit.viewport.utility-1.1.2] startup
+[5.423s] [ext: omni.kit.scripting-107.3.2] startup
+[5.452s] [ext: omni.kit.viewport.actions-107.0.2] startup
+[5.466s] [ext: omni.graph.action_core-1.1.7] startup
+[5.470s] [ext: omni.kit.widget.zoombar-1.0.6] startup
+[5.473s] [ext: omni.graph.action_nodes-1.50.4] startup
+[5.479s] [ext: omni.kit.browser.core-2.3.13] startup
+[5.502s] [ext: omni.graph.image.core-0.6.1] startup
+[5.505s] [ext: omni.graph.action-1.130.0] startup
+[5.506s] [ext: omni.kit.browser.folder.core-1.10.9] startup
+[5.526s] [ext: omni.graph.image.nodes-1.3.1] startup
+[5.528s] [ext: omni.graph.ui_nodes-1.50.5] startup
+[5.535s] [ext: omni.kit.browser.sample-1.4.9] startup
+[5.545s] [ext: omni.graph.nodes-1.170.10] startup
+[5.571s] [ext: omni.warp.core-1.8.2] startup
+[6.259s] [ext: omni.kit.viewport.menubar.core-107.2.1] startup
+[6.327s] [ext: omni.warp-1.8.2] startup
+[6.338s] [ext: omni.videoencoding-0.1.2] startup
+[6.345s] [ext: omni.syntheticdata-0.6.13] startup
+[6.407s] [ext: omni.usd.metrics.assembler-107.3.1] startup
+[6.422s] [ext: omni.replicator.core-1.12.27] startup
+2026-07-15T02:24:51Z [6,403ms] [Warning] [pxr.Semantics] pxr.Semantics is deprecated - please use Semantics instead
+2026-07-15T02:24:52Z [6,746ms] [Warning] [omni.graph.core.plugin] Found duplicate of category 'Replicator' - was 'Annotators', adding 'Fabric Reader'
+2026-07-15T02:24:52Z [6,746ms] [Warning] [omni.graph.core.plugin] Category 'Replicator' not accepted on node type 'omni.replicator.core.FabricReader' in extension 'omni.replicator.core'
+2026-07-15T02:24:52Z [6,753ms] [Warning] [omni.replicator.core.scripts.extension] No material configuration file, adding configuration to material settings directly.
+[6.830s] [ext: omni.kit.quicklayout-1.0.8] startup
+[6.839s] [ext: omni.kit.capture.viewport-1.7.5] startup
+[6.866s] [ext: omni.usd.metrics.assembler.physics-107.3.26] startup
+[6.896s] [ext: omni.metropolis.utils-0.1.20] startup
+[6.965s] [ext: isaacsim.util.debug_draw-3.1.0] startup
+[6.975s] [ext: isaacsim.core.utils-3.5.1] startup
+[6.987s] [ext: omni.kit.widget.prompt-1.0.7] startup
+[6.996s] [ext: omni.kit.usd.collect-2.4.5] startup
+[7.007s] [ext: isaacsim.replicator.object-0.4.13] startup
+[9.055s] [ext: omni.kit.usdz_export-1.0.9] startup
+[9.065s] [ext: omni.kit.viewport.menubar.display-107.0.3] startup
+[9.069s] [ext: omni.kit.window.extensions-1.4.27] startup
+[9.091s] [ext: omni.kit.tool.asset_importer-4.3.2] startup
+[9.102s] [ext: isaacsim.gui.sensors.icon-2.0.3] startup
+[9.132s] [ext: isaacsim.asset.importer.mjcf-2.5.13] startup
+[9.209s] [ext: isaacsim.replicator.caption.core-0.0.32] startup
+[11.345s] [ext: omni.physx.tensors-107.3.26] startup
+[11.352s] [ext: omni.anim.curve.core-1.3.1] startup
+[11.377s] [ext: isaacsim.core.simulation_manager-1.4.4] startup
+[14.853s] [ext: omni.kit.stage_templates-2.0.0] startup
+[14.862s] [ext: omni.kit.manipulator.viewport-107.0.1] startup
+[14.866s] [ext: isaacsim.core.prims-0.6.1] startup
+[14.927s] [ext: isaacsim.test.docstring-1.1.0] startup
+[14.938s] [ext: isaacsim.core.experimental.utils-0.3.0] startup
+[14.942s] [ext: omni.graph.visualization.nodes-2.1.3] startup
+[14.955s] [ext: omni.ui_query-1.1.8] startup
+[14.957s] [ext: isaacsim.core.api-4.8.0] startup
+[14.994s] [ext: isaacsim.core.experimental.prims-0.8.1] startup
+[15.098s] [ext: omni.kit.menu.stage-1.2.7] startup
+[15.106s] [ext: omni.kit.tool.collect-2.2.18] startup
+[15.112s] [ext: omni.kit.ui_test-1.3.7] startup
+[15.114s] [ext: isaacsim.robot_motion.lula-4.0.8] startup
+[15.132s] [ext: isaacsim.robot.surface_gripper-3.3.1] startup
+[15.138s] [ext: isaacsim.core.nodes-3.4.3] startup
+[15.154s] [ext: isaacsim.asset.browser-1.3.23] startup
+[15.175s] [ext: isaacsim.gui.components-1.2.1] startup
+[15.198s] [ext: isaacsim.robot_motion.motion_generation-8.0.26] startup
+[15.223s] [ext: isaacsim.robot.manipulators-3.3.6] startup
+[15.245s] [ext: isaacsim.core.experimental.objects-0.4.0] startup
+[15.287s] [ext: isaacsim.core.experimental.materials-0.4.0] startup
+[15.318s] [ext: omni.isaac.asset_browser-1.0.6] startup
+2026-07-15T02:25:00Z [15,254ms] [Warning] [omni.isaac.asset_browser] omni.isaac.asset_browser has been deprecated in favor of isaacsim.asset.browser. Please update your code accordingly.
+[15.323s] [ext: isaacsim.robot.manipulators.examples-1.1.2] startup
+[15.329s] [ext: isaacsim.examples.browser-0.2.1] startup
+[15.338s] [ext: isaacsim.asset.importer.urdf-2.4.30] startup
+[15.384s] [ext: isaacsim.cortex.framework-1.0.12] startup
+[15.387s] [ext: omni.flowusd-107.1.8] startup
+2026-07-15T02:25:00Z [15,326ms] [Warning] [omni.stageupdate.plugin] Deprecated: direct use of IStageUpdate callbacks is deprecated. Use IStageUpdate::getStageUpdate instead.
+[15.410s] [ext: isaacsim.cortex.behaviors-2.0.14] startup
+[15.412s] [ext: omni.isaac.cortex-1.0.5] startup
+2026-07-15T02:25:00Z [15,349ms] [Warning] [omni.isaac.cortex] omni.isaac.cortex has been deprecated in favor of isaacsim.cortex.framework. Please update your code accordingly.
+[15.417s] [ext: omni.isaac.cortex.sample_behaviors-2.0.5] startup
+2026-07-15T02:25:00Z [15,354ms] [Warning] [omni.isaac.cortex.sample_behaviors] omni.isaac.cortex.sample_behaviors has been deprecated in favor of isaacsim.cortex.behaviors. Please update your code accordingly.
+[15.422s] [ext: omni.isaac.franka-1.0.7] startup
+2026-07-15T02:25:00Z [15,359ms] [Warning] [omni.isaac.franka] omni.isaac.franka has been deprecated in favor of isaacsim.robot.manipulators.examples.franka. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,360ms] [Warning] [omni.isaac.franka.franka] omni.isaac.franka has been deprecated in favor of isaacsim.robot.manipulators.examples.franka. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,414ms] [Warning] [omni.isaac.franka.kinematics_solver] omni.isaac.franka has been deprecated in favor of isaacsim.robot.manipulators.examples.franka. Please update your code accordingly.
+[15.482s] [ext: isaacsim.replicator.behavior-1.1.16] startup
+[15.488s] [ext: omni.kit.selection-0.1.6] startup
+[15.493s] [ext: isaacsim.robot_motion.lula_test_widget-1.0.12] startup
+[15.497s] [ext: omni.isaac.lula-4.0.6] startup
+2026-07-15T02:25:00Z [15,432ms] [Warning] [omni.isaac.lula] omni.isaac.lula has been deprecated in favor of isaacsim.robot_motion.lula. Please update your code accordingly.
+[15.501s] [ext: isaacsim.gui.menu-2.4.4] startup
+[15.516s] [ext: omni.isaac.lula_test_widget-1.0.6] startup
+2026-07-15T02:25:00Z [15,451ms] [Warning] [omni.isaac.lula_test_widget] omni.isaac.lula_test_widget has been deprecated in favor of isaacsim.robot_motion.lula_test_widget. Please update your code accordingly.
+[15.520s] [ext: omni.isaac.manipulators-3.0.7] startup
+2026-07-15T02:25:00Z [15,455ms] [Warning] [omni.isaac.manipulators] omni.isaac.manipulators has been deprecated in favor of isaacsim.robot.manipulators. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,456ms] [Warning] [omni.isaac.manipulators.controllers] omni.isaac.manipulators has been deprecated in favor of isaacsim.robot.manipulators. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,456ms] [Warning] [omni.isaac.manipulators.controllers.pick_place_controller] omni.isaac.manipulators has been deprecated in favor of isaacsim.robot.manipulators. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,461ms] [Warning] [omni.isaac.manipulators.controllers.stacking_controller] omni.isaac.manipulators has been deprecated in favor of isaacsim.robot.manipulators. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,461ms] [Warning] [omni.isaac.manipulators.grippers] omni.isaac.manipulators has been deprecated in favor of isaacsim.robot.manipulators. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,462ms] [Warning] [omni.isaac.manipulators.grippers.gripper] omni.isaac.manipulators has been deprecated in favor of isaacsim.robot.manipulators. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,462ms] [Warning] [omni.isaac.manipulators.grippers.parallel_gripper] omni.isaac.manipulators has been deprecated in favor of isaacsim.robot.manipulators. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,463ms] [Warning] [omni.isaac.manipulators.grippers.surface_gripper] omni.isaac.manipulators has been deprecated in favor of isaacsim.robot.manipulators. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,463ms] [Warning] [omni.isaac.manipulators.manipulators] omni.isaac.manipulators has been deprecated in favor of isaacsim.robot.manipulators. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,463ms] [Warning] [omni.isaac.manipulators.manipulators.single_manipulator] omni.isaac.manipulators has been deprecated in favor of isaacsim.robot.manipulators. Please update your code accordingly.
+[15.532s] [ext: omni.isaac.menu-1.0.6] startup
+2026-07-15T02:25:00Z [15,468ms] [Warning] [omni.isaac.menu] omni.isaac.menu has been deprecated in favor of isaacsim.gui.menu. Please update your code accordingly.
+[15.537s] [ext: isaacsim.sensors.physics-0.4.3] startup
+[15.552s] [ext: omni.isaac.motion_generation-8.0.7] startup
+2026-07-15T02:25:00Z [15,489ms] [Warning] [omni.isaac.motion_generation] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,493ms] [Warning] [omni.isaac.motion_generation.articulation_kinematics_solver] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,494ms] [Warning] [omni.isaac.motion_generation.articulation_motion_policy] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,494ms] [Warning] [omni.isaac.motion_generation.articulation_trajectory] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,496ms] [Warning] [omni.isaac.motion_generation.kinematics_interface] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,496ms] [Warning] [omni.isaac.motion_generation.lula] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,497ms] [Warning] [omni.isaac.motion_generation.lula.kinematics] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,497ms] [Warning] [omni.isaac.motion_generation.lula.motion_policies] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,498ms] [Warning] [omni.isaac.motion_generation.lula.path_planners] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,498ms] [Warning] [omni.isaac.motion_generation.lula.trajectory_generator] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,499ms] [Warning] [omni.isaac.motion_generation.motion_policy_controller] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,500ms] [Warning] [omni.isaac.motion_generation.motion_policy_interface] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,503ms] [Warning] [omni.isaac.motion_generation.path_planner_visualizer] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,504ms] [Warning] [omni.isaac.motion_generation.path_planning_interface] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,505ms] [Warning] [omni.isaac.motion_generation.trajectory] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,505ms] [Warning] [omni.isaac.motion_generation.world_interface] omni.isaac.motion_generation has been deprecated in favor of isaacsim.robot_motion.motion_generation. Please update your code accordingly.
+[15.576s] [ext: omni.isaac.nucleus-1.0.6] startup
+2026-07-15T02:25:00Z [15,515ms] [Warning] [omni.isaac.nucleus] omni.isaac.nucleus has been deprecated in favor of isaacsim.storage.native. Please update your code accordingly.
+2026-07-15T02:25:00Z [15,517ms] [Warning] [omni.isaac.nucleus.nucleus] omni.isaac.nucleus.nucleus has been deprecated in favor of isaacsim.storage.native. Please update your code accordingly.
+[15.586s] [ext: isaacsim.robot.policy.examples-4.1.11] startup
+[15.599s] [ext: isaacsim.sensors.physx-2.3.2] startup
+[15.614s] [ext: isaacsim.core.cloner-1.4.10] startup
+[15.622s] [ext: omni.isaac.assets_check-0.3.13] startup
+2026-07-15T02:25:01Z [15,558ms] [Warning] [omni.isaac.assets_check] omni.isaac.assets_check has been deprecated in favor of isaacsim.asset.browser. Please update your code accordingly.
+[15.629s] [ext: omni.isaac.quadruped-3.0.7] startup
+2026-07-15T02:25:01Z [15,565ms] [Warning] [omni.isaac.quadruped] omni.isaac.quadruped has been deprecated in favor of isaacsim.robot.policy.examples. Please update your code accordingly.
+[15.634s] [ext: omni.isaac.range_sensor-4.0.6] startup
+2026-07-15T02:25:01Z [15,570ms] [Warning] [omni.isaac.range_sensor] omni.isaac.range_sensor has been deprecated in favor of isaacsim.sensors.physx. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,570ms] [Warning] [omni.isaac.range_sensor.commands] omni.isaac.range_sensor.commands has been deprecated in favor of isaacsim.sensors.physx.commands. Please update your code accordingly.
+[15.642s] [ext: omni.isaac.cloner-1.0.7] startup
+2026-07-15T02:25:01Z [15,578ms] [Warning] [omni.isaac.cloner] omni.isaac.cloner has been deprecated in favor of isaacsim.core.cloner. Please update your code accordingly.
+[15.647s] [ext: isaacsim.core.throttling-2.2.2] startup
+[15.657s] [ext: omni.kit.manipulator.transform-107.0.0] startup
+[15.668s] [ext: omni.kit.widget.toolbar-2.0.1] startup
+[15.687s] [ext: omni.kit.manipulator.selector-1.1.3] startup
+[15.690s] [ext: isaacsim.robot.wheeled_robots-4.0.24] startup
+[15.701s] [ext: isaacsim.app.about-2.0.11] startup
+[15.708s] [ext: omni.kit.manipulator.tool.snap-1.5.13] startup
+[15.722s] [ext: omni.isaac.version-2.0.7] startup
+2026-07-15T02:25:01Z [15,656ms] [Warning] [omni.isaac.version] omni.isaac.version has been deprecated in favor of isaacsim.core.version. Please update your code accordingly.
+[15.725s] [ext: omni.isaac.wheeled_robots-3.0.7] startup
+2026-07-15T02:25:01Z [15,659ms] [Warning] [omni.isaac.wheeled_robots] omni.isaac.wheeled_robots has been deprecated in favor of isaacsim.robot.wheeled_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,662ms] [Warning] [omni.isaac.wheeled_robots.controllers] omni.isaac.wheeled_robots has been deprecated in favor of isaacsim.robot.wheeled_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,664ms] [Warning] [omni.isaac.wheeled_robots.controllers.ackermann_controller] omni.isaac.wheeled_robots has been deprecated in favor of isaacsim.robot.wheeled_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,665ms] [Warning] [omni.isaac.wheeled_robots.controllers.differential_controller] omni.isaac.wheeled_robots has been deprecated in favor of isaacsim.robot.wheeled_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,666ms] [Warning] [omni.isaac.wheeled_robots.controllers.holonomic_controller] omni.isaac.wheeled_robots has been deprecated in favor of isaacsim.robot.wheeled_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,666ms] [Warning] [omni.isaac.wheeled_robots.controllers.quintic_path_planner] omni.isaac.wheeled_robots has been deprecated in favor of isaacsim.robot.wheeled_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,666ms] [Warning] [omni.isaac.wheeled_robots.controllers.stanley_control] omni.isaac.wheeled_robots has been deprecated in favor of isaacsim.robot.wheeled_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,667ms] [Warning] [omni.isaac.wheeled_robots.controllers.wheel_base_pose_controller] omni.isaac.wheeled_robots has been deprecated in favor of isaacsim.robot.wheeled_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,667ms] [Warning] [omni.isaac.wheeled_robots.impl] omni.isaac.wheeled_robots has been deprecated in favor of isaacsim.robot.wheeled_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,668ms] [Warning] [omni.isaac.wheeled_robots.robots] omni.isaac.wheeled_robots has been deprecated in favor of isaacsim.robot.wheeled_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,668ms] [Warning] [omni.isaac.wheeled_robots.robots.holonomic_robot_usd_setup] omni.isaac.wheeled_robots has been deprecated in favor of isaacsim.robot.wheeled_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,671ms] [Warning] [omni.isaac.wheeled_robots.robots.wheeled_robot] omni.isaac.wheeled_robots has been deprecated in favor of isaacsim.robot.wheeled_robots. Please update your code accordingly.
+[15.740s] [ext: omni.isaac.window.about-2.0.7] startup
+2026-07-15T02:25:01Z [15,690ms] [Warning] [omni.isaac.window.about] omni.isaac.window.about has been deprecated in favor of isaacsim.app.about. Please update your code accordingly.
+2026-07-15T02:25:01Z [15,691ms] [Warning] [omni.isaac.window.about.about] omni.isaac.window.about.about has been deprecated in favor of isaacsim.app.about.about. Please update your code accordingly.
+[15.760s] [ext: omni.kit.manipulator.camera-106.0.4] startup
+[15.773s] [ext: isaacsim.sensors.camera-1.3.6] startup
+[15.792s] [ext: omni.kit.viewport.manipulator.transform-107.0.4] startup
+[15.807s] [ext: omni.sensors.nv.common-3.0.0] startup
+[15.834s] [ext: omni.kit.property.audio-1.0.16] startup
+[15.838s] [ext: omni.kit.property.camera-1.0.10] startup
+[15.842s] [ext: omni.sensors.net-1.0.0] startup
+[15.849s] [ext: omni.fabric.commands-1.1.6] startup
+[15.855s] [ext: omni.kit.manipulator.prim.core-107.0.8] startup
+[15.880s] [ext: omni.sensors.nv.materials-2.0.0] startup
+[15.896s] [ext: omni.kit.property.geometry-2.0.4] startup
+[15.905s] [ext: omni.kit.property.light-1.0.12] startup
+[15.953s] [ext: omni.sensors.nv.wpm-3.0.0] startup
+[15.961s] [ext: omni.kit.property.material-1.11.9] startup
+[15.973s] [ext: omni.kit.manipulator.prim.fabric-107.0.4] startup
+[15.977s] [ext: omni.sensors.nv.ids-2.0.0] startup
+[15.983s] [ext: omni.hydra.scene_api-0.1.2] startup
+[15.992s] [ext: omni.sensors.nv.lidar-3.0.0] startup
+[16.014s] [ext: omni.sensors.nv.radar-3.0.0] startup
+[16.026s] [ext: omni.kit.manipulator.prim.usd-107.0.3] startup
+[16.030s] [ext: omni.kit.property.render-1.2.1] startup
+[16.034s] [ext: isaacsim.simulation_app-2.12.2] startup
+[16.036s] [ext: omni.kit.property.transform-1.5.13] startup
+[16.044s] [ext: isaacsim.gui.property-1.1.3] startup
+[16.049s] [ext: isaacsim.sensors.rtx-15.8.4] startup
+[16.064s] [ext: omni.kit.manipulator.prim-107.0.0] startup
+[16.072s] [ext: omni.kit.manipulator.selection-106.0.1] startup
+[16.076s] [ext: omni.isaac.kit-2.0.6] startup
+2026-07-15T02:25:01Z [16,010ms] [Warning] [omni.isaac.kit] omni.isaac.kit has been deprecated in favor of isaacsim.simulation_app. Please update your code accordingly.
+[16.079s] [ext: omni.kit.property.bundle-1.4.1] startup
+[16.088s] [ext: omni.kit.property.isaac-1.0.6] startup
+2026-07-15T02:25:01Z [16,026ms] [Warning] [omni.kit.property.isaac] omni.kit.property.isaac has been deprecated in favor of isaacsim.gui.property. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,027ms] [Warning] [omni.kit.property.isaac.widgets] omni.kit.property.isaac.widgets has been deprecated in favor of isaacsim.gui.property.widgets. Please update your code accordingly.
+[16.095s] [ext: omni.isaac.sensor-13.0.7] startup
+2026-07-15T02:25:01Z [16,029ms] [Warning] [omni.isaac.sensor] omni.isaac.sensor has been deprecated in favor of isaacsim.sensors.camera, isaacsim.sensors.physics, isaacsim.sensors.physx, and isaacsim.sensors.rtx. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,030ms] [Warning] [omni.isaac.sensor.camera] omni.isaac.sensor.camera has been deprecated in favor of isaacsim.sensors.camera.camera. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,030ms] [Warning] [omni.isaac.sensor.camera_view] omni.isaac.sensor.camera_view has been deprecated in favor of isaacsim.sensors.camera.camera_view. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,030ms] [Warning] [omni.isaac.sensor.commands] omni.isaac.sensor.commands has been deprecated in favor of isaacsim.sensors.physics.commands, isaacsim.sensors.physx.commands, and isaacsim.sensors.rtx.commands. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,031ms] [Warning] [omni.isaac.sensor.contact_sensor] omni.isaac.sensor.contact_sensor has been deprecated in favor of isaacsim.sensors.physics.contact_sensor. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,031ms] [Warning] [omni.isaac.sensor.imu_sensor] omni.isaac.sensor.imu_sensor has been deprecated in favor of isaacsim.sensors.physics.imu_sensor. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,032ms] [Warning] [omni.isaac.sensor.lidar_rtx] omni.isaac.sensor.lidar_rtx has been deprecated in favor of isaacsim.sensors.rtx.lidar_rtx. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,032ms] [Warning] [omni.isaac.sensor.rotating_lidar_physX] omni.isaac.sensor.imu_sensor has been deprecated in favor of isaacsim.sensors.physix.rotating_lidar_physX. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,034ms] [Warning] [omni.isaac.sensor.scripts.samples.contact_sensor] omni.isaac.sensor.scripts.samples.contact_sensor has been deprecated in favor of isaacsim.sensors.physics.scripts.samples.contact_sensor. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,034ms] [Warning] [omni.isaac.sensor.scripts.samples.imu_sensor] omni.isaac.sensor.scripts.samples.imu_sensor has been deprecated in favor of isaacsim.sensors.physics.scripts.samples.imu_sensor. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,035ms] [Warning] [omni.isaac.sensor.scripts.samples.lightbeam_sensor] omni.isaac.sensor.scripts.samples.lightbeam_sensor has been deprecated in favor of isaacsim.sensors.physx.scripts.samples.lightbeam_sensor. Please update your code accordingly.
+[16.104s] [ext: omni.kit.viewport.menubar.camera-107.0.6] startup
+[16.140s] [ext: omni.kit.viewport.menubar.lighting-107.3.1] startup
+[16.147s] [ext: omni.kit.viewport.menubar.render-107.0.10] startup
+[16.155s] [ext: isaacsim.replicator.writers-1.0.17] startup
+[16.192s] [ext: omni.kit.viewport.menubar.settings-107.0.3] startup
+[16.212s] [ext: omni.kit.window.console-1.1.4] startup
+[16.240s] [ext: omni.isaac.surface_gripper-2.0.6] startup
+2026-07-15T02:25:01Z [16,174ms] [Warning] [omni.isaac.surface_gripper] omni.isaac.surface_gripper has been deprecated in favor of isaacsim.robot.surface_gripper. Please update your code accordingly.
+[16.244s] [ext: omni.isaac.core-4.0.7] startup
+2026-07-15T02:25:01Z [16,183ms] [Warning] [omni.isaac.core.physics_context.physics_context] omni.isaac.core.physics_context.physics_context has been deprecated in favor of isaacsim.core.api.physics_context.physics_context. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,187ms] [Warning] [omni.isaac.core.simulation_context.simulation_context] omni.isaac.core.simulation_context.simulation_context has been deprecated in favor of isaacsim.core.api.simulation_context.simulation_context. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,188ms] [Warning] [omni.isaac.core.world.world] omni.isaac.core.world.world has been deprecated in favor of isaacsim.core.api.world.world. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,188ms] [Warning] [omni.isaac.core] omni.isaac.core has been deprecated in favor of isaacsim.core.api. Please update your code accordingly.
+[16.256s] [ext: isaacsim.replicator.domain_randomization-1.0.16] startup
+[16.271s] [ext: isaacsim.replicator.examples-1.3.6] startup
+[16.274s] [ext: omni.kit.window.status_bar-0.1.9] startup
+[16.304s] [ext: omni.kit.window.toolbar-2.0.0] startup
+[16.337s] [ext: omni.ocio-0.1.1] startup
+[16.343s] [ext: omni.rtx.window.settings-0.6.19] startup
+[16.358s] [ext: omni.replicator.isaac-2.0.8] startup
+2026-07-15T02:25:01Z [16,293ms] [Warning] [omni.replicator.isaac] omni.replicator.isaac has been deprecated in favor of isaacsim.replicator.domain_randomization, isaacsim.replicator.examples, isaacsim.replicator.writers. Please update your code accordingly.
+[16.362s] [ext: omni.anim.asset-107.3.0] startup
+[16.369s] [ext: omni.anim.retarget.core-107.3.3] startup
+[16.382s] [ext: omni.debugdraw-0.1.4] startup
+[16.389s] [ext: omni.replicator.replicator_yaml-2.0.11] startup
+[16.396s] [ext: omni.rtx.settings.core-0.6.5] startup
+[16.408s] [ext: omni.usd.metrics.assembler.ui-107.3.1] startup
+[16.437s] [ext: omni.isaac.universal_robots-1.0.6] startup
+2026-07-15T02:25:01Z [16,371ms] [Warning] [omni.isaac.universal_robots] omni.isaac.universal_robots has been deprecated in favor of isaacsim.robot.manipulators.examples.universal_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,371ms] [Warning] [omni.isaac.universal_robots.kinematics_solver] omni.isaac.franka has been deprecated in favor of isaacsim.robot.manipulators.examples.universal_robots. Please update your code accordingly.
+2026-07-15T02:25:01Z [16,373ms] [Warning] [omni.isaac.universal_robots.ur10] omni.isaac.franka has been deprecated in favor of isaacsim.robot.manipulators.examples.universal_robots. Please update your code accordingly.
+[16.441s] [ext: semantics.schema.editor-2.0.2] startup
+[16.452s] [ext: omni.anim.graph.core-107.3.4] startup
+[16.467s] [ext: omni.kit.ui.actions-1.0.5] startup
+[16.474s] [ext: semantics.schema.property-2.0.1] startup
+[16.480s] [ext: omni.isaac.utils-2.0.6] startup
+[16.484s] [ext: omni.isaac.core_nodes-2.0.6] startup
+2026-07-15T02:25:01Z [16,423ms] [Warning] [omni.isaac.core_nodes] omni.isaac.core_nodes has been deprecated in favor of isaacsim.core.nodes. Please update your code accordingly.
+[16.493s] [ext: isaacsim.gui.content_browser-0.1.11] startup
+[16.505s] [ext: omni.anim.people-0.7.9] startup
+[16.533s] [ext: omni.kit.menu.common-2.0.1] startup
+2026-07-15T02:25:01Z [16,474ms] [Warning] [omni.graph.core._impl._registration.register_python_ogn] Python import process in omni.anim.graph.core failed - 'NoneType' object is not subscriptable. Aborting Python node registration
+[16.544s] [ext: isaacsim.exp.base-5.1.0] startup
+[16.546s] [ext: isaacsim.anim.robot-0.0.15] startup
+[16.580s] [ext: isaacsim.replicator.incident-0.1.28] startup
+[16.617s] [ext: omni.anim.timeline-107.0.0] startup
+[16.624s] [ext: isaacsim.sensors.rtx.placement-0.6.14] startup
+[16.655s] [ext: isaacsim.replicator.agent.core-0.7.28] startup
+[16.684s] [ext: isaacsim.exp.action_and_event_data_generation.base-0.1.5] startup
+[16.686s] Simulation App Starting
+2026-07-15T02:25:02Z [16,829ms] [Warning] [omni.fabric.plugin] Warning: attribute viewPickingId not found for bucket id 9
+
+[16.997s] app ready
+[22.355s] Simulation App Startup Complete
+2026-07-15T02:25:07Z [22,337ms] [Warning] [omni.usd] Unexpected reference count of 2 for UsdStage 'anon:0x3d662c30:World0.usd' while being closed in UsdContext (this may indicate it is still resident in memory).
+2026-07-15T02:25:44Z [59,141ms] [Warning] [omni.physx.plugin] Detected an articulation at /World/Robot/base with more than 4 velocity iterations being added to a TGS scene.The related behavior changed recently, please consult the changelog. This warning will only print once.
+2026-07-15T02:25:45Z [60,501ms] [Warning] [omni.hydra] Mesh '/__Prototype_7147707861820536524/mesh_0' has corrupted data in primvar 'st': buffer size 6270 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:45Z [60,501ms] [Warning] [omni.hydra] Mesh '/__Prototype_3264144985291803192/mesh_0' has corrupted data in primvar 'st': buffer size 6270 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:45Z [60,501ms] [Warning] [omni.hydra] Mesh '/__Prototype_1755509091188273382/mesh_0' has corrupted data in primvar 'st': buffer size 6270 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:45Z [60,501ms] [Warning] [omni.hydra] Mesh '/__Prototype_3258612832921094522/mesh_0' has corrupted data in primvar 'st': buffer size 6270 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_7147707861820536524/mesh_0' has corrupted data in primvar 'st_1': buffer size 19536 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_3258612832921094522/mesh_0' has corrupted data in primvar 'st_1': buffer size 19536 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_8091865226856843301/mesh_0' has corrupted data in primvar 'st': buffer size 35124 doesn't match expected size 90402 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_9583569365467364069/mesh_0' has corrupted data in primvar 'st': buffer size 35124 doesn't match expected size 90378 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_8091865226856843301/mesh_0' has corrupted data in primvar 'st_1': buffer size 55278 doesn't match expected size 90402 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_1755509091188273382/mesh_0' has corrupted data in primvar 'st_1': buffer size 19536 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_9583569365467364069/mesh_0' has corrupted data in primvar 'st_1': buffer size 55254 doesn't match expected size 90378 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_17010634116395044750/mesh_0' has corrupted data in primvar 'st': buffer size 35124 doesn't match expected size 90378 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_5539364067670591507/mesh_0' has corrupted data in primvar 'st': buffer size 56922 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_5539364067670591507/mesh_0' has corrupted data in primvar 'st_1': buffer size 54198 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_2617829726875680070/mesh_0' has corrupted data in primvar 'st': buffer size 56922 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_2617829726875680070/mesh_0' has corrupted data in primvar 'st_1': buffer size 54198 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_8847316110249261642/mesh_0' has corrupted data in primvar 'st': buffer size 56922 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_17010634116395044750/mesh_0' has corrupted data in primvar 'st_1': buffer size 55254 doesn't match expected size 90378 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_15274609757265069675/mesh_0' has corrupted data in primvar 'st': buffer size 178533 doesn't match expected size 233784 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_8847316110249261642/mesh_0' has corrupted data in primvar 'st_1': buffer size 54198 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_15274609757265069675/mesh_0' has corrupted data in primvar 'st_2': buffer size 6015 doesn't match expected size 233784 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_16035613645124882491/mesh_0' has corrupted data in primvar 'st': buffer size 35124 doesn't match expected size 90402 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_15274609757265069675/mesh_0' has corrupted data in primvar 'st_4': buffer size 30390 doesn't match expected size 233784 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_15274609757265069675/mesh_0' has corrupted data in primvar 'st_1': buffer size 6960 doesn't match expected size 233784 in faceVarying primvars
+2026-07-15T02:25:45Z [60,502ms] [Warning] [omni.hydra] Mesh '/__Prototype_16035613645124882491/mesh_0' has corrupted data in primvar 'st_1': buffer size 55278 doesn't match expected size 90402 in faceVarying primvars
+2026-07-15T02:25:45Z [60,503ms] [Warning] [omni.hydra] Mesh '/__Prototype_14285437553699148380/mesh_0' has corrupted data in primvar 'st': buffer size 56922 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:45Z [60,503ms] [Warning] [omni.hydra] Mesh '/__Prototype_14285437553699148380/mesh_0' has corrupted data in primvar 'st_1': buffer size 54198 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:45Z [60,503ms] [Warning] [omni.hydra] Mesh '/__Prototype_15274609757265069675/mesh_0' has corrupted data in primvar 'st_3': buffer size 11886 doesn't match expected size 233784 in faceVarying primvars
+2026-07-15T02:25:45Z [60,504ms] [Warning] [omni.hydra] Mesh '/__Prototype_3264144985291803192/mesh_0' has corrupted data in primvar 'st_1': buffer size 19536 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:47Z [62,274ms] [Warning] [omni.physx.tensors.plugin] prim '/World/Robot/base/collisions/mesh_0' was deleted while being used by a shape in a tensor view class. The physics.tensors simulationView was invalidated.
+2026-07-15T02:25:47Z [62,388ms] [Warning] [omni.hydra] Mesh '/__Prototype_16035613645124882491/mesh_0' has corrupted data in primvar 'st': buffer size 35124 doesn't match expected size 90402 in faceVarying primvars
+2026-07-15T02:25:47Z [62,389ms] [Warning] [omni.hydra] Mesh '/__Prototype_16035613645124882491/mesh_0' has corrupted data in primvar 'st_1': buffer size 55278 doesn't match expected size 90402 in faceVarying primvars
+2026-07-15T02:25:47Z [62,389ms] [Warning] [omni.hydra] Mesh '/__Prototype_15274609757265069675/mesh_0' has corrupted data in primvar 'st': buffer size 178533 doesn't match expected size 233784 in faceVarying primvars
+2026-07-15T02:25:47Z [62,389ms] [Warning] [omni.hydra] Mesh '/__Prototype_15274609757265069675/mesh_0' has corrupted data in primvar 'st_2': buffer size 6015 doesn't match expected size 233784 in faceVarying primvars
+2026-07-15T02:25:47Z [62,389ms] [Warning] [omni.hydra] Mesh '/__Prototype_15274609757265069675/mesh_0' has corrupted data in primvar 'st_4': buffer size 30390 doesn't match expected size 233784 in faceVarying primvars
+2026-07-15T02:25:47Z [62,389ms] [Warning] [omni.hydra] Mesh '/__Prototype_15274609757265069675/mesh_0' has corrupted data in primvar 'st_1': buffer size 6960 doesn't match expected size 233784 in faceVarying primvars
+2026-07-15T02:25:47Z [62,389ms] [Warning] [omni.hydra] Mesh '/__Prototype_15274609757265069675/mesh_0' has corrupted data in primvar 'st_3': buffer size 11886 doesn't match expected size 233784 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_7147707861820536524/mesh_0' has corrupted data in primvar 'st': buffer size 6270 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_14285437553699148380/mesh_0' has corrupted data in primvar 'st': buffer size 56922 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_7147707861820536524/mesh_0' has corrupted data in primvar 'st_1': buffer size 19536 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_1755509091188273382/mesh_0' has corrupted data in primvar 'st': buffer size 6270 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_14285437553699148380/mesh_0' has corrupted data in primvar 'st_1': buffer size 54198 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_1755509091188273382/mesh_0' has corrupted data in primvar 'st_1': buffer size 19536 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_8847316110249261642/mesh_0' has corrupted data in primvar 'st': buffer size 56922 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_2617829726875680070/mesh_0' has corrupted data in primvar 'st': buffer size 56922 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_8847316110249261642/mesh_0' has corrupted data in primvar 'st_1': buffer size 54198 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_2617829726875680070/mesh_0' has corrupted data in primvar 'st_1': buffer size 54198 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_3264144985291803192/mesh_0' has corrupted data in primvar 'st': buffer size 6270 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_3264144985291803192/mesh_0' has corrupted data in primvar 'st_1': buffer size 19536 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_8091865226856843301/mesh_0' has corrupted data in primvar 'st': buffer size 35124 doesn't match expected size 90402 in faceVarying primvars
+2026-07-15T02:25:47Z [62,392ms] [Warning] [omni.hydra] Mesh '/__Prototype_8091865226856843301/mesh_0' has corrupted data in primvar 'st_1': buffer size 55278 doesn't match expected size 90402 in faceVarying primvars
+2026-07-15T02:25:47Z [62,394ms] [Warning] [omni.hydra] Mesh '/__Prototype_9583569365467364069/mesh_0' has corrupted data in primvar 'st': buffer size 35124 doesn't match expected size 90378 in faceVarying primvars
+2026-07-15T02:25:47Z [62,394ms] [Warning] [omni.hydra] Mesh '/__Prototype_9583569365467364069/mesh_0' has corrupted data in primvar 'st_1': buffer size 55254 doesn't match expected size 90378 in faceVarying primvars
+2026-07-15T02:25:47Z [62,395ms] [Warning] [omni.hydra] Mesh '/__Prototype_3258612832921094522/mesh_0' has corrupted data in primvar 'st': buffer size 6270 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:47Z [62,395ms] [Warning] [omni.hydra] Mesh '/__Prototype_3258612832921094522/mesh_0' has corrupted data in primvar 'st_1': buffer size 19536 doesn't match expected size 25806 in faceVarying primvars
+2026-07-15T02:25:47Z [62,396ms] [Warning] [omni.hydra] Mesh '/__Prototype_17010634116395044750/mesh_0' has corrupted data in primvar 'st': buffer size 35124 doesn't match expected size 90378 in faceVarying primvars
+2026-07-15T02:25:47Z [62,396ms] [Warning] [omni.hydra] Mesh '/__Prototype_17010634116395044750/mesh_0' has corrupted data in primvar 'st_1': buffer size 55254 doesn't match expected size 90378 in faceVarying primvars
+2026-07-15T02:25:47Z [62,398ms] [Warning] [omni.hydra] Mesh '/__Prototype_5539364067670591507/mesh_0' has corrupted data in primvar 'st': buffer size 56922 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:47Z [62,398ms] [Warning] [omni.hydra] Mesh '/__Prototype_5539364067670591507/mesh_0' has corrupted data in primvar 'st_1': buffer size 54198 doesn't match expected size 111120 in faceVarying primvars
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,224ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,225ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,232ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,233ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,233ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,233ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,233ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,233ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,233ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,233ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,233ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,233ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,233ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,233ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:48Z [63,233ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,716ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,716ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,716ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,716ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,716ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,716ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,717ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,717ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,717ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,774ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,775ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,775ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,776ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,777ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,828ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,829ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [63,830ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:25:49Z [64,014ms] [Warning] [isaacsim.sensors.camera.camera] 'verticalAperture' (1.5290800094604493) and 'horizontalAperture' (2.0954999923706055) are inconsistent with the pixel resolution aspect ratio (1.7777777777777777). Setting 'verticalAperture' to 1.1787187457084656 to ensure square pixels.
+2026-07-15T02:25:50Z [64,750ms] [Warning] [isaacsim.sensors.camera.camera] 'verticalAperture' (1.1787187576293945) and 'horizontalAperture' (1.8799999237060547) are inconsistent with the pixel resolution aspect ratio (1.7777777777777777). Setting 'verticalAperture' to 1.057499957084656 to ensure square pixels.
+2026-07-15T02:25:50Z [65,474ms] [Warning] [omni.syntheticdata.plugin] OgnSdPostRenderVarToHost : rendervar copy from texture directly to host buffer is counter-performant. Please use copy from texture to device buffer first.
+2026-07-15T02:25:57Z [72,438ms] [Warning] [omni.fabric.plugin] Warning: attribute evaluatedTranslations not found for bucket id 4d
+
+2026-07-15T02:26:02Z [77,003ms] [Warning] [omni.fabric.plugin] Warning: attribute skel:animationGraph not found for path /World/Characters/Character/female_adult_business_02/ManRoot/female_adult_business_02
+
+2026-07-15T02:26:04Z [78,719ms] [Warning] [carb] Client gpu.foundation.plugin has acquired [gpu::unstable::IMemoryBudgetManagerFactory v0.1] 100 times. Consider accessing this interface with carb::getCachedInterface() (Performance warning)
+2026-07-15T02:26:05Z [80,218ms] [Warning] [usdrt.population.plugin] [UsdNoticeHandler] Unhandled attribute type VtArray<std::string> (prim attribute: omni:scripting:scriptData)
+2026-07-15T02:26:05Z [80,218ms] [Warning] [usdrt.population.plugin] [UsdNoticeHandler] Unhandled attribute type VtArray<std::string> (prim attribute: omni:scripting:scriptData)
+Starting kit application with the following args:  ['/isaac-sim/exts/isaacsim.simulation_app/isaacsim/simulation_app/simulation_app.py', '/isaac-sim/apps/isaacsim.exp.action_and_event_data_generation.base.kit', '--/app/tokens/exe-path=/isaac-sim/kit', '--/persistent/app/viewport/displayOptions=3094', '--/rtx/materialDb/syncLoads=True', '--/rtx/hydra/materialSyncLoads=True', '--/omni.kit.plugin/syncUsdLoads=True', '--/app/renderer/resolution/width=1280', '--/app/renderer/resolution/height=720', '--/app/window/width=1440', '--/app/window/height=900', '--/renderer/multiGpu/enabled=True', '--/app/fastShutdown=True', '--/app/installSignalHandlers=0', '--ext-folder', '/isaac-sim/exts', '--ext-folder', '/isaac-sim/apps', '--/physics/cudaDevice=0', '--/plugins/carb.tasking.plugin/threadCount=32', '--/plugins/omni.tbb.globalcontrol/maxThreadCount=32', '--portable', '--no-window', '--/app/window/hideUi=1', '--allow-root']
+Passing the following args to the base kit application:  ['--episode_dir', '/workspace/SAGE-3D_Official/SAGE-3D_data/v3_tracking_episodes/0001_839920', '--robot_type', 'go2', '--camera_type', 'zed', '--start_idx', '0', '--end_idx', '1', '--max_steps', '300', '--character_speed', '0.5', '--save_images', '--image_save_dir', '/workspace/FLUX/logs_formal_v2/test_runs/go2_zed_datagen_0001_839920_20260715_102444/0001_839920', '--headless']
+Warp 1.8.2 initialized:
+   CUDA Toolkit 12.8, Driver 12.4
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA GeForce RTX 3090" (24 GiB, sm_86, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.8.2
+Warp DeprecationWarning: The `warp.sim` module is deprecated and will be removed in v1.10. Please transition to using the forthcoming Newton library instead.
+[INFO] Register IROSceneGraphWriter to the WriterRegistry
+[INFO] Register CombinedIROSceneGraphWriter to the WriterRegistry
+[INFO] Register IRObjectCaptionWriter to the WriterRegistry
+[isaacsim.replicator.incident] started
+[Camera] Preset=zed  1280×720  aperture=5.2mm  focal=2.12mm  HFOV=101.6°  fx=521.8  fy=521.8
+[Paths] scene_id inferred from episode_dir: '0001_839920'
+[Paths] semantic_map_json auto-derived: '/workspace/SAGE-3D_Official/SAGE-3D_data/semantic_maps_v2/2D_Semantic_Map_0001_839920_Complete.json'
+[Paths] Output: /workspace/FLUX/logs_formal_v2/go2_zed_datagen/0001_839920/
+[Paths] scene_id   = 0001_839920
+[Paths] usda_path  = /workspace/SAGE-3D_Official/SAGE-3D_data/usda/839920.usda
+[Paths] episode_dir = /workspace/SAGE-3D_Official/SAGE-3D_data/v3_tracking_episodes/0001_839920
+[STAGE] Opening: /workspace/SAGE-3D_Official/SAGE-3D_data/usda/839920.usda
+[STAGE] Loaded. Default prim: /World
+[Colliders] scene_collision invisible (3DGS RGB), CollisionAPI ensured on 0 new meshes, total meshes with CollisionAPI under /World: 237
+[Cache] NavVols USDA : /workspace/SAGE-3D_Official/SAGE-3D_data/usda_processed/839920_navvols.usda
+[NavMesh] Internal cache dir: /isaac-sim/kit/cache/Kit/107.3/69cbf6ad/navmeshcache/
+[Cache] Restoring NavMeshVolumes from delta: /workspace/SAGE-3D_Official/SAGE-3D_data/usda_processed/839920_navvols.usda
+[Cache] Delta sublayer inserted, 1 NavMeshVolume(s) active.
+[Cache] restore_navmesh_volumes_as_sublayer returned: True
+  [diag] NavMeshVolume: /World/NavMeshVolume vis=inherited active=True
+[Cache] Found 1 NavMeshVolume(s), 1 visible.
+[Vis] /World/scene_collision: invisible → inherited
+[NavMesh] Baking (volumes restored, expect cache hit)...
+[Cache] get_navmesh() returned: INavMesh
+[Cache] safe_query_random_point: (0.396994,-0.132241,0)
+[Vis] /World/scene_collision: inherited → invisible
+[Cache] NavMesh OK. Sample point: (0.39699435234069824, -0.1322411149740219, 0.0)
+[NavMesh] OK. Sample point: (-5.585881233215332, -0.9334245324134827, 1.6456929569086398e-11)
+[OccMap] Strategy B: border-free ratio = 100.0%.
+[OccMap] Kept 1 interior components.
+[OccMap] Interior: 4829/5597 free px (86.3%).
+[OccMap] Loaded /workspace/SAGE-3D_Official/SAGE-3D_data/semantic_maps_v2/2D_Semantic_Map_0001_839920_Complete.json → grid 128×102 px, scale=0.1m, obstacles=10784
+[NavMesh] Hidden 1 NavMeshVolume prim(s).
+[Episode] Selected 1/100 episodes
+[Init] First episode robot start: xy=(-7.646548388310729, 3.492820234254736), yaw=50.2 deg
+[World] Creating World + physicsScene...
+[World] Physics initialized.
+[Robot] Adding reference: /workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/Isaac/IsaacLab/Robots/Unitree/Go2/go2.usd
+[Robot] USD-translated to (-7.65, 3.49, 0.40) before physics takes over.
+[KinRobot] Disabled gravity on 19 rigid bodies under /World/Robot.
+[Robot] ArticulationRoot discovered at /World/Robot/base (USD nesting: not directly at /World/Robot)
+[Robot] num_dof = 12, dof_names = ['FL_hip_joint', 'FR_hip_joint', 'RL_hip_joint', 'RR_hip_joint', 'FL_thigh_joint', 'FR_thigh_joint', 'RL_thigh_joint', 'RR_thigh_joint', 'FL_calf_joint', 'FR_calf_joint', 'RL_calf_joint', 'RR_calf_joint']
+[Robot] go2 uses kinematic control — no wheel DOFs.
+[Collision] Contact report enabled on 19 robot rigid bodies.
+[KinRobot] Rest joint positions (go2): {'FL_hip_joint': 0.1, 'FR_hip_joint': -0.1, 'RL_hip_joint': 0.1, 'RR_hip_joint': -0.1, 'FL_thigh_joint': 0.8, 'FR_thigh_joint': 0.8, 'RL_thigh_joint': 1.0, 'RR_thigh_joint': 1.0, 'FL_calf_joint': -1.5, 'FR_calf_joint': -1.5, 'RL_calf_joint': -1.5, 'RR_calf_joint': -1.5}
+[Robot] settled at [-7.646548271179199, 3.4928202629089355, 0.4000000059604645], yaw=50.2 deg
+[ChaseCam] Initialized on /World/MySensorCamera, distance=1.5m, height=0.8m
+[Camera] Policy camera initialized at /World/Robot/base/front_cam
+[PEOPLE] Listing characters under https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/People/Characters/
+[People] 21 character assets loaded.
+[People] Loaded clothing profiles: 21 assets
+
+[Pre-spawn] Setting up first episode characters...
+[PEOPLE] Spawned /World/Characters/Character  at=(-6.9743299961090095, 4.299459934234619, 0.0)
+[Episode] Spawned Character at [-6.9743299961090095, 4.299459934234619, 0.0]  ->  /World/Characters/Character  (asset=F_Business_02)
+[PEOPLE] Creating biped template at /World/Characters/Biped_Setup
+[PEOPLE]   /World/Characters/Character/female_adult_business_02/ManRoot/female_adult_business_02  skel:animationGraph → [Sdf.Path('/World/Characters/Biped_Setup/CharacterAnimation/AnimationGraph')]
+[PEOPLE] Animation graph bound to 1 SkelRoot(s).
+[Episode] Character: 4 commands, 3 paths written.
+[RenderWarmup] background ready after 1 updates; nonblack_coverage=0.998
+[Pre-spawn] Initial scene ready. Entering episode loop...
+
+============================================================
+Episode 0
+============================================================
+[Episode 0] target='Character' prim=/World/Characters/Character target_pos=[-6.97745466  4.31184244] robot_pos=[-7.6465483  3.4928203] init_dist=1.06m
+[Episode 0] Phase 1: static warmup (40 frames)...
+[Recolor] Character: 4 recolored, 0 default-kept | {'tennisshoes': 'recolored:diffuse_tint', 'bluejeans': 'recolored:diffuse_tint', 'shirt': 'recolored:diffuse_tint', 'vest': 'recolored:diffuse_tint'}
+[Episode 0] Phase 3: robot pre-tracking toward target spawn...
+[Episode 0] Phase 4: attaching behavior scripts (barrier closed; main loop will open it)...
+[PEOPLE] CharacterBehavior script path: /isaac-sim/extscache/omni.anim.people-0.7.9+107.3.3/omni/anim/people/scripts/character_behavior.py
+[PEOPLE] CharacterBehavior attached to 1 SkelRoot(s).
+[Diag] /World/Characters/Character/female_adult_business_02/ManRoot/female_adult_business_02  typeName=SkelRoot  AG_targets=[Sdf.Path('/World/Characters/Biped_Setup/CharacterAnimation/AnimationGraph')]  applied=['AnimationGraphAPI', 'OmniScriptingAPI']
+[Oracle] Target 'Character' path: 260 oracle points loaded
+[EP0] Character barrier opened — commands start now.
+[DepthDBG] RTX cam.get_depth():        valid=21.2%  max=1.15m  mean=0.97m
+[DepthDBG] PhysX raycast depth:          valid=100.0%  max=8.59m  mean=2.68m
+[DepthDBG] Composite depth:              valid=100.0%  mean=2.17m  rtx_pixels=195297 / 921600 (21.2%)
+[DepthDBG] /World/scene_collision:    visibility=invisible  meshes=237  with_CollisionAPI=237
+[DepthDBG] Debug images saved to /tmp/depth_debug2026-07-15T02:26:13Z [88,522ms] [Error] [omni.kit.app._impl] [py stderr]: /workspace/FLUX/sage_utils/tracking_episode_collection_datagen.py:2493: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+  Image.fromarray(depth_mm, mode="I;16").save(
+2026-07-15T02:26:11Z [85,640ms] [Warning] [omni.fabric.plugin] USD->Fabric: Unhandled array type string[]
+
+[ST] ep=0 s=   0 INIT         R( -7.647, +3.493) yaw +50.2° T( -6.977, +4.311) dist=1.057m ang= +0.5° tgt_cam=Y
+[cmdsDone] step=0 prim=/World/Characters/Character skelroot=/World/Characters/Character/female_adult_business_02/ManRoot/female_adult_business_02 attr_exists=False val=False (was None)
+[DATAGEN] ep=0 step=0 mode=FOLLOW dist=1.06 action=(+0.10,-0.10,-0.01) visible=True blocker=- hit=1.08
+[ST] ep=0 s=   1 FOLLOW       R( -7.642, +3.493) yaw +50.2° T( -6.977, +4.311) dist=1.054m ang= +0.7° tgt_cam=Y
+[MODE] ep=0 s=   1 INIT → FOLLOW  dist=1.054m ang_err=0.7°
+[ST] ep=0 s=   2 FOLLOW       R( -7.633, +3.495) yaw +50.2° T( -6.978, +4.312) dist=1.048m ang= +1.1° tgt_cam=Y tgt_v=0.02m/s appr=-0.01m/s
+[ST] ep=0 s=   3 FOLLOW       R( -7.622, +3.498) yaw +50.2° T( -6.978, +4.313) dist=1.038m ang= +1.5° tgt_cam=Y tgt_v=0.02m/s appr=-0.01m/s
+[ST] ep=0 s=   4 FOLLOW       R( -7.609, +3.503) yaw +50.2° T( -6.978, +4.314) dist=1.027m ang= +2.0° tgt_cam=Y tgt_v=0.03m/s appr=-0.01m/s
+[ST] ep=0 s=   5 FOLLOW       R( -7.597, +3.507) yaw +50.2° T( -6.979, +4.314) dist=1.017m ang= +2.4° tgt_cam=Y tgt_v=0.03m/s appr=-0.01m/s
+[ST] ep=0 s=   6 FOLLOW       R( -7.587, +3.511) yaw +50.2° T( -6.979, +4.314) dist=1.007m ang= +2.7° tgt_cam=Y tgt_v=0.02m/s appr=-0.00m/s
+[ST] ep=0 s=   7 FOLLOW       R( -7.580, +3.514) yaw +50.2° T( -6.980, +4.315) dist=1.000m ang= +2.9° tgt_cam=Y tgt_v=0.01m/s appr=+0.00m/s
+[ST] ep=0 s=   8 FOLLOW       R( -7.575, +3.516) yaw +50.3° T( -6.977, +4.310) dist=0.993m ang= +2.7° tgt_cam=Y tgt_v=0.08m/s appr=+0.04m/s
+[ST] ep=0 s=   9 RETREAT      R( -7.572, +3.516) yaw +50.3° T( -6.975, +4.289) dist=0.977m ang= +2.0° tgt_cam=Y tgt_v=0.39m/s appr=+0.26m/s
+[MODE] ep=0 s=   9 FOLLOW → RETREAT  dist=0.977m ang_err=2.0°
+[ST] ep=0 s=  10 RETREAT      R( -7.572, +3.513) yaw +50.3° T( -6.977, +4.243) dist=0.942m ang= +0.5° tgt_cam=Y tgt_v=1.01m/s appr=+0.78m/s
+[DATAGEN] ep=0 step=10 mode=RETREAT dist=0.94 action=(-0.16,-0.06,-0.01) visible=True blocker=- hit=0.96
+[ST] ep=0 s=  11 RETREAT      R( -7.573, +3.507) yaw +50.3° T( -6.985, +4.174) dist=0.889m ang= -1.7° tgt_cam=Y tgt_v=1.73m/s appr=+1.40m/s
+[ST] ep=0 s=  12 RETREAT      R( -7.579, +3.500) yaw +50.1° T( -6.997, +4.087) dist=0.826m ang= -4.8° tgt_cam=Y tgt_v=2.35m/s appr=+1.87m/s
+[ST] ep=0 s=  13 RETREAT      R( -7.588, +3.492) yaw +49.8° T( -7.016, +3.981) dist=0.752m ang= -9.3° tgt_cam=Y tgt_v=2.94m/s appr=+2.24m/s
+[ST] ep=0 s=  14 RECOVERY     R( -7.602, +3.484) yaw +49.4° T( -7.029, +3.881) dist=0.697m ang=-14.8° tgt_cam=Y tgt_v=3.14m/s appr=+2.15m/s
+[MODE] ep=0 s=  14 RETREAT → RECOVERY  dist=0.697m ang_err=14.8°
+[ST] ep=0 s=  15 RECOVERY     R( -7.621, +3.476) yaw +49.0° T( -7.032, +3.787) dist=0.666m ang=-21.2° tgt_cam=Y tgt_v=2.93m/s appr=+1.57m/s
+[ST] ep=0 s=  16 RECOVERY     R( -7.645, +3.468) yaw +48.4° T( -7.033, +3.691) dist=0.652m ang=-28.4° tgt_cam=Y tgt_v=2.84m/s appr=+1.03m/s
+[ST] ep=0 s=  17 RECOVERY     R( -7.673, +3.459) yaw +47.7° T( -7.030, +3.586) dist=0.656m ang=-36.5° tgt_cam=Y tgt_v=3.00m/s appr=+0.55m/s
+[ST] ep=0 s=  18 RECOVERY     R( -7.707, +3.451) yaw +46.9° T( -7.018, +3.477) dist=0.689m ang=-44.7° tgt_cam=Y tgt_v=3.22m/s appr=-0.10m/s
+[ST] ep=0 s=  19 RECOVERY     R( -7.745, +3.443) yaw +46.0° T( -6.997, +3.359) dist=0.753m ang=-52.4° tgt_cam=N tgt_v=3.44m/s appr=-0.87m/s
+[DepthDBG] RTX cam.get_depth():        valid=0.0%  max=0.00m  mean=0.00m
+[DepthDBG] PhysX raycast depth:          valid=100.0%  max=9.18m  mean=2.81m
+[DepthDBG] Composite depth:              valid=100.0%  mean=2.81m  rtx_pixels=0 / 921600 (0.0%)
+[DepthDBG] /World/scene_collision:    visibility=invisible  meshes=237  with_CollisionAPI=237
+[DepthDBG] Debug images saved to /tmp/depth_debug_step20
+[ST] ep=0 s=  20 RECOVERY     R( -7.745, +3.443) yaw +45.1° T( -6.979, +3.256) dist=0.789m ang=-58.8° tgt_cam=N tgt_v=3.37m/s appr=-1.36m/s
+[DATAGEN] ep=0 step=20 mode=RECOVERY dist=0.79 action=(-1.16,+0.87,-0.59) visible=True blocker=- hit=0.81
+[ST] ep=0 s=  21 RECOVERY     R( -7.745, +3.443) yaw +43.9° T( -6.973, +3.157) dist=0.824m ang=-64.3° tgt_cam=N tgt_v=3.05m/s appr=-1.40m/s
+[ST] ep=0 s=  22 RECOVERY     R( -7.745, +3.443) yaw +42.5° T( -6.974, +3.056) dist=0.863m ang=-69.2° tgt_cam=N tgt_v=2.99m/s appr=-1.42m/s
+[ST] ep=0 s=  23 RECOVERY     R( -7.745, +3.443) yaw +40.9° T( -6.975, +2.945) dist=0.917m ang=-73.8° tgt_cam=N tgt_v=3.18m/s appr=-1.70m/s
+[ST] ep=0 s=  24 RECOVERY     R( -7.745, +3.443) yaw +39.2° T( -6.985, +2.833) dist=0.975m ang=-78.0° tgt_cam=N tgt_v=3.35m/s appr=-1.97m/s
+[ST] ep=0 s=  25 RECOVERY     R( -7.745, +3.443) yaw +37.4° T( -6.998, +2.721) dist=1.039m ang=-81.4° tgt_cam=N tgt_v=3.38m/s appr=-2.09m/s
+[ST] ep=0 s=  26 RECOVERY     R( -7.745, +3.443) yaw +35.3° T( -7.009, +2.632) dist=1.096m ang=-83.1° tgt_cam=N tgt_v=3.04m/s appr=-1.99m/s
+[ST] ep=0 s=  27 FOLLOW       R( -7.745, +3.443) yaw +33.0° T( -7.008, +2.554) dist=1.155m ang=-83.4° tgt_cam=N tgt_v=2.51m/s appr=-1.84m/s
+[MODE] ep=0 s=  27 RECOVERY → FOLLOW  dist=1.155m ang_err=83.4°
+[ST] ep=0 s=  28 RECOVERY     R( -7.745, +3.443) yaw +30.4° T( -7.009, +2.466) dist=1.223m ang=-83.4° tgt_cam=N tgt_v=2.48m/s appr=-1.98m/s
+[MODE] ep=0 s=  28 FOLLOW → RECOVERY  dist=1.223m ang_err=83.4°
+[ST] ep=0 s=  29 RECOVERY     R( -7.745, +3.443) yaw +27.6° T( -7.015, +2.373) dist=1.296m ang=-83.3° tgt_cam=N tgt_v=2.72m/s appr=-2.19m/s
+[ST] ep=0 s=  30 RECOVERY     R( -7.745, +3.443) yaw +24.5° T( -7.011, +2.274) dist=1.381m ang=-82.4° tgt_cam=N tgt_v=2.89m/s appr=-2.44m/s
+[DATAGEN] ep=0 step=30 mode=RECOVERY dist=1.38 action=(-1.41,+1.17,-1.75) visible=False blocker=/World/scene_collision/ZG5PFNZVAIMNYPTUJU888888_001 hit=0.52
+[ST] ep=0 s=  31 RECOVERY     R( -7.745, +3.443) yaw +21.2° T( -6.993, +2.166) dist=1.482m ang=-80.7° tgt_cam=N tgt_v=3.11m/s appr=-2.84m/s
+[ST] ep=0 s=  32 RECOVERY     R( -7.745, +3.443) yaw +17.7° T( -6.974, +2.073) dist=1.573m ang=-78.3° tgt_cam=N tgt_v=3.06m/s appr=-2.90m/s
+[ST] ep=0 s=  33 RECOVERY     R( -7.745, +3.443) yaw +14.2° T( -6.959, +1.985) dist=1.656m ang=-75.8° tgt_cam=N tgt_v=2.76m/s appr=-2.63m/s
+[ST] ep=0 s=  34 RECOVERY     R( -7.745, +3.443) yaw +10.6° T( -6.941, +1.897) dist=1.743m ang=-73.2° tgt_cam=N tgt_v=2.68m/s appr=-2.56m/s
+[ST] ep=0 s=  35 RECOVERY     R( -7.745, +3.443) yaw  +7.2° T( -6.917, +1.803) dist=1.838m ang=-70.4° tgt_cam=N tgt_v=2.81m/s appr=-2.73m/s
+[ST] ep=0 s=  36 RECOVERY     R( -7.745, +3.443) yaw  +3.8° T( -6.887, +1.703) dist=1.940m ang=-67.6° tgt_cam=N tgt_v=3.02m/s appr=-2.96m/s
+[ST] ep=0 s=  37 RECOVERY     R( -7.745, +3.443) yaw  +0.7° T( -6.859, +1.591) dist=2.053m ang=-65.1° tgt_cam=N tgt_v=3.28m/s appr=-3.23m/s
+[ST] ep=0 s=  38 RECOVERY     R( -7.745, +3.443) yaw  -2.2° T( -6.835, +1.485) dist=2.160m ang=-62.9° tgt_cam=N tgt_v=3.38m/s appr=-3.31m/s
+[ST] ep=0 s=  39 RECOVERY     R( -7.745, +3.443) yaw  -4.8° T( -6.817, +1.396) dist=2.248m ang=-60.8° tgt_cam=N tgt_v=3.00m/s appr=-2.93m/s
+[ST] ep=0 s=  40 RECOVERY     R( -7.745, +3.443) yaw  -7.2° T( -6.793, +1.323) dist=2.325m ang=-58.7° tgt_cam=N tgt_v=2.51m/s appr=-2.47m/s
+[DATAGEN] ep=0 step=40 mode=RECOVERY dist=2.32 action=(-1.83,+0.35,-1.14) visible=False blocker=/World/scene_collision/ZG5PFNZVAIMNYPTUJU888888_001 hit=0.76
+[ST] ep=0 s=  41 RECOVERY     R( -7.745, +3.443) yaw  -9.3° T( -6.757, +1.267) dist=2.390m ang=-56.2° tgt_cam=N tgt_v=2.13m/s appr=-2.13m/s
+[ST] ep=0 s=  42 RECOVERY     R( -7.745, +3.443) yaw -11.4° T( -6.706, +1.222) dist=2.452m ang=-53.6° tgt_cam=N tgt_v=1.99m/s appr=-1.91m/s
+[ST] ep=0 s=  43 RECOVERY     R( -7.745, +3.443) yaw -13.3° T( -6.624, +1.165) dist=2.540m ang=-50.5° tgt_cam=Y tgt_v=2.52m/s appr=-2.26m/s
+[ST] ep=0 s=  44 RECOVERY     R( -7.745, +3.443) yaw -15.1° T( -6.521, +1.112) dist=2.633m ang=-47.2° tgt_cam=Y tgt_v=3.23m/s appr=-2.75m/s
+[ST] ep=0 s=  45 RECOVERY     R( -7.745, +3.443) yaw -16.8° T( -6.418, +1.071) dist=2.719m ang=-44.0° tgt_cam=Y tgt_v=3.40m/s appr=-2.74m/s
+[ST] ep=0 s=  46 RECOVERY     R( -7.745, +3.443) yaw -18.4° T( -6.334, +1.041) dist=2.786m ang=-41.2° tgt_cam=Y tgt_v=3.01m/s appr=-2.34m/s
+[ST] ep=0 s=  47 RECOVERY     R( -7.745, +3.443) yaw -20.0° T( -6.262, +1.007) dist=2.852m ang=-38.7° tgt_cam=Y tgt_v=2.53m/s appr=-2.03m/s
+[ST] ep=0 s=  48 RECOVERY     R( -7.745, +3.443) yaw -21.5° T( -6.196, +0.961) dist=2.927m ang=-36.5° tgt_cam=Y tgt_v=2.40m/s appr=-2.12m/s
+[ST] ep=0 s=  49 RECOVERY     R( -7.745, +3.443) yaw -22.9° T( -6.126, +0.907) dist=3.009m ang=-34.5° tgt_cam=Y tgt_v=2.53m/s appr=-2.36m/s
+[ST] ep=0 s=  50 RECOVERY     R( -7.745, +3.443) yaw -24.2° T( -6.063, +0.848) dist=3.092m ang=-32.8° tgt_cam=Y tgt_v=2.61m/s appr=-2.50m/s
+[DATAGEN] ep=0 step=50 mode=RECOVERY dist=3.09 action=(-1.82,-0.43,-0.65) visible=False blocker=/World/scene_collision/ZG5PFNZVAIMNYPTUJU888888_001 hit=0.47
+[ST] ep=0 s=  51 RECOVERY     R( -7.745, +3.443) yaw -25.5° T( -6.000, +0.780) dist=3.184m ang=-31.3° tgt_cam=Y tgt_v=2.68m/s appr=-2.62m/s
+[ST] ep=0 s=  52 RECOVERY     R( -7.745, +3.443) yaw -26.7° T( -5.947, +0.722) dist=3.262m ang=-29.9° tgt_cam=Y tgt_v=2.58m/s appr=-2.54m/s
+[ST] ep=0 s=  53 RECOVERY     R( -7.745, +3.443) yaw -27.8° T( -5.902, +0.662) dist=3.337m ang=-28.7° tgt_cam=Y tgt_v=2.31m/s appr=-2.30m/s
+[ST] ep=0 s=  54 RECOVERY     R( -7.745, +3.443) yaw -28.8° T( -5.862, +0.592) dist=3.417m ang=-27.8° tgt_cam=Y tgt_v=2.33m/s appr=-2.33m/s
+[ST] ep=0 s=  55 RECOVERY     R( -7.745, +3.443) yaw -29.8° T( -5.828, +0.510) dist=3.504m ang=-27.0° tgt_cam=Y tgt_v=2.53m/s appr=-2.52m/s
+[ST] ep=0 s=  56 RECOVERY     R( -7.745, +3.443) yaw -30.8° T( -5.803, +0.428) dist=3.587m ang=-26.4° tgt_cam=Y tgt_v=2.61m/s appr=-2.54m/s
+[ST] ep=0 s=  57 RECOVERY     R( -7.745, +3.443) yaw -31.7° T( -5.769, +0.353) dist=3.668m ang=-25.7° tgt_cam=Y tgt_v=2.51m/s appr=-2.45m/s
+[ST] ep=0 s=  58 RECOVERY     R( -7.745, +3.443) yaw -32.6° T( -5.749, +0.274) dist=3.746m ang=-25.2° tgt_cam=Y tgt_v=2.45m/s appr=-2.39m/s
+[ST] ep=0 s=  59 RECOVERY     R( -7.745, +3.443) yaw -33.5° T( -5.737, +0.192) dist=3.821m ang=-24.8° tgt_cam=Y tgt_v=2.47m/s appr=-2.31m/s
+[ST] ep=0 s=  60 RECOVERY     R( -7.745, +3.443) yaw -34.3° T( -5.727, +0.108) dist=3.898m ang=-24.5° tgt_cam=Y tgt_v=2.51m/s appr=-2.30m/s
+[DATAGEN] ep=0 step=60 mode=RECOVERY dist=3.90 action=(-1.00,+0.28,-0.43) visible=False blocker=/World/scene_collision/ZG5PFNZVAIMNYPTUJU888888_001 hit=0.47
+[ST] ep=0 s=  61 RECOVERY     R( -7.745, +3.443) yaw -35.1° T( -5.705, +0.048) dist=3.961m ang=-23.9° tgt_cam=Y tgt_v=2.21m/s appr=-2.10m/s
+[ST] ep=0 s=  62 RECOVERY     R( -7.745, +3.443) yaw -35.9° T( -5.699, +0.035) dist=3.975m ang=-23.1° tgt_cam=Y tgt_v=1.17m/s appr=-1.15m/s
+[ST] ep=0 s=  63 RECOVERY     R( -7.745, +3.443) yaw -36.7° T( -5.698, +0.035) dist=3.976m ang=-22.3° tgt_cam=Y tgt_v=0.22m/s appr=-0.22m/s
+[ST] ep=0 s=  64 RECOVERY     R( -7.748, +3.458) yaw -37.5° T( -5.697, +0.035) dist=3.991m ang=-21.6° tgt_cam=Y tgt_v=0.03m/s appr=-0.03m/s
+[ST] ep=0 s=  65 RECOVERY     R( -7.749, +3.473) yaw -38.2° T( -5.696, +0.034) dist=4.005m ang=-21.0° tgt_cam=Y tgt_v=0.03m/s appr=-0.03m/s
+[ST] ep=0 s=  66 RECOVERY     R( -7.746, +3.504) yaw -38.9° T( -5.696, +0.034) dist=4.030m ang=-20.5° tgt_cam=Y tgt_v=0.02m/s appr=-0.02m/s
+[ST] ep=0 s=  67 FOLLOW       R( -7.737, +3.535) yaw -39.6° T( -5.697, +0.034) dist=4.052m ang=-20.2° tgt_cam=Y tgt_v=0.01m/s appr=+0.00m/s
+[MODE] ep=0 s=  67 RECOVERY → FOLLOW  dist=4.052m ang_err=20.2°
+[ST] ep=0 s=  68 FOLLOW       R( -7.724, +3.566) yaw -40.2° T( -5.700, +0.036) dist=4.069m ang=-20.0° tgt_cam=Y tgt_v=0.06m/s appr=+0.06m/s
+[ST] ep=0 s=  69 FOLLOW       R( -7.705, +3.598) yaw -40.9° T( -5.698, +0.029) dist=4.094m ang=-19.8° tgt_cam=Y tgt_v=0.07m/s appr=-0.05m/s
+[ST] ep=0 s=  70 FOLLOW       R( -7.682, +3.630) yaw -41.5° T( -5.710, +0.012) dist=4.120m ang=-19.9° tgt_cam=Y tgt_v=0.40m/s appr=-0.25m/s
+[DATAGEN] ep=0 step=70 mode=FOLLOW dist=4.12 action=(+0.00,+1.28,-0.33) visible=True blocker=- hit=4.13
+[ST] ep=0 s=  71 FOLLOW       R( -7.653, +3.661) yaw -42.1° T( -5.714, +0.004) dist=4.140m ang=-19.9° tgt_cam=Y tgt_v=0.45m/s appr=-0.23m/s
+[ST] ep=0 s=  72 FOLLOW       R( -7.620, +3.692) yaw -42.7° T( -5.703, +0.025) dist=4.138m ang=-19.7° tgt_cam=Y tgt_v=0.23m/s appr=+0.13m/s
+[ST] ep=0 s=  73 FOLLOW       R( -7.584, +3.722) yaw -43.4° T( -5.687, +0.067) dist=4.117m ang=-19.2° tgt_cam=Y tgt_v=1.03m/s appr=+0.65m/s
+[ST] ep=0 s=  74 FOLLOW       R( -7.544, +3.748) yaw -44.0° T( -5.670, +0.105) dist=4.096m ang=-18.8° tgt_cam=Y tgt_v=1.30m/s appr=+0.85m/s
+[ST] ep=0 s=  75 FOLLOW       R( -7.503, +3.771) yaw -44.6° T( -5.641, +0.143) dist=4.078m ang=-18.2° tgt_cam=Y tgt_v=1.34m/s appr=+0.70m/s
+[ST] ep=0 s=  76 FOLLOW       R( -7.461, +3.789) yaw -45.2° T( -5.601, +0.200) dist=4.042m ang=-17.4° tgt_cam=Y tgt_v=1.76m/s appr=+0.78m/s
+[ST] ep=0 s=  77 FOLLOW       R( -7.419, +3.802) yaw -45.7° T( -5.546, +0.268) dist=4.000m ang=-16.4° tgt_cam=Y tgt_v=2.36m/s appr=+1.00m/s
+[ST] ep=0 s=  78 FOLLOW       R( -7.377, +3.810) yaw -46.3° T( -5.496, +0.330) dist=3.956m ang=-15.4° tgt_cam=Y tgt_v=2.51m/s appr=+0.96m/s
+[ST] ep=0 s=  79 FOLLOW       R( -7.335, +3.812) yaw -46.0° T( -5.460, +0.393) dist=3.899m ang=-15.3° tgt_cam=Y tgt_v=2.27m/s appr=+1.02m/s
+[ST] ep=0 s=  80 FOLLOW       R( -7.290, +3.809) yaw -48.5° T( -5.440, +0.468) dist=3.819m ang=-12.6° tgt_cam=Y tgt_v=2.24m/s appr=+1.41m/s
+[DATAGEN] ep=0 step=80 mode=FOLLOW dist=3.82 action=(+1.00,+0.78,-0.22) visible=True blocker=- hit=3.82
+[ST] ep=0 s=  81 FOLLOW       R( -7.251, +3.804) yaw -47.7° T( -5.428, +0.562) dist=3.719m ang=-13.0° tgt_cam=Y tgt_v=2.59m/s appr=+1.98m/s
+[ST] ep=0 s=  82 FOLLOW       R( -7.209, +3.792) yaw -48.1° T( -5.433, +0.670) dist=3.592m ang=-12.3° tgt_cam=Y tgt_v=3.03m/s appr=+2.59m/s
+[ST] ep=0 s=  83 FOLLOW       R( -7.168, +3.775) yaw -48.4° T( -5.456, +0.793) dist=3.439m ang=-11.7° tgt_cam=Y tgt_v=3.48m/s appr=+3.20m/s
+[ST] ep=0 s=  84 FOLLOW       R( -7.127, +3.753) yaw -48.8° T( -5.467, +0.912) dist=3.291m ang=-10.9° tgt_cam=Y tgt_v=3.66m/s appr=+3.38m/s
+[ST] ep=0 s=  85 FOLLOW       R( -7.087, +3.726) yaw -49.1° T( -5.472, +1.018) dist=3.153m ang=-10.1° tgt_cam=Y tgt_v=3.39m/s appr=+3.03m/s
+[ST] ep=0 s=  86 FOLLOW       R( -7.047, +3.695) yaw -49.5° T( -5.471, +1.119) dist=3.020m ang= -9.1° tgt_cam=Y tgt_v=3.10m/s appr=+2.68m/s
+[ST] ep=0 s=  87 FOLLOW       R( -7.008, +3.658) yaw -49.8° T( -5.470, +1.219) dist=2.883m ang= -8.0° tgt_cam=Y tgt_v=3.01m/s appr=+2.53m/s
+[ST] ep=0 s=  88 FOLLOW       R( -6.969, +3.616) yaw -50.0° T( -5.466, +1.329) dist=2.737m ang= -6.7° tgt_cam=Y tgt_v=3.15m/s appr=+2.59m/s
+[ST] ep=0 s=  89 FOLLOW       R( -6.936, +3.575) yaw -50.2° T( -5.452, +1.442) dist=2.598m ang= -5.0° tgt_cam=Y tgt_v=3.36m/s appr=+2.59m/s
+[ST] ep=0 s=  90 FOLLOW       R( -6.906, +3.534) yaw -50.4° T( -5.439, +1.547) dist=2.470m ang= -3.2° tgt_cam=Y tgt_v=3.30m/s appr=+2.40m/s
+[DATAGEN] ep=0 step=90 mode=FOLLOW dist=2.47 action=(+1.40,-0.07,-0.07) visible=True blocker=- hit=2.48
+[ST] ep=0 s=  91 FOLLOW       R( -6.878, +3.497) yaw -50.5° T( -5.437, +1.625) dist=2.362m ang= -1.9° tgt_cam=Y tgt_v=2.75m/s appr=+2.04m/s
+[ST] ep=0 s=  92 FOLLOW       R( -6.851, +3.463) yaw -50.6° T( -5.444, +1.694) dist=2.260m ang= -0.9° tgt_cam=Y tgt_v=2.20m/s appr=+1.77m/s
+[ST] ep=0 s=  93 FOLLOW       R( -6.826, +3.431) yaw -50.7° T( -5.459, +1.776) dist=2.147m ang= +0.2° tgt_cam=Y tgt_v=2.30m/s appr=+1.96m/s
+[ST] ep=0 s=  94 FOLLOW       R( -6.803, +3.403) yaw -50.7° T( -5.485, +1.864) dist=2.026m ang= +1.3° tgt_cam=Y tgt_v=2.62m/s appr=+2.33m/s
+[ST] ep=0 s=  95 FOLLOW       R( -6.782, +3.377) yaw -50.6° T( -5.532, +1.948) dist=1.898m ang= +1.8° tgt_cam=Y tgt_v=2.80m/s appr=+2.66m/s
+[ST] ep=0 s=  96 FOLLOW       R( -6.762, +3.354) yaw -50.5° T( -5.600, +2.031) dist=1.761m ang= +1.8° tgt_cam=Y tgt_v=3.05m/s appr=+3.02m/s
+[ST] ep=0 s=  97 FOLLOW       R( -6.745, +3.333) yaw -50.4° T( -5.668, +2.098) dist=1.639m ang= +1.5° tgt_cam=Y tgt_v=3.03m/s appr=+3.03m/s
+[ST] ep=0 s=  98 FOLLOW       R( -6.730, +3.316) yaw -50.3° T( -5.729, +2.165) dist=1.525m ang= +1.3° tgt_cam=Y tgt_v=2.79m/s appr=+2.78m/s
+[ST] ep=0 s=  99 FOLLOW       R( -6.717, +3.300) yaw -50.2° T( -5.797, +2.228) dist=1.412m ang= +0.8° tgt_cam=Y tgt_v=2.75m/s appr=+2.74m/s
+[ST] ep=0 s= 100 FOLLOW       R( -6.706, +3.288) yaw -50.1° T( -5.881, +2.301) dist=1.286m ang= +0.0° tgt_cam=Y tgt_v=3.06m/s appr=+3.03m/s
+[DATAGEN] ep=0 step=100 mode=FOLLOW dist=1.29 action=(+0.40,+0.01,+0.02) visible=True blocker=- hit=1.30
+[ST] ep=0 s= 101 FOLLOW       R( -6.697, +3.278) yaw -50.1° T( -5.961, +2.381) dist=1.160m ang= -0.5° tgt_cam=Y tgt_v=3.36m/s appr=+3.33m/s
+[ST] ep=0 s= 102 FOLLOW       R( -6.690, +3.270) yaw -50.1° T( -6.035, +2.468) dist=1.036m ang= -0.7° tgt_cam=Y tgt_v=3.40m/s appr=+3.39m/s
+[ST] ep=0 s= 103 FOLLOW       R( -6.685, +3.266) yaw -50.0° T( -6.099, +2.533) dist=0.938m ang= -1.3° tgt_cam=Y tgt_v=3.08m/s appr=+3.07m/s
+[ST] ep=0 s= 104 RETREAT      R( -6.682, +3.263) yaw -50.0° T( -6.161, +2.587) dist=0.854m ang= -2.3° tgt_cam=Y tgt_v=2.61m/s appr=+2.58m/s
+[MODE] ep=0 s= 104 FOLLOW → RETREAT  dist=0.854m ang_err=2.3°
+[ST] ep=0 s= 105 RETREAT      R( -6.681, +3.264) yaw -50.0° T( -6.229, +2.647) dist=0.766m ang= -3.7° tgt_cam=Y tgt_v=2.58m/s appr=+2.52m/s
+[ST] ep=0 s= 106 RETREAT      R( -6.682, +3.268) yaw -50.0° T( -6.306, +2.708) dist=0.674m ang= -6.1° tgt_cam=Y tgt_v=2.84m/s appr=+2.73m/s
+[ST] ep=0 s= 107 RETREAT      R( -6.683, +3.276) yaw -50.0° T( -6.397, +2.769) dist=0.582m ang=-10.6° tgt_cam=Y tgt_v=3.13m/s appr=+2.84m/s
+[ST] ep=0 s= 108 RETREAT      R( -6.684, +3.287) yaw -50.0° T( -6.450, +2.804) dist=0.537m ang=-14.1° tgt_cam=Y tgt_v=2.58m/s appr=+2.23m/s
+[ST] ep=0 s= 109 RECOVERY     R( -6.681, +3.299) yaw -50.1° T( -6.458, +2.811) dist=0.537m ang=-15.4° tgt_cam=Y tgt_v=1.11m/s appr=+0.95m/s
+[MODE] ep=0 s= 109 RETREAT → RECOVERY  dist=0.537m ang_err=15.4°
+[ST] ep=0 s= 110 RECOVERY     R( -6.673, +3.310) yaw -50.2° T( -6.460, +2.811) dist=0.543m ang=-16.6° tgt_cam=Y tgt_v=0.18m/s appr=+0.15m/s
+[DATAGEN] ep=0 step=110 mode=RECOVERY dist=0.54 action=(+0.00,+0.50,-0.10) visible=True blocker=- hit=0.58
+[ST] ep=0 s= 111 RECOVERY     R( -6.660, +3.320) yaw -50.4° T( -6.461, +2.811) dist=0.547m ang=-18.2° tgt_cam=Y tgt_v=0.03m/s appr=+0.02m/s
+[ST] ep=0 s= 112 RECOVERY     R( -6.643, +3.330) yaw -50.7° T( -6.462, +2.811) dist=0.550m ang=-20.1° tgt_cam=Y tgt_v=0.03m/s appr=+0.02m/s
+[ST] ep=0 s= 113 RECOVERY     R( -6.621, +3.340) yaw -50.9° T( -6.462, +2.811) dist=0.552m ang=-22.3° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 114 RECOVERY     R( -6.595, +3.351) yaw -51.3° T( -6.461, +2.812) dist=0.556m ang=-24.7° tgt_cam=Y tgt_v=0.01m/s appr=+0.00m/s
+[ST] ep=0 s= 115 RECOVERY     R( -6.567, +3.363) yaw -51.6° T( -6.458, +2.810) dist=0.563m ang=-27.3° tgt_cam=Y tgt_v=0.06m/s appr=-0.04m/s
+[ST] ep=0 s= 116 RECOVERY     R( -6.535, +3.376) yaw -52.0° T( -6.455, +2.804) dist=0.578m ang=-30.0° tgt_cam=Y tgt_v=0.15m/s appr=-0.13m/s
+[ST] ep=0 s= 117 RECOVERY     R( -6.501, +3.391) yaw -52.5° T( -6.452, +2.799) dist=0.594m ang=-32.8° tgt_cam=Y tgt_v=0.18m/s appr=-0.17m/s
+[ST] ep=0 s= 118 RECOVERY     R( -6.464, +3.408) yaw -53.0° T( -6.451, +2.798) dist=0.610m ang=-35.8° tgt_cam=Y tgt_v=0.10m/s appr=-0.08m/s
+[ST] ep=0 s= 119 RECOVERY     R( -6.464, +3.408) yaw -53.6° T( -6.450, +2.799) dist=0.609m ang=-35.1° tgt_cam=Y tgt_v=0.03m/s appr=+0.00m/s
+[ST] ep=0 s= 120 RECOVERY     R( -6.464, +3.408) yaw -54.3° T( -6.449, +2.801) dist=0.608m ang=-34.4° tgt_cam=Y tgt_v=0.05m/s appr=+0.03m/s
+[DATAGEN] ep=0 step=120 mode=RECOVERY dist=0.61 action=(+0.21,+1.41,-0.34) visible=True blocker=- hit=0.64
+[ST] ep=0 s= 121 RECOVERY     R( -6.464, +3.408) yaw -54.9° T( -6.449, +2.802) dist=0.606m ang=-33.7° tgt_cam=Y tgt_v=0.05m/s appr=+0.05m/s
+[ST] ep=0 s= 122 RETREAT      R( -6.464, +3.408) yaw -55.5° T( -6.448, +2.804) dist=0.605m ang=-33.0° tgt_cam=Y tgt_v=0.04m/s appr=+0.04m/s
+[MODE] ep=0 s= 122 RECOVERY → RETREAT  dist=0.605m ang_err=33.0°
+[ST] ep=0 s= 123 RETREAT      R( -6.464, +3.408) yaw -56.2° T( -6.448, +2.804) dist=0.604m ang=-32.3° tgt_cam=Y tgt_v=0.03m/s appr=+0.03m/s
+[ST] ep=0 s= 124 RETREAT      R( -6.464, +3.408) yaw -56.8° T( -6.447, +2.805) dist=0.604m ang=-31.7° tgt_cam=Y tgt_v=0.02m/s appr=+0.02m/s
+[ST] ep=0 s= 125 RETREAT      R( -6.450, +3.421) yaw -57.4° T( -6.447, +2.805) dist=0.616m ang=-32.3° tgt_cam=Y tgt_v=0.02m/s appr=+0.00m/s
+[ST] ep=0 s= 126 RETREAT      R( -6.450, +3.421) yaw -58.0° T( -6.446, +2.804) dist=0.616m ang=-31.6° tgt_cam=Y tgt_v=0.02m/s appr=-0.01m/s
+[ST] ep=0 s= 127 RETREAT      R( -6.450, +3.421) yaw -58.7° T( -6.445, +2.804) dist=0.617m ang=-30.8° tgt_cam=Y tgt_v=0.02m/s appr=-0.01m/s
+[ST] ep=0 s= 128 RECOVERY     R( -6.450, +3.421) yaw -59.3° T( -6.444, +2.804) dist=0.617m ang=-30.1° tgt_cam=Y tgt_v=0.03m/s appr=-0.01m/s
+[MODE] ep=0 s= 128 RETREAT → RECOVERY  dist=0.617m ang_err=30.1°
+[ST] ep=0 s= 129 RECOVERY     R( -6.450, +3.421) yaw -59.9° T( -6.444, +2.804) dist=0.617m ang=-29.5° tgt_cam=Y tgt_v=0.02m/s appr=-0.00m/s
+[ST] ep=0 s= 130 RECOVERY     R( -6.450, +3.421) yaw -60.5° T( -6.443, +2.804) dist=0.617m ang=-28.8° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[DATAGEN] ep=0 step=130 mode=RECOVERY dist=0.62 action=(-0.11,+1.39,-0.31) visible=True blocker=- hit=0.65
+[ST] ep=0 s= 131 RECOVERY     R( -6.450, +3.421) yaw -61.1° T( -6.442, +2.805) dist=0.616m ang=-28.1° tgt_cam=Y tgt_v=0.03m/s appr=+0.01m/s
+[ST] ep=0 s= 132 RECOVERY     R( -6.450, +3.421) yaw -61.7° T( -6.441, +2.805) dist=0.616m ang=-27.4° tgt_cam=Y tgt_v=0.03m/s appr=+0.01m/s
+[ST] ep=0 s= 133 RECOVERY     R( -6.450, +3.421) yaw -62.3° T( -6.441, +2.805) dist=0.615m ang=-26.8° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 134 RECOVERY     R( -6.450, +3.421) yaw -62.8° T( -6.440, +2.806) dist=0.615m ang=-26.3° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 135 RECOVERY     R( -6.450, +3.421) yaw -63.3° T( -6.440, +2.806) dist=0.615m ang=-25.7° tgt_cam=Y tgt_v=0.01m/s appr=+0.01m/s
+[ST] ep=0 s= 136 RECOVERY     R( -6.450, +3.421) yaw -63.9° T( -6.440, +2.806) dist=0.615m ang=-25.2° tgt_cam=Y tgt_v=0.01m/s appr=+0.00m/s
+[ST] ep=0 s= 137 RECOVERY     R( -6.450, +3.421) yaw -64.4° T( -6.440, +2.806) dist=0.615m ang=-24.6° tgt_cam=Y tgt_v=0.01m/s appr=+0.00m/s
+[ST] ep=0 s= 138 RECOVERY     R( -6.450, +3.421) yaw -64.9° T( -6.440, +2.806) dist=0.614m ang=-24.2° tgt_cam=Y tgt_v=0.00m/s appr=+0.00m/s
+[ST] ep=0 s= 139 RECOVERY     R( -6.450, +3.421) yaw -65.4° T( -6.440, +2.807) dist=0.614m ang=-23.7° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 140 RECOVERY     R( -6.450, +3.421) yaw -65.9° T( -6.442, +2.808) dist=0.613m ang=-23.3° tgt_cam=Y tgt_v=0.03m/s appr=+0.02m/s
+[DATAGEN] ep=0 step=140 mode=RECOVERY dist=0.61 action=(-0.29,+1.40,-0.25) visible=True blocker=- hit=0.64
+[ST] ep=0 s= 141 RECOVERY     R( -6.450, +3.421) yaw -66.3° T( -6.443, +2.809) dist=0.612m ang=-23.0° tgt_cam=Y tgt_v=0.04m/s appr=+0.03m/s
+[ST] ep=0 s= 142 RECOVERY     R( -6.450, +3.421) yaw -66.8° T( -6.444, +2.809) dist=0.612m ang=-22.6° tgt_cam=Y tgt_v=0.04m/s appr=+0.02m/s
+[ST] ep=0 s= 143 RECOVERY     R( -6.450, +3.421) yaw -67.2° T( -6.445, +2.810) dist=0.611m ang=-22.3° tgt_cam=Y tgt_v=0.04m/s appr=+0.02m/s
+[ST] ep=0 s= 144 RECOVERY     R( -6.450, +3.421) yaw -67.6° T( -6.446, +2.810) dist=0.611m ang=-22.0° tgt_cam=Y tgt_v=0.04m/s appr=+0.01m/s
+[ST] ep=0 s= 145 RECOVERY     R( -6.450, +3.421) yaw -68.1° T( -6.448, +2.810) dist=0.611m ang=-21.7° tgt_cam=Y tgt_v=0.04m/s appr=+0.01m/s
+[ST] ep=0 s= 146 RECOVERY     R( -6.450, +3.421) yaw -68.5° T( -6.450, +2.810) dist=0.611m ang=-21.5° tgt_cam=Y tgt_v=0.05m/s appr=-0.00m/s
+[ST] ep=0 s= 147 RECOVERY     R( -6.450, +3.421) yaw -68.8° T( -6.451, +2.810) dist=0.611m ang=-21.3° tgt_cam=Y tgt_v=0.05m/s appr=+0.00m/s
+[ST] ep=0 s= 148 RECOVERY     R( -6.450, +3.421) yaw -69.2° T( -6.453, +2.810) dist=0.611m ang=-21.0° tgt_cam=Y tgt_v=0.05m/s appr=+0.00m/s
+[ST] ep=0 s= 149 RECOVERY     R( -6.450, +3.421) yaw -69.6° T( -6.455, +2.810) dist=0.610m ang=-20.8° tgt_cam=Y tgt_v=0.05m/s appr=+0.00m/s
+[ST] ep=0 s= 150 RECOVERY     R( -6.449, +3.442) yaw -70.0° T( -6.456, +2.811) dist=0.632m ang=-20.6° tgt_cam=Y tgt_v=0.04m/s appr=+0.01m/s
+[DATAGEN] ep=0 step=150 mode=RECOVERY dist=0.63 action=(-1.29,+0.40,-0.20) visible=True blocker=- hit=0.66
+[ST] ep=0 s= 151 RECOVERY     R( -6.451, +3.487) yaw -70.3° T( -6.457, +2.811) dist=0.677m ang=-20.1° tgt_cam=Y tgt_v=0.03m/s appr=+0.00m/s
+[ST] ep=0 s= 152 RECOVERY     R( -6.457, +3.534) yaw -70.8° T( -6.458, +2.811) dist=0.724m ang=-19.2° tgt_cam=Y tgt_v=0.03m/s appr=-0.00m/s
+[ST] ep=0 s= 153 RECOVERY     R( -6.467, +3.583) yaw -71.3° T( -6.459, +2.811) dist=0.773m ang=-18.1° tgt_cam=Y tgt_v=0.03m/s appr=-0.00m/s
+[ST] ep=0 s= 154 RETREAT      R( -6.474, +3.637) yaw -71.8° T( -6.460, +2.811) dist=0.826m ang=-17.2° tgt_cam=Y tgt_v=0.04m/s appr=+0.00m/s
+[MODE] ep=0 s= 154 RECOVERY → RETREAT  dist=0.826m ang_err=17.2°
+[ST] ep=0 s= 155 RETREAT      R( -6.479, +3.693) yaw -72.4° T( -6.461, +2.811) dist=0.882m ang=-16.4° tgt_cam=Y tgt_v=0.04m/s appr=+0.01m/s
+[ST] ep=0 s= 156 RETREAT      R( -6.482, +3.752) yaw -73.1° T( -6.462, +2.811) dist=0.941m ang=-15.7° tgt_cam=Y tgt_v=0.03m/s appr=+0.01m/s
+[ST] ep=0 s= 157 RETREAT      R( -6.483, +3.812) yaw -73.8° T( -6.462, +2.811) dist=1.001m ang=-15.0° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 158 FOLLOW       R( -6.487, +3.868) yaw -74.5° T( -6.460, +2.811) dist=1.057m ang=-14.0° tgt_cam=Y tgt_v=0.02m/s appr=+0.00m/s
+[MODE] ep=0 s= 158 RETREAT → FOLLOW  dist=1.057m ang_err=14.0°
+[ST] ep=0 s= 159 FOLLOW       R( -6.491, +3.920) yaw -75.2° T( -6.457, +2.808) dist=1.113m ang=-13.0° tgt_cam=Y tgt_v=0.09m/s appr=-0.05m/s
+[ST] ep=0 s= 160 FOLLOW       R( -6.498, +3.968) yaw -75.9° T( -6.454, +2.802) dist=1.167m ang=-12.0° tgt_cam=Y tgt_v=0.17m/s appr=-0.15m/s
+[DATAGEN] ep=0 step=160 mode=FOLLOW dist=1.17 action=(-1.34,+0.06,-0.31) visible=True blocker=- hit=1.18
+[ST] ep=0 s= 161 FOLLOW       R( -6.507, +4.012) yaw -76.5° T( -6.452, +2.798) dist=1.215m ang=-11.0° tgt_cam=Y tgt_v=0.16m/s appr=-0.15m/s
+[ST] ep=0 s= 162 FOLLOW       R( -6.517, +4.052) yaw -77.0° T( -6.451, +2.799) dist=1.255m ang=-10.0° tgt_cam=Y tgt_v=0.07m/s appr=-0.05m/s
+[ST] ep=0 s= 163 FOLLOW       R( -6.530, +4.088) yaw -77.5° T( -6.450, +2.800) dist=1.291m ang= -8.9° tgt_cam=Y tgt_v=0.03m/s appr=+0.02m/s
+[ST] ep=0 s= 164 FOLLOW       R( -6.545, +4.120) yaw -77.9° T( -6.449, +2.801) dist=1.323m ang= -7.9° tgt_cam=Y tgt_v=0.05m/s appr=+0.04m/s
+[ST] ep=0 s= 165 FOLLOW       R( -6.563, +4.149) yaw -78.3° T( -6.448, +2.803) dist=1.351m ang= -6.8° tgt_cam=Y tgt_v=0.05m/s appr=+0.04m/s
+[ST] ep=0 s= 166 FOLLOW       R( -6.583, +4.173) yaw -78.7° T( -6.448, +2.804) dist=1.376m ang= -5.7° tgt_cam=Y tgt_v=0.04m/s appr=+0.04m/s
+[ST] ep=0 s= 167 FOLLOW       R( -6.605, +4.194) yaw -79.0° T( -6.448, +2.805) dist=1.398m ang= -4.6° tgt_cam=Y tgt_v=0.03m/s appr=+0.03m/s
+[ST] ep=0 s= 168 FOLLOW       R( -6.630, +4.211) yaw -79.2° T( -6.447, +2.805) dist=1.418m ang= -3.4° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 169 FOLLOW       R( -6.657, +4.225) yaw -79.4° T( -6.446, +2.805) dist=1.436m ang= -2.2° tgt_cam=Y tgt_v=0.02m/s appr=-0.00m/s
+[ST] ep=0 s= 170 FOLLOW       R( -6.684, +4.235) yaw -79.5° T( -6.446, +2.804) dist=1.450m ang= -1.0° tgt_cam=Y tgt_v=0.02m/s appr=-0.01m/s
+[DATAGEN] ep=0 step=170 mode=FOLLOW dist=1.45 action=(-0.34,-0.75,-0.05) visible=True blocker=- hit=1.46
+[ST] ep=0 s= 171 FOLLOW       R( -6.711, +4.241) yaw -79.6° T( -6.445, +2.804) dist=1.462m ang= +0.1° tgt_cam=Y tgt_v=0.03m/s appr=-0.01m/s
+[ST] ep=0 s= 172 FOLLOW       R( -6.736, +4.245) yaw -79.7° T( -6.444, +2.804) dist=1.470m ang= +1.1° tgt_cam=Y tgt_v=0.03m/s appr=-0.01m/s
+[ST] ep=0 s= 173 FOLLOW       R( -6.759, +4.245) yaw -79.7° T( -6.443, +2.804) dist=1.476m ang= +2.0° tgt_cam=Y tgt_v=0.02m/s appr=-0.00m/s
+[ST] ep=0 s= 174 FOLLOW       R( -6.781, +4.243) yaw -79.6° T( -6.443, +2.804) dist=1.478m ang= +2.9° tgt_cam=Y tgt_v=0.02m/s appr=+0.00m/s
+[ST] ep=0 s= 175 FOLLOW       R( -6.801, +4.237) yaw -79.5° T( -6.442, +2.805) dist=1.477m ang= +3.6° tgt_cam=Y tgt_v=0.03m/s appr=+0.00m/s
+[ST] ep=0 s= 176 FOLLOW       R( -6.819, +4.229) yaw -79.4° T( -6.441, +2.805) dist=1.473m ang= +4.3° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 177 FOLLOW       R( -6.835, +4.217) yaw -79.3° T( -6.441, +2.806) dist=1.465m ang= +4.9° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 178 FOLLOW       R( -6.849, +4.202) yaw -79.1° T( -6.440, +2.806) dist=1.455m ang= +5.4° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 179 FOLLOW       R( -6.862, +4.184) yaw -78.8° T( -6.440, +2.806) dist=1.441m ang= +5.9° tgt_cam=Y tgt_v=0.01m/s appr=+0.00m/s
+[ST] ep=0 s= 180 FOLLOW       R( -6.873, +4.163) yaw -78.6° T( -6.440, +2.806) dist=1.424m ang= +6.3° tgt_cam=Y tgt_v=0.01m/s appr=+0.00m/s
+[DATAGEN] ep=0 step=180 mode=FOLLOW dist=1.42 action=(+0.66,-0.43,+0.13) visible=True blocker=- hit=1.44
+[ST] ep=0 s= 181 FOLLOW       R( -6.882, +4.138) yaw -78.4° T( -6.440, +2.806) dist=1.404m ang= +6.7° tgt_cam=Y tgt_v=0.01m/s appr=+0.00m/s
+[ST] ep=0 s= 182 FOLLOW       R( -6.890, +4.111) yaw -78.1° T( -6.440, +2.807) dist=1.380m ang= +7.1° tgt_cam=Y tgt_v=0.01m/s appr=+0.01m/s
+[ST] ep=0 s= 183 FOLLOW       R( -6.897, +4.080) yaw -77.8° T( -6.441, +2.807) dist=1.352m ang= +7.5° tgt_cam=Y tgt_v=0.02m/s appr=+0.02m/s
+[ST] ep=0 s= 184 FOLLOW       R( -6.903, +4.046) yaw -77.5° T( -6.442, +2.808) dist=1.321m ang= +7.9° tgt_cam=Y tgt_v=0.04m/s appr=+0.03m/s
+[ST] ep=0 s= 185 FOLLOW       R( -6.907, +4.009) yaw -77.1° T( -6.443, +2.809) dist=1.287m ang= +8.3° tgt_cam=Y tgt_v=0.04m/s appr=+0.04m/s
+[ST] ep=0 s= 186 FOLLOW       R( -6.911, +3.969) yaw -76.8° T( -6.444, +2.809) dist=1.250m ang= +8.7° tgt_cam=Y tgt_v=0.04m/s appr=+0.03m/s
+[ST] ep=0 s= 187 FOLLOW       R( -6.913, +3.925) yaw -76.4° T( -6.445, +2.810) dist=1.209m ang= +9.2° tgt_cam=Y tgt_v=0.04m/s appr=+0.03m/s
+[ST] ep=0 s= 188 FOLLOW       R( -6.915, +3.878) yaw -76.0° T( -6.447, +2.810) dist=1.166m ang= +9.7° tgt_cam=Y tgt_v=0.04m/s appr=+0.02m/s
+[ST] ep=0 s= 189 FOLLOW       R( -6.917, +3.827) yaw -75.6° T( -6.449, +2.810) dist=1.120m ang=+10.3° tgt_cam=Y tgt_v=0.05m/s appr=+0.02m/s
+[ST] ep=0 s= 190 FOLLOW       R( -6.918, +3.777) yaw -75.1° T( -6.450, +2.810) dist=1.074m ang=+10.9° tgt_cam=Y tgt_v=0.05m/s appr=+0.02m/s
+[DATAGEN] ep=0 step=190 mode=FOLLOW dist=1.07 action=(+1.35,-0.37,+0.26) visible=True blocker=- hit=1.09
+[ST] ep=0 s= 191 FOLLOW       R( -6.918, +3.730) yaw -74.6° T( -6.452, +2.810) dist=1.031m ang=+11.5° tgt_cam=Y tgt_v=0.05m/s appr=+0.02m/s
+[ST] ep=0 s= 192 FOLLOW       R( -6.917, +3.687) yaw -74.1° T( -6.466, +2.826) dist=0.972m ang=+11.7° tgt_cam=Y tgt_v=0.33m/s appr=+0.32m/s
+[ST] ep=0 s= 193 RETREAT      R( -6.917, +3.647) yaw -73.5° T( -6.505, +2.885) dist=0.866m ang=+11.9° tgt_cam=Y tgt_v=1.38m/s appr=+1.36m/s
+[MODE] ep=0 s= 193 FOLLOW → RETREAT  dist=0.866m ang_err=11.9°
+[ST] ep=0 s= 194 RETREAT      R( -6.918, +3.610) yaw -73.0° T( -6.541, +2.971) dist=0.742m ang=+13.5° tgt_cam=Y tgt_v=2.46m/s appr=+2.45m/s
+[ST] ep=0 s= 195 RETREAT      R( -6.921, +3.576) yaw -72.3° T( -6.563, +3.074) dist=0.616m ang=+17.9° tgt_cam=Y tgt_v=2.97m/s appr=+2.81m/s
+[ST] ep=0 s= 196 RETREAT      R( -6.926, +3.544) yaw -71.7° T( -6.573, +3.178) dist=0.509m ang=+25.7° tgt_cam=Y tgt_v=3.14m/s appr=+2.56m/s
+[ST] ep=0 s= 197 RETREAT      R( -6.936, +3.514) yaw -71.0° T( -6.580, +3.270) dist=0.431m ang=+36.5° tgt_cam=Y tgt_v=2.95m/s appr=+1.89m/s
+[ST] ep=0 s= 198 RETREAT      R( -6.949, +3.486) yaw -70.3° T( -6.592, +3.362) dist=0.378m ang=+51.1° tgt_cam=N tgt_v=2.78m/s appr=+1.18m/s
+[ST] ep=0 s= 199 RETREAT      R( -6.966, +3.460) yaw -69.6° T( -6.610, +3.458) dist=0.356m ang=+69.1° tgt_cam=N tgt_v=2.84m/s appr=+0.46m/s
+[ST] ep=0 s= 200 RETREAT      R( -6.987, +3.436) yaw -68.9° T( -6.633, +3.561) dist=0.376m ang=+88.4° tgt_cam=N tgt_v=3.05m/s appr=-0.42m/s
+[DATAGEN] ep=0 step=200 mode=RETREAT dist=0.38 action=(+0.35,-0.95,+0.32) visible=True blocker=- hit=0.43
+[ST] ep=0 s= 201 RETREAT      R( -7.013, +3.413) yaw -68.3° T( -6.666, +3.670) dist=0.432m ang=+104.8° tgt_cam=N tgt_v=3.30m/s appr=-1.22m/s
+[ST] ep=0 s= 202 RETREAT      R( -7.042, +3.392) yaw -67.7° T( -6.702, +3.778) dist=0.514m ang=+116.2° tgt_cam=N tgt_v=3.40m/s appr=-1.75m/s
+[ST] ep=0 s= 203 RETREAT      R( -7.073, +3.366) yaw -67.0° T( -6.729, +3.871) dist=0.611m ang=+122.7° tgt_cam=N tgt_v=3.16m/s appr=-1.96m/s
+[ST] ep=0 s= 204 RETREAT      R( -7.102, +3.337) yaw -66.0° T( -6.746, +3.963) dist=0.720m ang=+126.4° tgt_cam=N tgt_v=2.86m/s appr=-2.09m/s
+[ST] ep=0 s= 205 RETREAT      R( -7.102, +3.337) yaw -64.8° T( -6.755, +4.059) dist=0.801m ang=+129.2° tgt_cam=N tgt_v=2.84m/s appr=-2.37m/s
+[ST] ep=0 s= 206 RETREAT      R( -7.102, +3.337) yaw -63.3° T( -6.760, +4.163) dist=0.894m ang=+130.8° tgt_cam=N tgt_v=3.00m/s appr=-2.69m/s
+[ST] ep=0 s= 207 RETREAT      R( -7.102, +3.337) yaw -61.6° T( -6.755, +4.272) dist=0.997m ang=+131.3° tgt_cam=N tgt_v=3.20m/s appr=-3.00m/s
+[ST] ep=0 s= 208 RETREAT      R( -7.102, +3.337) yaw -59.6° T( -6.745, +4.385) dist=1.107m ang=+130.8° tgt_cam=N tgt_v=3.34m/s appr=-3.22m/s
+[ST] ep=0 s= 209 FOLLOW       R( -7.102, +3.337) yaw -57.4° T( -6.737, +4.482) dist=1.202m ang=+129.7° tgt_cam=N tgt_v=3.16m/s appr=-3.08m/s
+[MODE] ep=0 s= 209 RETREAT → FOLLOW  dist=1.202m ang_err=129.7°
+[ST] ep=0 s= 210 FOLLOW       R( -7.102, +3.337) yaw -54.9° T( -6.735, +4.577) dist=1.293m ang=+128.5° tgt_cam=N tgt_v=2.89m/s appr=-2.81m/s
+[DATAGEN] ep=0 step=210 mode=FOLLOW dist=1.29 action=(+0.56,-0.87,+1.43) visible=True blocker=- hit=1.31
+[ST] ep=0 s= 211 FOLLOW       R( -7.102, +3.337) yaw -52.2° T( -6.736, +4.674) dist=1.387m ang=+126.9° tgt_cam=N tgt_v=2.89m/s appr=-2.79m/s
+[ST] ep=0 s= 212 FOLLOW       R( -7.102, +3.337) yaw -49.2° T( -6.738, +4.780) dist=1.488m ang=+125.1° tgt_cam=N tgt_v=3.05m/s appr=-2.95m/s
+[ST] ep=0 s= 213 FOLLOW       R( -7.106, +3.325) yaw -46.0° T( -6.750, +4.889) dist=1.604m ang=+123.1° tgt_cam=N tgt_v=3.23m/s appr=-3.10m/s
+[ST] ep=0 s= 214 RECOVERY     R( -7.106, +3.325) yaw -42.5° T( -6.766, +5.002) dist=1.711m ang=+121.1° tgt_cam=N tgt_v=3.35m/s appr=-3.17m/s
+[MODE] ep=0 s= 214 FOLLOW → RECOVERY  dist=1.711m ang_err=121.1°
+[ST] ep=0 s= 215 RECOVERY     R( -7.106, +3.325) yaw -38.9° T( -6.780, +5.094) dist=1.799m ang=+118.5° tgt_cam=N tgt_v=3.11m/s appr=-2.94m/s
+[ST] ep=0 s= 216 RECOVERY     R( -7.106, +3.325) yaw -35.3° T( -6.782, +5.147) dist=1.851m ang=+115.2° tgt_cam=N tgt_v=2.19m/s appr=-2.10m/s
+[ST] ep=0 s= 217 RECOVERY     R( -7.106, +3.325) yaw -31.6° T( -6.781, +5.157) dist=1.861m ang=+111.5° tgt_cam=N tgt_v=0.94m/s appr=-0.92m/s
+[ST] ep=0 s= 218 RECOVERY     R( -7.106, +3.325) yaw -27.8° T( -6.782, +5.158) dist=1.862m ang=+107.8° tgt_cam=N tgt_v=0.17m/s appr=-0.16m/s
+[ST] ep=0 s= 219 RECOVERY     R( -7.106, +3.325) yaw -24.0° T( -6.783, +5.159) dist=1.862m ang=+104.0° tgt_cam=N tgt_v=0.03m/s appr=-0.02m/s
+[ST] ep=0 s= 220 RECOVERY     R( -7.106, +3.325) yaw -20.2° T( -6.783, +5.160) dist=1.863m ang=+100.3° tgt_cam=N tgt_v=0.03m/s appr=-0.03m/s
+[DATAGEN] ep=0 step=220 mode=RECOVERY dist=1.86 action=(-0.44,-0.72,+1.99) visible=True blocker=- hit=1.87
+[ST] ep=0 s= 221 RECOVERY     R( -7.106, +3.325) yaw -16.4° T( -6.784, +5.160) dist=1.864m ang=+96.5° tgt_cam=N tgt_v=0.02m/s appr=-0.02m/s
+[ST] ep=0 s= 222 RECOVERY     R( -7.106, +3.325) yaw -12.6° T( -6.783, +5.160) dist=1.863m ang=+92.6° tgt_cam=N tgt_v=0.01m/s appr=+0.00m/s
+[ST] ep=0 s= 223 RECOVERY     R( -7.106, +3.325) yaw  -8.8° T( -6.782, +5.156) dist=1.860m ang=+88.8° tgt_cam=N tgt_v=0.06m/s appr=+0.06m/s
+[ST] ep=0 s= 224 RECOVERY     R( -7.106, +3.325) yaw  -5.0° T( -6.784, +5.150) dist=1.853m ang=+85.0° tgt_cam=N tgt_v=0.15m/s appr=+0.15m/s
+[ST] ep=0 s= 225 RECOVERY     R( -7.106, +3.325) yaw  -1.2° T( -6.786, +5.145) dist=1.848m ang=+81.2° tgt_cam=N tgt_v=0.18m/s appr=+0.18m/s
+[ST] ep=0 s= 226 RECOVERY     R( -7.106, +3.325) yaw  +2.6° T( -6.785, +5.144) dist=1.847m ang=+77.4° tgt_cam=N tgt_v=0.10m/s appr=+0.10m/s
+[ST] ep=0 s= 227 RECOVERY     R( -7.106, +3.325) yaw  +6.3° T( -6.784, +5.144) dist=1.847m ang=+73.7° tgt_cam=N tgt_v=0.03m/s appr=+0.01m/s
+[ST] ep=0 s= 228 RECOVERY     R( -7.106, +3.325) yaw  +9.9° T( -6.782, +5.144) dist=1.847m ang=+70.0° tgt_cam=N tgt_v=0.05m/s appr=-0.01m/s
+[ST] ep=0 s= 229 RECOVERY     R( -7.106, +3.325) yaw +13.3° T( -6.781, +5.144) dist=1.848m ang=+66.5° tgt_cam=N tgt_v=0.05m/s appr=-0.02m/s
+[ST] ep=0 s= 230 RECOVERY     R( -7.106, +3.325) yaw +16.6° T( -6.780, +5.145) dist=1.849m ang=+63.2° tgt_cam=N tgt_v=0.04m/s appr=-0.03m/s
+[DATAGEN] ep=0 step=230 mode=RECOVERY dist=1.85 action=(-1.44,+0.28,+1.65) visible=True blocker=- hit=1.86
+[ST] ep=0 s= 231 RECOVERY     R( -7.106, +3.325) yaw +19.8° T( -6.779, +5.146) dist=1.850m ang=+60.0° tgt_cam=N tgt_v=0.03m/s appr=-0.02m/s
+[ST] ep=0 s= 232 RECOVERY     R( -7.106, +3.325) yaw +22.7° T( -6.778, +5.145) dist=1.850m ang=+57.1° tgt_cam=N tgt_v=0.02m/s appr=-0.01m/s
+[ST] ep=0 s= 233 RECOVERY     R( -7.106, +3.325) yaw +25.3° T( -6.778, +5.145) dist=1.849m ang=+54.5° tgt_cam=N tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 234 RECOVERY     R( -7.106, +3.325) yaw +27.7° T( -6.777, +5.144) dist=1.849m ang=+52.0° tgt_cam=N tgt_v=0.02m/s appr=+0.02m/s
+[ST] ep=0 s= 235 RECOVERY     R( -7.106, +3.325) yaw +29.9° T( -6.777, +5.143) dist=1.848m ang=+49.9° tgt_cam=Y tgt_v=0.02m/s appr=+0.02m/s
+[ST] ep=0 s= 236 RECOVERY     R( -7.106, +3.325) yaw +31.9° T( -6.777, +5.142) dist=1.847m ang=+47.8° tgt_cam=Y tgt_v=0.03m/s appr=+0.02m/s
+[ST] ep=0 s= 237 RECOVERY     R( -7.106, +3.325) yaw +33.8° T( -6.776, +5.142) dist=1.847m ang=+45.9° tgt_cam=Y tgt_v=0.02m/s appr=+0.02m/s
+[ST] ep=0 s= 238 RECOVERY     R( -7.106, +3.325) yaw +35.6° T( -6.775, +5.142) dist=1.847m ang=+44.1° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 239 RECOVERY     R( -7.106, +3.325) yaw +37.3° T( -6.775, +5.141) dist=1.846m ang=+42.3° tgt_cam=Y tgt_v=0.03m/s appr=+0.01m/s
+[ST] ep=0 s= 240 RECOVERY     R( -7.168, +3.324) yaw +39.0° T( -6.774, +5.141) dist=1.859m ang=+38.8° tgt_cam=Y tgt_v=0.03m/s appr=+0.00m/s
+[DATAGEN] ep=0 step=240 mode=RECOVERY dist=1.86 action=(-1.39,+1.22,+0.82) visible=True blocker=- hit=1.87
+[ST] ep=0 s= 241 RECOVERY     R( -7.229, +3.326) yaw +40.6° T( -6.773, +5.141) dist=1.872m ang=+35.3° tgt_cam=Y tgt_v=0.02m/s appr=-0.00m/s
+[EP0] step=242 ABNORMAL STATE: robot (-7.29,3.32) inside obstacle! _KIN_BLOCKED_TOTAL=221 nearest_free=[-7.1921661721013175, 3.3466643275296613]
+[EP0] step=242 Snapped kinematic pos → (-7.19,3.35)
+[ST] ep=0 s= 242 RECOVERY     R( -7.289, +3.321) yaw +44.9° T( -6.773, +5.141) dist=1.892m ang=+29.3° tgt_cam=Y tgt_v=0.02m/s appr=-0.00m/s
+[ST] ep=0 s= 243 RECOVERY     R( -7.253, +3.350) yaw +43.9° T( -6.772, +5.141) dist=1.854m ang=+31.1° tgt_cam=Y tgt_v=0.01m/s appr=-0.00m/s
+[ST] ep=0 s= 244 RECOVERY     R( -7.317, +3.360) yaw +42.8° T( -6.772, +5.141) dist=1.862m ang=+30.2° tgt_cam=Y tgt_v=0.01m/s appr=+0.00m/s
+[ST] ep=0 s= 245 RECOVERY     R( -7.377, +3.361) yaw +45.5° T( -6.772, +5.141) dist=1.880m ang=+25.7° tgt_cam=Y tgt_v=0.01m/s appr=-0.00m/s
+[ST] ep=0 s= 246 RECOVERY     R( -7.439, +3.366) yaw +46.5° T( -6.772, +5.141) dist=1.897m ang=+22.9° tgt_cam=Y tgt_v=0.00m/s appr=-0.00m/s
+[ST] ep=0 s= 247 RECOVERY     R( -7.501, +3.371) yaw +47.4° T( -6.772, +5.142) dist=1.915m ang=+20.2° tgt_cam=Y tgt_v=0.02m/s appr=-0.01m/s
+[ST] ep=0 s= 248 RECOVERY     R( -7.563, +3.376) yaw +48.2° T( -6.772, +5.143) dist=1.936m ang=+17.7° tgt_cam=Y tgt_v=0.03m/s appr=-0.03m/s
+[ST] ep=0 s= 249 RECOVERY     R( -7.624, +3.381) yaw +48.9° T( -6.772, +5.145) dist=1.958m ang=+15.3° tgt_cam=Y tgt_v=0.04m/s appr=-0.04m/s
+[ST] ep=0 s= 250 RECOVERY     R( -7.682, +3.383) yaw +51.5° T( -6.772, +5.146) dist=1.983m ang=+11.2° tgt_cam=Y tgt_v=0.04m/s appr=-0.03m/s
+[DATAGEN] ep=0 step=250 mode=RECOVERY dist=1.98 action=(-1.01,+1.49,+0.27) visible=True blocker=- hit=1.99
+[ST] ep=0 s= 251 RECOVERY     R( -7.748, +3.397) yaw +47.2° T( -6.773, +5.147) dist=2.003m ang=+13.7° tgt_cam=Y tgt_v=0.04m/s appr=-0.02m/s
+[ST] ep=0 s= 252 RECOVERY     R( -7.747, +3.397) yaw +48.2° T( -6.774, +5.148) dist=2.003m ang=+12.8° tgt_cam=Y tgt_v=0.04m/s appr=-0.02m/s
+[ST] ep=0 s= 253 FOLLOW       R( -7.749, +3.399) yaw +47.3° T( -6.775, +5.149) dist=2.003m ang=+13.6° tgt_cam=Y tgt_v=0.04m/s appr=-0.02m/s
+[MODE] ep=0 s= 253 RECOVERY → FOLLOW  dist=2.003m ang_err=13.6°
+[EP0] step=254 ABNORMAL STATE: robot (-7.76,3.41) inside obstacle! _KIN_BLOCKED_TOTAL=227 nearest_free=[-7.65935173034668, 3.4056363105773926]
+[EP0] step=254 Snapped kinematic pos → (-7.66,3.41)
+[ST] ep=0 s= 254 FOLLOW       R( -7.759, +3.406) yaw +39.0° T( -6.776, +5.151) dist=2.003m ang=+21.6° tgt_cam=Y tgt_v=0.05m/s appr=-0.02m/s
+[ST] ep=0 s= 255 FOLLOW       R( -7.722, +3.382) yaw +51.2° T( -6.777, +5.152) dist=2.006m ang=+10.7° tgt_cam=Y tgt_v=0.05m/s appr=-0.02m/s
+[ST] ep=0 s= 256 FOLLOW       R( -7.747, +3.420) yaw +51.9° T( -6.778, +5.153) dist=1.986m ang= +8.9° tgt_cam=Y tgt_v=0.05m/s appr=-0.02m/s
+[ST] ep=0 s= 257 FOLLOW       R( -7.748, +3.420) yaw +52.2° T( -6.779, +5.154) dist=1.987m ang= +8.6° tgt_cam=Y tgt_v=0.05m/s appr=-0.02m/s
+[ST] ep=0 s= 258 FOLLOW       R( -7.748, +3.420) yaw +52.5° T( -6.780, +5.155) dist=1.987m ang= +8.3° tgt_cam=Y tgt_v=0.04m/s appr=-0.02m/s
+[ST] ep=0 s= 259 FOLLOW       R( -7.748, +3.420) yaw +52.8° T( -6.780, +5.156) dist=1.987m ang= +8.1° tgt_cam=Y tgt_v=0.03m/s appr=-0.01m/s
+[ST] ep=0 s= 260 FOLLOW       R( -7.748, +3.420) yaw +53.0° T( -6.781, +5.157) dist=1.987m ang= +7.9° tgt_cam=Y tgt_v=0.03m/s appr=-0.01m/s
+[DATAGEN] ep=0 step=260 mode=RECOVERY dist=1.99 action=(-0.25,+0.80,+0.15) visible=True blocker=- hit=2.00
+[ST] ep=0 s= 261 RECOVERY     R( -7.748, +3.421) yaw +53.3° T( -6.782, +5.158) dist=1.988m ang= +7.6° tgt_cam=Y tgt_v=0.03m/s appr=-0.01m/s
+[MODE] ep=0 s= 261 FOLLOW → RECOVERY  dist=1.988m ang_err=7.6°
+[ST] ep=0 s= 262 RECOVERY     R( -7.748, +3.421) yaw +53.5° T( -6.782, +5.159) dist=1.988m ang= +7.5° tgt_cam=Y tgt_v=0.04m/s appr=-0.01m/s
+[ST] ep=0 s= 263 RECOVERY     R( -7.748, +3.421) yaw +53.7° T( -6.783, +5.159) dist=1.988m ang= +7.3° tgt_cam=Y tgt_v=0.04m/s appr=-0.02m/s
+[ST] ep=0 s= 264 RECOVERY     R( -7.748, +3.421) yaw +53.8° T( -6.783, +5.160) dist=1.988m ang= +7.2° tgt_cam=Y tgt_v=0.03m/s appr=-0.02m/s
+[ST] ep=0 s= 265 RECOVERY     R( -7.748, +3.422) yaw +53.9° T( -6.783, +5.160) dist=1.988m ang= +7.0° tgt_cam=Y tgt_v=0.02m/s appr=-0.01m/s
+[ST] ep=0 s= 266 RECOVERY     R( -7.748, +3.422) yaw +54.0° T( -6.782, +5.159) dist=1.987m ang= +6.9° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 267 RECOVERY     R( -7.748, +3.423) yaw +54.1° T( -6.782, +5.154) dist=1.983m ang= +6.8° tgt_cam=Y tgt_v=0.09m/s appr=+0.07m/s
+[ST] ep=0 s= 268 RECOVERY     R( -7.748, +3.424) yaw +54.2° T( -6.785, +5.148) dist=1.976m ang= +6.6° tgt_cam=Y tgt_v=0.17m/s appr=+0.16m/s
+[ST] ep=0 s= 269 RECOVERY     R( -7.749, +3.424) yaw +54.2° T( -6.786, +5.144) dist=1.971m ang= +6.6° tgt_cam=Y tgt_v=0.16m/s appr=+0.16m/s
+[ST] ep=0 s= 270 RECOVERY     R( -7.749, +3.425) yaw +54.2° T( -6.785, +5.144) dist=1.970m ang= +6.5° tgt_cam=Y tgt_v=0.07m/s appr=+0.06m/s
+[DATAGEN] ep=0 step=270 mode=RECOVERY dist=1.97 action=(-0.29,+1.48,+0.12) visible=True blocker=- hit=1.98
+[ST] ep=0 s= 271 RECOVERY     R( -7.749, +3.425) yaw +54.3° T( -6.784, +5.144) dist=1.971m ang= +6.4° tgt_cam=Y tgt_v=0.03m/s appr=-0.01m/s
+[EP0] step=272 ABNORMAL STATE: robot (-7.75,3.42) inside obstacle! _KIN_BLOCKED_TOTAL=259 nearest_free=[-7.64968957901001, 3.42413067817688]
+[EP0] step=272 Snapped kinematic pos → (-7.65,3.42)
+[ST] ep=0 s= 272 RECOVERY     R( -7.750, +3.424) yaw +54.2° T( -6.782, +5.144) dist=1.973m ang= +6.4° tgt_cam=Y tgt_v=0.05m/s appr=-0.03m/s
+[ST] ep=0 s= 273 RECOVERY     R( -7.696, +3.442) yaw +57.5° T( -6.780, +5.145) dist=1.933m ang= +4.2° tgt_cam=Y tgt_v=0.05m/s appr=-0.04m/s
+[ST] ep=0 s= 274 FOLLOW       R( -7.739, +3.468) yaw +56.5° T( -6.779, +5.145) dist=1.932m ang= +3.8° tgt_cam=Y tgt_v=0.04m/s appr=-0.04m/s
+[MODE] ep=0 s= 274 RECOVERY → FOLLOW  dist=1.932m ang_err=3.8°
+[ST] ep=0 s= 275 FOLLOW       R( -7.739, +3.468) yaw +56.5° T( -6.779, +5.146) dist=1.933m ang= +3.7° tgt_cam=Y tgt_v=0.03m/s appr=-0.02m/s
+[ST] ep=0 s= 276 FOLLOW       R( -7.739, +3.471) yaw +56.9° T( -6.778, +5.145) dist=1.930m ang= +3.3° tgt_cam=Y tgt_v=0.02m/s appr=-0.01m/s
+[ST] ep=0 s= 277 FOLLOW       R( -7.739, +3.471) yaw +57.0° T( -6.778, +5.144) dist=1.930m ang= +3.1° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 278 FOLLOW       R( -7.739, +3.471) yaw +57.1° T( -6.777, +5.144) dist=1.929m ang= +3.0° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 279 FOLLOW       R( -7.749, +3.476) yaw +57.8° T( -6.777, +5.143) dist=1.930m ang= +1.9° tgt_cam=Y tgt_v=0.03m/s appr=+0.01m/s
+[ST] ep=0 s= 280 FOLLOW       R( -7.749, +3.476) yaw +57.9° T( -6.777, +5.142) dist=1.929m ang= +1.8° tgt_cam=Y tgt_v=0.03m/s appr=+0.01m/s
+[DATAGEN] ep=0 step=280 mode=FOLLOW dist=1.93 action=(+0.51,+0.69,+0.05) visible=True blocker=- hit=1.94
+[ST] ep=0 s= 281 FOLLOW       R( -7.749, +3.476) yaw +58.0° T( -6.776, +5.142) dist=1.929m ang= +1.7° tgt_cam=Y tgt_v=0.02m/s appr=+0.01m/s
+[ST] ep=0 s= 282 FOLLOW       R( -7.749, +3.476) yaw +58.1° T( -6.775, +5.142) dist=1.929m ang= +1.6° tgt_cam=Y tgt_v=0.02m/s appr=-0.00m/s
+[ST] ep=0 s= 283 FOLLOW       R( -7.749, +3.477) yaw +58.1° T( -6.774, +5.141) dist=1.929m ang= +1.5° tgt_cam=Y tgt_v=0.03m/s appr=-0.00m/s
+[ST] ep=0 s= 284 RECOVERY     R( -7.749, +3.477) yaw +58.2° T( -6.774, +5.141) dist=1.929m ang= +1.5° tgt_cam=Y tgt_v=0.02m/s appr=-0.00m/s
+[MODE] ep=0 s= 284 FOLLOW → RECOVERY  dist=1.929m ang_err=1.5°
+[ST] ep=0 s= 285 RECOVERY     R( -7.749, +3.477) yaw +58.2° T( -6.773, +5.141) dist=1.929m ang= +1.4° tgt_cam=Y tgt_v=0.02m/s appr=-0.01m/s
+[ST] ep=0 s= 286 RECOVERY     R( -7.749, +3.477) yaw +58.3° T( -6.773, +5.141) dist=1.929m ang= +1.3° tgt_cam=Y tgt_v=0.02m/s appr=-0.01m/s
+[ST] ep=0 s= 287 RECOVERY     R( -7.749, +3.477) yaw +58.4° T( -6.772, +5.141) dist=1.929m ang= +1.2° tgt_cam=Y tgt_v=0.01m/s appr=-0.00m/s
+[ST] ep=0 s= 288 RECOVERY     R( -7.749, +3.477) yaw +58.4° T( -6.772, +5.141) dist=1.929m ang= +1.2° tgt_cam=Y tgt_v=0.01m/s appr=-0.00m/s
+[ST] ep=0 s= 289 RECOVERY     R( -7.749, +3.477) yaw +58.5° T( -6.772, +5.141) dist=1.930m ang= +1.1° tgt_cam=Y tgt_v=0.01m/s appr=-0.00m/s
+[ST] ep=0 s= 290 RECOVERY     R( -7.749, +3.477) yaw +58.5° T( -6.772, +5.141) dist=1.930m ang= +1.1° tgt_cam=Y tgt_v=0.01m/s appr=-0.01m/s
+[DATAGEN] ep=0 step=290 mode=RECOVERY dist=1.93 action=(-0.09,+1.29,+0.03) visible=True blocker=- hit=1.94
+[ST] ep=0 s= 291 RECOVERY     R( -7.749, +3.477) yaw +58.6° T( -6.772, +5.142) dist=1.931m ang= +1.0° tgt_cam=Y tgt_v=0.02m/s appr=-0.02m/s
+[ST] ep=0 s= 292 RECOVERY     R( -7.749, +3.477) yaw +58.6° T( -6.772, +5.144) dist=1.932m ang= +1.0° tgt_cam=Y tgt_v=0.04m/s appr=-0.03m/s
+[ST] ep=0 s= 293 RECOVERY     R( -7.749, +3.477) yaw +58.7° T( -6.772, +5.145) dist=1.933m ang= +1.0° tgt_cam=Y tgt_v=0.04m/s appr=-0.03m/s
+[ST] ep=0 s= 294 RECOVERY     R( -7.749, +3.477) yaw +58.7° T( -6.773, +5.146) dist=1.934m ang= +1.0° tgt_cam=Y tgt_v=0.04m/s appr=-0.03m/s
+[ST] ep=0 s= 295 RECOVERY     R( -7.749, +3.477) yaw +58.8° T( -6.773, +5.147) dist=1.934m ang= +1.0° tgt_cam=Y tgt_v=0.04m/s appr=-0.02m/s
+[ST] ep=0 s= 296 RECOVERY     R( -7.749, +3.477) yaw +58.8° T( -6.774, +5.148) dist=1.935m ang= +1.0° tgt_cam=Y tgt_v=0.04m/s appr=-0.02m/s
+[ST] ep=0 s= 297 RECOVERY     R( -7.749, +3.477) yaw +58.8° T( -6.775, +5.150) dist=1.935m ang= +1.0° tgt_cam=Y tgt_v=0.05m/s appr=-0.02m/s
+[ST] ep=0 s= 298 RECOVERY     R( -7.749, +3.477) yaw +58.9° T( -6.776, +5.151) dist=1.936m ang= +1.0° tgt_cam=Y tgt_v=0.05m/s appr=-0.01m/s
+[ST] ep=0 s= 299 RECOVERY     R( -7.749, +3.477) yaw +58.9° T( -6.777, +5.152) dist=1.936m ang= +1.0° tgt_cam=Y tgt_v=0.05m/s appr=-0.02m/s
+[Data] Saved 300 frames to /workspace/FLUX/logs_formal_v2/test_runs/go2_zed_datagen_0001_839920_20260715_102444/0001_839920/episode_0000/frames/frame_data.npz
+[EP0] done | success=False len=300 tr=0.423 had_recovery=True reason=had_recovery ep_min_ped_dist=infm
+[Video] EP0: saved /workspace/FLUX/logs_formal_v2/test_runs/go2_zed_datagen_0001_839920_20260715_102444/0001_839920/episode_0000/tracking.mp4 (300 frames @ 30.0 FPS)
+[Metrics] Saved 1 rows to /workspace/FLUX/logs_formal_v2/go2_zed_datagen/metrics.csv
+
+[Finished] Cleaning up...
+2026-07-15T02:29:16Z [270,830ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:29:16Z [270,830ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:29:16Z [270,830ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:29:16Z [270,830ms] [Warning] [omni.physx.plugin] PhysX warning: PxShape::getMaterialFromInternalFaceIndex received 0xFFFFffff as input - returning NULL., FILE /builds/omniverse/physics/physx/source/physx/src/NpShape.cpp, LINE 566
+2026-07-15T02:30:09Z [324,521ms] [Warning] [omni.usd] Unexpected reference count of 2 for UsdStage '/workspace/SAGE-3D_Official/SAGE-3D_data/usda/839920.usda' while being closed in UsdContext (this may indicate it is still resident in memory).
+[324.780s] Simulation App Shutting Down
