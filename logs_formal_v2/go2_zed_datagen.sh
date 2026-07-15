@@ -38,6 +38,7 @@ for GPU in 0 1 2 3; do
   [ $GPU -eq 3 ] && E=987
   docker run -d --name flux_go2_zed_datagen_$GPU --rm \
     -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y \
+    -e CHARACTER_SPEED="${CHARACTER_SPEED:-0.5}" \
     --entrypoint bash --runtime=nvidia --gpus device=$GPU --network=host \
     -v "$REPO_DIR:/workspace/FLUX" \
     -v "$SAGE3D_DIR:/workspace/SAGE-3D_Official" \
