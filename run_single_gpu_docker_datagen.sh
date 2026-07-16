@@ -16,7 +16,7 @@ SCRIPT_PY="/workspace/FLUX/sage_utils/tracking_episode_collection_datagen.py"
 PYTHON="/isaac-sim/python.sh"
 ALL_SCENES=($(ls "$SCENE_DIR"))
 
-LOG_DIR="/workspace/FLUX/logs_formal_v2"
+LOG_DIR="/workspace/FLUX/logs_formal_v3"
 LOG_NAME="collect_datagen_${ROBOT_ONLY:-all}_${CAM_ONLY:-all}_$(date '+%Y%m%d_%H%M%S')_gpu${GPU}"
 VIDEO_ARGS=()
 [ "${SAVE_VIDEO:-0}" = "1" ] && VIDEO_ARGS+=(--save_video)
@@ -38,9 +38,11 @@ for combo in $COMBOS; do
   for ((i=S; i<E; i++)); do
     scene="${ALL_SCENES[$i]}"
     OUT_DIR="$LOG_DIR/${robot}_${cam}_datagen/$scene"
-    # Skip if scene already has any output
-    if [ -d "$OUT_DIR" ] && ls "$OUT_DIR"/episode_* 2>/dev/null | head -1 | grep -q .; then
-      echo "[GPU$GPU] $(date '+%H:%M:%S') SKIP (already done): $scene"
+    # Only validated NPZ files count as completed episodes. Image-only
+    # directories can be leftovers from episodes rejected by quality filters.
+    VALID_EPISODES=$(find "$OUT_DIR" -path '*/frames/frame_data.npz' -type f 2>/dev/null | wc -l)
+    if [ "$VALID_EPISODES" -ge "$NUM_EPISODES" ]; then
+      echo "[GPU$GPU] $(date '+%H:%M:%S') SKIP (valid=$VALID_EPISODES): $scene"
       continue
     fi
     # ── 场景级超时守卫: 超过 SCENE_TIMEOUT 自动跳过 ──
@@ -75,6 +77,9 @@ for combo in $COMBOS; do
           --episode_dir "$SCENE_DIR/$scene" \
           --robot_type "$robot" --camera_type "$cam" \
           --max_steps 300 --character_speed "$CHARACTER_SPEED" \
+          --min_tracking_rate 0.8 --min_visible_rate 0.8 \
+          --max_collisions 0 --no-allow-recovery \
+          --max_final_dist 3.0 --allowed_end_reasons max_steps,char_done \
           --save_images --start_idx $batch_start --end_idx $batch_end \
           --headless \
           "${VIDEO_ARGS[@]}" \

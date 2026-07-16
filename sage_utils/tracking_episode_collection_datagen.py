@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import csv
 import glob
+import itertools
 import json
 import math
 import os
@@ -102,20 +103,21 @@ def parse_args():
                         "zed (1280×720, 90°×60°)")
 
     # ── Data quality filtering (for oracle training) ────────────────────
-    p.add_argument("--min_tracking_rate", type=float, default=0.0,
-                   help="Min tracking rate to save per-step data (default 0.0 = save all)")
-    p.add_argument("--max_collisions", type=int, default=999,
-                   help="Max collisions allowed to save data (default 999)")
-    p.add_argument("--allow_recovery", action="store_true", default=True,
-                   help="If set, allow episodes with recovery events in saved data")
-    p.add_argument("--max_final_dist", type=float, default=100.0,
-                   help="Max final distance to target (default: 100.0)")
+    p.add_argument("--min_tracking_rate", type=float, default=0.8,
+                   help="Min tracking rate to save per-step data (default 0.8)")
+    p.add_argument("--max_collisions", type=int, default=0,
+                   help="Max collisions allowed to save data (default 0)")
+    p.add_argument("--allow_recovery", action=argparse.BooleanOptionalAction,
+                   default=False,
+                   help="Allow episodes with recovery events in saved data")
+    p.add_argument("--max_final_dist", type=float, default=3.0,
+                   help="Max final distance to target (default: 3.0)")
     p.add_argument("--allowed_end_reasons", type=str,
-                   default="max_steps,char_done,had_recovery",
+                   default="max_steps,char_done",
                    help="Comma-separated done_reasons that count as success")
-    p.add_argument("--min_visible_rate", type=float, default=0.0,
+    p.add_argument("--min_visible_rate", type=float, default=0.8,
                    help="Min fraction of frames where target is in camera view "
-                        "(uv_u >= 0) to save data (default 0.0 = save all)")
+                        "(uv_u >= 0) to save data (default 0.8)")
     p.add_argument("--max_consecutive_lost", type=int, default=0,
                    help="Optional visual-loss abort; 0 disables it as in datagen")
     p.add_argument("--early_abort_min_steps", type=int, default=30,
@@ -138,6 +140,11 @@ def parse_args():
     p.add_argument("--datagen_lookahead", type=float, default=0.8)
     p.add_argument("--datagen_max_lateral_vel", type=float, default=1.5)
     p.add_argument("--datagen_dynamic_radius", type=float, default=0.45)
+    p.add_argument(
+        "--datagen_follower_script",
+        default="/workspace/FLUX/datagen/follow_script/cylinder_follow_v2.py",
+        help="Canonical datagen BehaviorScript used as the robot tracking oracle",
+    )
     p.add_argument("--proximity_collision_dist", type=float, default=0.5,
                    help="Robot-target distance threshold for proximity collision abort "
                         "(default 0.5).  Set to 0 to disable.")
@@ -219,6 +226,8 @@ simulation_app = SimulationApp(
 
 
 import carb
+import omni.kit.app
+import omni.kit.commands
 import omni.usd
 import omni.timeline
 from pxr import Usd, Sdf, UsdGeom, UsdPhysics, Gf
@@ -1921,6 +1930,138 @@ _REST_JOINT_POSITIONS: Optional[np.ndarray] = None
 # Desired kinematic state — integrated independently of physics to avoid drift.
 _KIN_POS = np.zeros(3, dtype=np.float64)
 _KIN_YAW = 0.0
+DATAGEN_ORACLE_PATH = "/World/DatagenFollowerOracle"
+
+
+def _set_prim_attr(prim, name, value, value_type) -> None:
+    attr = prim.GetAttribute(name)
+    if not attr:
+        attr = prim.CreateAttribute(name, value_type)
+    attr.Set(value)
+
+
+def setup_datagen_follower_oracle(robot_pos, robot_yaw, target_prim_path):
+    """Bind datagen's canonical follower BehaviorScript to an invisible oracle."""
+    script_path = os.path.abspath(ARGS.datagen_follower_script)
+    if not os.path.isfile(script_path):
+        raise FileNotFoundError(
+            f"Canonical datagen follower script not found: {script_path}"
+        )
+    stage = omni.usd.get_context().get_stage()
+    ext_manager = omni.kit.app.get_app().get_extension_manager()
+    if not ext_manager.is_extension_enabled("omni.kit.scripting"):
+        ext_manager.set_extension_enabled_immediate("omni.kit.scripting", True)
+    if stage.GetPrimAtPath(DATAGEN_ORACLE_PATH).IsValid():
+        stage.RemovePrim(DATAGEN_ORACLE_PATH)
+
+    oracle = UsdGeom.Xform.Define(stage, DATAGEN_ORACLE_PATH).GetPrim()
+    xformable = UsdGeom.Xformable(oracle)
+    xformable.ClearXformOpOrder()
+    xformable.AddTranslateOp().Set(Gf.Vec3d(
+        float(robot_pos[0]), float(robot_pos[1]), float(robot_pos[2])
+    ))
+    # Datagen follower local forward is [sin(yaw), -cos(yaw)].
+    xformable.AddRotateXYZOp().Set(Gf.Vec3d(
+        0.0, 0.0, math.degrees(float(robot_yaw) + math.pi / 2.0)
+    ))
+
+    attrs = (
+        ("follower:target_skelroot_path", str(target_prim_path), Sdf.ValueTypeNames.String),
+        ("follower:follow_distance", float(ARGS.follow_distance), Sdf.ValueTypeNames.Float),
+        ("follower:radius", 0.35, Sdf.ValueTypeNames.Float),
+        ("follower:motion_type", "omnidirectional", Sdf.ValueTypeNames.String),
+        ("follower:safe_distance_min", float(ARGS.datagen_safe_distance_min), Sdf.ValueTypeNames.Float),
+        ("follower:safe_distance_max", float(ARGS.datagen_safe_distance_max), Sdf.ValueTypeNames.Float),
+        ("follower:too_close_distance", float(ARGS.datagen_too_close_distance), Sdf.ValueTypeNames.Float),
+        ("follower:max_navmesh_snap", float(ARGS.datagen_navmesh_snap), Sdf.ValueTypeNames.Float),
+        ("follower:target_navmesh_snap", float(ARGS.datagen_target_snap), Sdf.ValueTypeNames.Float),
+        ("follower:planning_radius", float(ARGS.datagen_planning_radius), Sdf.ValueTypeNames.Float),
+        ("follower:dynamic_avoidance_enabled", True, Sdf.ValueTypeNames.Bool),
+        ("follower:dynamic_avoidance_radius", float(ARGS.datagen_dynamic_radius), Sdf.ValueTypeNames.Float),
+        ("follower:path_stop_distance", float(ARGS.datagen_too_close_distance), Sdf.ValueTypeNames.Float),
+        ("follower:stuck_move_epsilon", 0.015, Sdf.ValueTypeNames.Float),
+        ("follower:stuck_warn_seconds", 0.8, Sdf.ValueTypeNames.Float),
+        ("follower:stuck_recovery_enabled", True, Sdf.ValueTypeNames.Bool),
+        ("follower:stuck_recovery_seconds", 1.2, Sdf.ValueTypeNames.Float),
+        ("follower:stuck_recovery_cooldown", 1.0, Sdf.ValueTypeNames.Float),
+        ("follower:stuck_recovery_distance", 0.8, Sdf.ValueTypeNames.Float),
+        ("follower:debug_draw_path", False, Sdf.ValueTypeNames.Bool),
+        ("follower:debug_draw_trail", False, Sdf.ValueTypeNames.Bool),
+    )
+    for name, value, value_type in attrs:
+        _set_prim_attr(oracle, name, value, value_type)
+
+    omni.kit.commands.execute("ApplyScriptingAPICommand", paths=[DATAGEN_ORACLE_PATH])
+    scripts_attr = oracle.GetAttribute("omni:scripting:scripts")
+    if not scripts_attr:
+        scripts_attr = oracle.CreateAttribute(
+            "omni:scripting:scripts", Sdf.ValueTypeNames.AssetArray, custom=False
+        )
+    scripts_attr.Set([Sdf.AssetPath(script_path)])
+    simulation_app.update()
+    print(f"[DatagenOracle] Bound canonical controller: {script_path}")
+    return oracle
+
+
+def update_datagen_oracle_visual(oracle, target_bbox, frame_id: int) -> None:
+    visible = target_bbox is not None
+    center_x = -1.0
+    if visible:
+        center_x = (0.5 * (float(target_bbox[0]) + float(target_bbox[2]))
+                    / max(float(CAM_W), 1.0))
+    _set_prim_attr(oracle, "follower:target_bbox_visible", visible, Sdf.ValueTypeNames.Bool)
+    _set_prim_attr(oracle, "follower:target_bbox_center_x", center_x, Sdf.ValueTypeNames.Float)
+    _set_prim_attr(oracle, "follower:target_bbox_frame", int(frame_id), Sdf.ValueTypeNames.Int)
+
+
+def read_datagen_oracle(oracle):
+    world_tf = UsdGeom.Xformable(oracle).ComputeLocalToWorldTransform(Usd.TimeCode.Default())
+    pos = world_tf.ExtractTranslation()
+    rotation = world_tf.ExtractRotationMatrix()
+    oracle_yaw = math.atan2(float(rotation[0][1]), float(rotation[0][0]))
+    robot_yaw = math.atan2(
+        math.sin(oracle_yaw - math.pi / 2.0),
+        math.cos(oracle_yaw - math.pi / 2.0),
+    )
+
+    def attr(name, default):
+        value_attr = oracle.GetAttribute(name)
+        value = value_attr.Get() if value_attr else None
+        return default if value is None else value
+
+    diagnostics = {
+        "state": str(attr("follower:last_state", "UNKNOWN")),
+        "forward": float(attr("follower:last_cmd_linear", 0.0)),
+        "lateral": float(attr("follower:last_cmd_lateral", 0.0)),
+        "yaw": float(attr("follower:last_cmd_angular", 0.0)),
+        "recovery_active": bool(attr("follower:recovery_active", False)),
+        "recovery_count": int(attr("follower:stuck_recovery_count", 0)),
+        "recovery_reason": str(attr("follower:last_recovery_reason", "")),
+        "snap_rejected": bool(attr("follower:snap_rejected", False)),
+    }
+    return np.array([pos[0], pos[1], pos[2]], dtype=np.float64), robot_yaw, diagnostics
+
+
+def mirror_datagen_oracle_to_robot(robot, oracle_pos, robot_yaw) -> None:
+    global _KIN_POS, _KIN_YAW
+    robot_pos = np.array(
+        [oracle_pos[0], oracle_pos[1], ARGS.robot_z_height], dtype=np.float32
+    )
+    quat = np.array([
+        math.cos(robot_yaw / 2.0), 0.0, 0.0, math.sin(robot_yaw / 2.0)
+    ], dtype=np.float32)
+    robot.set_world_pose(position=robot_pos, orientation=quat)
+    _KIN_POS[:] = robot_pos
+    _KIN_YAW = float(robot_yaw)
+    if _REST_JOINT_POSITIONS is not None:
+        robot.set_joint_positions(_REST_JOINT_POSITIONS)
+
+
+def remove_datagen_follower_oracle() -> None:
+    stage = omni.usd.get_context().get_stage()
+    if stage and stage.GetPrimAtPath(DATAGEN_ORACLE_PATH).IsValid():
+        stage.RemovePrim(DATAGEN_ORACLE_PATH)
+        simulation_app.update()
 
 
 class DatagenFollowController:
@@ -1935,6 +2076,16 @@ class DatagenFollowController:
         self.pose_history = []
         self.recovery_waypoint = None
         self.recovery_until = -1
+        self.last_recovery_step = -10**9
+        self.recovery_count = 0
+        self.recovery_frames = 0
+        self.last_recovery_reason = ""
+        self.stuck_elapsed = 0.0
+        self.last_robot_pos = None
+        self.last_tracking_distance = None
+        self.last_waypoint_distance = None
+        self.last_waypoint_idx = None
+        self.last_waypoint_skip_step = -10**9
         self.step_index = 0
         self.last_goal = None
 
@@ -1942,6 +2093,21 @@ class DatagenFollowController:
     def _axes(yaw):
         return (np.array([math.cos(yaw), math.sin(yaw)]),
                 np.array([-math.sin(yaw), math.cos(yaw)]))
+
+    @staticmethod
+    def _is_sharp_path_turn(points, waypoint_idx):
+        if waypoint_idx <= 0 or waypoint_idx >= len(points) - 1:
+            return False
+        prev_vec = np.asarray(points[waypoint_idx])[:2] - np.asarray(points[waypoint_idx - 1])[:2]
+        next_vec = np.asarray(points[waypoint_idx + 1])[:2] - np.asarray(points[waypoint_idx])[:2]
+        prev_len = float(np.linalg.norm(prev_vec))
+        next_len = float(np.linalg.norm(next_vec))
+        if prev_len < 1e-6 or next_len < 1e-6:
+            return False
+        turn_cos = float(np.clip(
+            np.dot(prev_vec / prev_len, next_vec / next_len), -1.0, 1.0
+        ))
+        return turn_cos < 0.866
 
     def _project(self, point, max_snap):
         projected = snap_to_navmesh(
@@ -2036,25 +2202,21 @@ class DatagenFollowController:
     def compute(self, robot_pos, robot_yaw, target_pos, target_bbox,
                 char_paths, target_path):
         self.step_index += 1
+        control_dt = ARGS.physics_dt * ARGS.decimation
         delta = target_pos[:2] - robot_pos[:2]
         distance = float(np.linalg.norm(delta))
         target_dir = delta / max(distance, 1e-6)
         forward, left = self._axes(robot_yaw)
 
-        self.pose_history.append(robot_pos[:2].copy())
-        if len(self.pose_history) > 10:
-            self.pose_history.pop(0)
-        stuck = (len(self.pose_history) == 10 and
-                 float(np.linalg.norm(self.pose_history[-1] - self.pose_history[0])) < 0.04 and
-                 float(np.linalg.norm(self.prev_action[:2])) > 0.15)
-        if stuck and self.step_index > self.recovery_until:
-            self.recovery_waypoint = self._recovery_goal(robot_pos, robot_yaw)
-            self.recovery_until = self.step_index + 12
-            self.pose_history.clear()
-
         waypoint, mode = None, "FOLLOW"
-        if self.recovery_waypoint is not None and self.step_index <= self.recovery_until:
+        if self.recovery_waypoint is not None and self.step_index > self.recovery_until:
+            self.recovery_waypoint = None
+        if self.recovery_waypoint is not None:
             waypoint, mode = self.recovery_waypoint, "RECOVERY"
+            if float(np.linalg.norm(waypoint[:2] - robot_pos[:2])) < 0.3:
+                self.recovery_waypoint = None
+                self.last_recovery_reason = "recovery_waypoint_reached"
+                waypoint, mode = None, "FOLLOW"
         elif distance < ARGS.datagen_too_close_distance:
             waypoint, mode = self._retreat_goal(robot_pos, target_pos), "RETREAT"
         else:
@@ -2068,6 +2230,66 @@ class DatagenFollowController:
                 )
             if waypoint is None:
                 mode = "HOLD"
+
+        moved = (float(np.linalg.norm(robot_pos[:2] - self.last_robot_pos))
+                 if self.last_robot_pos is not None else float("inf"))
+        tracking_progress = (self.last_tracking_distance - distance
+                             if self.last_tracking_distance is not None else 0.0)
+        waypoint_distance = (float(np.linalg.norm(waypoint[:2] - robot_pos[:2]))
+                             if waypoint is not None else None)
+        waypoint_progress = None
+        if (waypoint_distance is not None and self.last_waypoint_distance is not None
+                and self.last_waypoint_idx == self.path_idx):
+            waypoint_progress = self.last_waypoint_distance - waypoint_distance
+
+        command_speed = float(np.linalg.norm(self.prev_action[:2]))
+        should_move = (mode == "FOLLOW" and command_speed > 0.1
+                       and distance > ARGS.datagen_safe_distance_max + 0.05)
+        no_route_progress = (
+            self.last_tracking_distance is not None
+            and tracking_progress < 0.01
+            and moved < max(0.015 * 1.25, 0.35 * 0.04)
+            and (waypoint_progress is None or waypoint_progress < 0.0075)
+        )
+        if should_move and (moved < 0.015 or no_route_progress):
+            self.stuck_elapsed += control_dt
+        else:
+            self.stuck_elapsed = 0.0
+
+        if self.stuck_elapsed >= 0.8 and self.path and len(self.path) >= 3:
+            can_skip = (self.path_idx < len(self.path) - 1
+                        and not self._is_sharp_path_turn(self.path, self.path_idx)
+                        and self.step_index - self.last_waypoint_skip_step
+                        >= int(round(0.8 / control_dt)))
+            if can_skip:
+                self.path_idx += 1
+                waypoint = np.asarray(self.path[self.path_idx])
+                self.last_waypoint_skip_step = self.step_index
+                self.stuck_elapsed = 0.0
+
+        cooldown_steps = int(round(1.0 / control_dt))
+        if (self.stuck_elapsed >= 1.2
+                and self.step_index - self.last_recovery_step >= cooldown_steps):
+            recovery_goal = self._recovery_goal(robot_pos, robot_yaw)
+            if recovery_goal is not None:
+                self.recovery_waypoint = recovery_goal
+                waypoint, mode = recovery_goal, "RECOVERY"
+                self.recovery_until = self.step_index + int(round(1.2 / control_dt))
+                self.last_recovery_step = self.step_index
+                self.recovery_count += 1
+                self.last_recovery_reason = "stuck_static_or_navmesh_local_escape"
+                self.path = []
+                self.path_idx = 0
+            else:
+                self.last_recovery_reason = "no_valid_recovery_waypoint"
+            self.stuck_elapsed = 0.0
+
+        self.last_robot_pos = robot_pos[:2].copy()
+        self.last_tracking_distance = distance
+        self.last_waypoint_distance = waypoint_distance
+        self.last_waypoint_idx = self.path_idx
+        if mode == "RECOVERY":
+            self.recovery_frames += 1
 
         move_dir = np.zeros(2, dtype=np.float64)
         if waypoint is not None:
@@ -3083,7 +3305,56 @@ def extract_ep_id(p: str) -> int:
 
 def _episode_completed(ep_id: int) -> bool:
     out_dir = os.path.join(ARGS.image_save_dir, f"episode_{ep_id:04d}", "frames")
-    return os.path.isfile(os.path.join(out_dir, "frame_data.npz"))
+    npz_path = os.path.join(out_dir, "frame_data.npz")
+    if not os.path.isfile(npz_path):
+        return False
+    try:
+        data = np.load(npz_path, allow_pickle=False)
+        distances = np.asarray(data["dist_to_target"], dtype=np.float64)
+        heading = np.asarray(data["heading_error_deg"], dtype=np.float64)
+        visible = np.asarray(data["target_visible"], dtype=bool)
+        uv_u = np.asarray(data["target_uv_u"], dtype=np.float64)
+        modes = np.asarray(data["mode"]).astype(str)
+        contact = np.asarray(data["contact_force"], dtype=np.float64)
+        if len(distances) == 0:
+            return False
+        tracked = ((distances >= ARGS.datagen_too_close_distance)
+                   & (distances <= ARGS.tracking_dist_max)
+                   & (heading <= ARGS.tracking_angle_thresh)
+                   & visible)
+        tracking_rate = float(np.mean(tracked))
+        visible_rate = float(np.mean(uv_u >= 0))
+        collisions = int(np.count_nonzero(contact >= COLLISION_FORCE_THRESHOLD))
+        had_recovery = bool(np.any(modes == "RECOVERY"))
+        target_xy = np.stack([data["target_pos_x"], data["target_pos_y"]], axis=-1)
+        target_low = np.linalg.norm(np.diff(target_xy, axis=0), axis=1) <= 0.001
+        low_motion_frames = max(
+            (len(list(group)) for value, group in itertools.groupby(target_low) if value),
+            default=0,
+        )
+        blocking_incident = low_motion_frames >= max(
+            1, int(round(3.0 / (ARGS.physics_dt * ARGS.decimation)))
+        )
+        return (tracking_rate >= ARGS.min_tracking_rate
+                and visible_rate >= ARGS.min_visible_rate
+                and collisions <= ARGS.max_collisions
+                and (ARGS.allow_recovery or not had_recovery)
+                and not blocking_incident
+                and float(distances[-1]) <= ARGS.max_final_dist)
+    except (KeyError, OSError, ValueError) as exc:
+        print(f"[Resume] EP{ep_id} output validation failed: {exc}")
+        return False
+
+
+def _remove_stale_episode_data(ep_id: int) -> None:
+    frames_dir = os.path.join(
+        ARGS.image_save_dir, f"episode_{ep_id:04d}", "frames"
+    )
+    for name in ("frame_data.npz", "preview.json"):
+        path = os.path.join(frames_dir, name)
+        if os.path.isfile(path):
+            os.remove(path)
+            print(f"[Data] Removed stale rejected output: {path}")
 
 
 def setup_episode_full(
@@ -3460,11 +3731,25 @@ def main() -> int:
             "recovery_angular": 0.0,
             "consecutive_recoveries": 0,
             "any_recovery": False,
+            "recovery_frames": 0,
+            "recovery_count": 0,
+            "last_recovery_reason": "",
+            "follower_stuck_incident": False,
+            "follower_stuck_frames": 0,
+            "recovery_active_frames": 0,
+            "target_low_motion_incident": False,
+            "target_low_motion_frames": 0,
+            "last_incident_robot_pos": None,
+            "last_incident_target_pos": None,
+            "oracle_action": np.zeros(3, dtype=np.float64),
             "prev_linear": 0.0,
             "prev_angular": 0.0,
             "_last_mode": "",   # for mode-switch smoother reset
         }
-        datagen_controller = DatagenFollowController(nm)
+        _oracle_start_pos, _oracle_start_yaw = get_robot_pose(robot)
+        datagen_oracle = setup_datagen_follower_oracle(
+            _oracle_start_pos, _oracle_start_yaw, target_prim_path
+        )
 
         # ── Per-step data recording buffers ─────────────────────────────
         ep_data = init_ep_data()
@@ -3580,6 +3865,38 @@ def main() -> int:
 
             delta = target_pos[:2] - robot_pos[:2]
             dist_to_target = float(np.linalg.norm(delta))
+
+            # Match datagen/utils/rollout_incidents.py blocking criteria.
+            _incident_dt = ARGS.physics_dt * ARGS.decimation
+            _prev_inc_robot = pursuit_state["last_incident_robot_pos"]
+            _actual_speed = (float(np.linalg.norm(robot_pos[:2] - _prev_inc_robot))
+                             / _incident_dt if _prev_inc_robot is not None else 0.0)
+            _command_speed = float(np.linalg.norm(pursuit_state["oracle_action"][:2]))
+            _stuck_record = (dist_to_target >= 5.0 and _actual_speed <= 0.05
+                             and _command_speed >= 0.2)
+            pursuit_state["follower_stuck_frames"] = (
+                pursuit_state["follower_stuck_frames"] + 1 if _stuck_record else 0
+            )
+            if pursuit_state["follower_stuck_frames"] >= max(
+                    1, int(round(1.0 / _incident_dt))):
+                pursuit_state["follower_stuck_incident"] = True
+
+            _prev_inc_target = pursuit_state["last_incident_target_pos"]
+            _target_step = (float(np.linalg.norm(target_pos[:2] - _prev_inc_target))
+                            if _prev_inc_target is not None else float("inf"))
+            pursuit_state["target_low_motion_frames"] = (
+                pursuit_state["target_low_motion_frames"] + 1
+                if _target_step <= 0.001 else 0
+            )
+            if pursuit_state["target_low_motion_frames"] >= max(
+                    1, int(round(3.0 / _incident_dt))):
+                pursuit_state["target_low_motion_incident"] = True
+                done_reason = "target_low_motion"
+                print(f"[EP{ep_id}] step={step} blocking incident: "
+                      f"target_low_motion for >=3.0s")
+                break
+            pursuit_state["last_incident_robot_pos"] = robot_pos[:2].copy()
+            pursuit_state["last_incident_target_pos"] = target_pos[:2].copy()
 
             # ── Proximity collision check ─────────────────────────────────
             if ARGS.proximity_collision_dist > 0 and dist_to_target < ARGS.proximity_collision_dist:
@@ -3731,18 +4048,35 @@ def main() -> int:
                 done_reason = "low_tracking"
                 break
 
-            body_action, _viz_mode, nav_goal, nav_path = datagen_controller.compute(
-                robot_pos, robot_yaw, target_pos, _rec["target_bbox"],
-                char_paths, target_prim_path,
+            update_datagen_oracle_visual(
+                datagen_oracle, _rec["target_bbox"], step
             )
-            if _viz_mode == "RECOVERY":
-                pursuit_state["any_recovery"] = True
             for _ in range(ARGS.decimation):
                 world.step(render=False)
-                kinematic_move_datagen(robot, body_action, nm)
-                update_chase_camera(robot)
                 simulation_app.update()
                 _set_character_speeds(char_paths, ARGS.character_speed)
+
+            oracle_pos, oracle_yaw, oracle_diag = read_datagen_oracle(datagen_oracle)
+            mirror_datagen_oracle_to_robot(robot, oracle_pos, oracle_yaw)
+            update_chase_camera(robot)
+            body_action = np.array([
+                oracle_diag["forward"], oracle_diag["lateral"], oracle_diag["yaw"]
+            ], dtype=np.float64)
+            pursuit_state["oracle_action"] = body_action
+            _viz_mode = "RECOVERY" if oracle_diag["recovery_active"] else oracle_diag["state"]
+            if oracle_diag["recovery_active"]:
+                pursuit_state["any_recovery"] = True
+                pursuit_state["recovery_active_frames"] += 1
+            else:
+                pursuit_state["recovery_active_frames"] = 0
+            if pursuit_state["recovery_active_frames"] >= max(
+                    1, int(round(1.0 / (ARGS.physics_dt * ARGS.decimation)))):
+                pursuit_state["follower_stuck_incident"] = True
+            pursuit_state["recovery_frames"] += int(oracle_diag["recovery_active"])
+            pursuit_state["recovery_count"] = oracle_diag["recovery_count"]
+            pursuit_state["last_recovery_reason"] = oracle_diag["recovery_reason"]
+            if oracle_diag["snap_rejected"]:
+                collision_count += 1
 
             if ARGS.save_images and step % ARGS.save_image_every == 0:
                 save_rgb_depth(
@@ -3753,7 +4087,7 @@ def main() -> int:
                 )
                 save_occ_debug(
                     occ, robot_pos, robot_yaw, target_pos,
-                    nav_goal, nav_path, step, ARGS.image_save_dir, ep_id,
+                    None, None, step, ARGS.image_save_dir, ep_id,
                     _viz_mode,
                 )
             _rec["forward"] = float(body_action[0])
@@ -4594,6 +4928,8 @@ def main() -> int:
         episode_length = step
         tracking_rate  = tracking_steps / max(episode_length, 1)
         had_recovery   = pursuit_state["any_recovery"]
+        blocking_incident = (pursuit_state["follower_stuck_incident"]
+                             or pursuit_state["target_low_motion_incident"])
 
         # ── In-frame rate: fraction of frames where target projects into image ─
         uv_u = np.array(ep_data.get("target_uv_u", []), dtype=np.float32)
@@ -4608,15 +4944,18 @@ def main() -> int:
                  and visible_rate >= ARGS.min_visible_rate
                  and collision_count <= ARGS.max_collisions
                  and (ARGS.allow_recovery or not had_recovery)
+                 and not blocking_incident
                  and distances[-1] <= _max_final
                  and done_reason in _allowed_reasons)
         if ep_ok:
             save_episode_npz(ep_data, ep_id, ARGS.image_save_dir,
                               episode_dict=episode)
         else:
+            _remove_stale_episode_data(ep_id)
             print(f"[Data] EP{ep_id} SKIPPED (tracking_rate={tracking_rate:.3f}, "
                   f"visible_rate={visible_rate:.3f}, "
                   f"collisions={collision_count}, recovery={had_recovery}, "
+                  f"blocking_incident={blocking_incident}, "
                   f"final_dist={distances[-1] if distances else -1:.2f}, "
                   f"reason={done_reason})")
 
@@ -4633,6 +4972,11 @@ def main() -> int:
             "episode_id":            ep_id,
             "success":               int(success),
             "had_recovery":          int(had_recovery),
+            "recovery_count":        pursuit_state["recovery_count"],
+            "recovery_frames":       pursuit_state["recovery_frames"],
+            "last_recovery_reason":  pursuit_state["last_recovery_reason"],
+            "follower_stuck_incident": int(pursuit_state["follower_stuck_incident"]),
+            "target_low_motion_incident": int(pursuit_state["target_low_motion_incident"]),
             "episode_length":        episode_length,
             "tracking_rate":         tracking_rate,
             "collision":             collision_count,
@@ -4649,6 +4993,8 @@ def main() -> int:
 
         if ARGS.save_video:
             save_episode_video(ARGS.image_save_dir, ep_id)
+
+        remove_datagen_follower_oracle()
 
         # Wrap post-episode physics cleanup to prevent segfault from killing data save.
         try:
