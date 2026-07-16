@@ -1112,13 +1112,18 @@ class FollowerBehavior(BehaviorScript):
             command_speed > 0.1
             and tracking_distance > self.safe_dis_max + 0.05
         )
+        same_waypoint_no_progress = (
+            waypoint_progress is not None
+            and waypoint_progress < max(0.005, self.stuck_move_eps * 0.5)
+        )
         no_route_progress = (
             previous_tracking is not None
             and progress_delta < max(0.01, self.stuck_move_eps * 0.5)
-            and moved < max(self.stuck_move_eps * 1.25, self.my_radius * 0.04)
             and (
-                waypoint_progress is None
-                or waypoint_progress < max(0.005, self.stuck_move_eps * 0.5)
+                same_waypoint_no_progress
+                or (waypoint_progress is None
+                    and moved < max(self.stuck_move_eps * 1.25,
+                                    self.my_radius * 0.04))
             )
         )
 

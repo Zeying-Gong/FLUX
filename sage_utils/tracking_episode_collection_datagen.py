@@ -134,8 +134,10 @@ def parse_args():
                    help="If >0, abort episode early when running tracking rate "
                         "stays below this threshold after --early_abort_min_steps "
                         "(default 0.0 = disabled)")
-    p.add_argument("--max_consecutive_snap_rejected", type=int, default=8,
+    p.add_argument("--max_consecutive_snap_rejected", type=int, default=20,
                    help="Abort after this many consecutive NavMesh motion rejections")
+    p.add_argument("--max_consecutive_robot_in_obstacle", type=int, default=5,
+                   help="Abort after this many consecutive occupancy-grid obstacle detections")
     p.add_argument("--character_speed", type=float, default=0.5,
                    help="Character walk speed fraction [0-1]. "
                         "1.0 = full animation speed (~1.2 m/s typical). "
@@ -3928,6 +3930,7 @@ def main() -> int:
             "oracle_unready_steps": 0,
             "snap_rejected_frames": 0,
             "consecutive_snap_rejected": 0,
+            "consecutive_robot_in_obstacle": 0,
             "prev_linear": 0.0,
             "prev_angular": 0.0,
             "_last_mode": "",   # for mode-switch smoother reset
@@ -3998,10 +4001,21 @@ def main() -> int:
             # Kinematic drift or a runaway backward command can land the robot
             # inside an obstacle cell.  Detect and recover to nearest free cell
             # so subsequent navmesh plans don't start from an invalid position.
-            if ROBOT_DRIVE_MODE == "kinematic" and _detect_in_obstacle(robot_pos, occ):
+            robot_in_obstacle = (
+                ROBOT_DRIVE_MODE == "kinematic"
+                and _detect_in_obstacle(robot_pos, occ)
+            )
+            pursuit_state["consecutive_robot_in_obstacle"] = (
+                pursuit_state["consecutive_robot_in_obstacle"] + 1
+                if robot_in_obstacle else 0
+            )
+            if (ARGS.max_consecutive_robot_in_obstacle > 0
+                    and pursuit_state["consecutive_robot_in_obstacle"]
+                    >= ARGS.max_consecutive_robot_in_obstacle):
                 print(f"[EP{ep_id}] step={step} ABNORMAL STATE: robot "
-                      f"({robot_pos[0]:.2f},{robot_pos[1]:.2f}) inside obstacle! "
-                      f"_KIN_BLOCKED_TOTAL={_KIN_BLOCKED_TOTAL}; aborting episode")
+                      f"({robot_pos[0]:.2f},{robot_pos[1]:.2f}) inside obstacle for "
+                      f"{pursuit_state['consecutive_robot_in_obstacle']} consecutive "
+                      f"steps; _KIN_BLOCKED_TOTAL={_KIN_BLOCKED_TOTAL}; aborting episode")
                 done_reason = "robot_in_obstacle"
                 break
 
@@ -4061,10 +4075,21 @@ def main() -> int:
             )
             if pursuit_state["target_low_motion_frames"] >= max(
                     1, int(round(3.0 / _incident_dt))):
-                pursuit_state["target_low_motion_incident"] = True
-                done_reason = "target_low_motion"
-                print(f"[EP{ep_id}] step={step} blocking incident: "
-                      f"target_low_motion for >=3.0s")
+                # A character normally remains stationary after its command queue
+                # finishes.  Check the authoritative completion flag before
+                # classifying the same observation as a blocking incident.
+                if _read_commands_done(target_prim_path, step):
+                    _tgt_done = True
+                    _tgt_done_step = step
+                    done_reason = "char_done"
+                    print(f"[EP{ep_id}] step={step} EPISODE END: char_done "
+                          f"(commandsDone observed during low-motion check, "
+                          f"final dist={dist_to_target:.2f}m)")
+                else:
+                    pursuit_state["target_low_motion_incident"] = True
+                    done_reason = "target_low_motion"
+                    print(f"[EP{ep_id}] step={step} blocking incident: "
+                          f"target_low_motion for >=3.0s without commandsDone")
                 break
             pursuit_state["last_incident_robot_pos"] = robot_pos[:2].copy()
             pursuit_state["last_incident_target_pos"] = target_pos[:2].copy()
