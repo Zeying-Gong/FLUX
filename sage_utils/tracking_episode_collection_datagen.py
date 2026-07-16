@@ -1951,6 +1951,11 @@ def setup_datagen_follower_oracle(robot_pos, robot_yaw, target_prim_path):
     ext_manager = omni.kit.app.get_app().get_extension_manager()
     if not ext_manager.is_extension_enabled("omni.kit.scripting"):
         ext_manager.set_extension_enabled_immediate("omni.kit.scripting", True)
+    timeline = omni.timeline.get_timeline_interface()
+    was_playing = timeline.is_playing()
+    if was_playing:
+        timeline.stop()
+        simulation_app.update()
     if stage.GetPrimAtPath(DATAGEN_ORACLE_PATH).IsValid():
         stage.RemovePrim(DATAGEN_ORACLE_PATH)
 
@@ -1999,6 +2004,10 @@ def setup_datagen_follower_oracle(robot_pos, robot_yaw, target_prim_path):
         )
     scripts_attr.Set([Sdf.AssetPath(script_path)])
     simulation_app.update()
+    if was_playing:
+        timeline.play()
+        for _ in range(3):
+            simulation_app.update()
     print(f"[DatagenOracle] Bound canonical controller: {script_path}")
     return oracle
 
@@ -2038,6 +2047,7 @@ def read_datagen_oracle(oracle):
         "recovery_count": int(attr("follower:stuck_recovery_count", 0)),
         "recovery_reason": str(attr("follower:last_recovery_reason", "")),
         "snap_rejected": bool(attr("follower:snap_rejected", False)),
+        "navmesh_available": bool(attr("follower:navmesh_available", False)),
     }
     return np.array([pos[0], pos[1], pos[2]], dtype=np.float64), robot_yaw, diagnostics
 
@@ -3698,6 +3708,16 @@ def main() -> int:
         build_target_traj_cache(episode, char_paths, target_prim_path)
         reset_collision_state()
 
+        # Bind while the character barrier is closed. setup_datagen_follower_oracle
+        # restarts the timeline so Kit reliably invokes BehaviorScript on_init/on_play.
+        carb.settings.get_settings().set(
+            "/exts/people_sim/character_barrier_open", False
+        )
+        _oracle_start_pos, _oracle_start_yaw = get_robot_pose(robot)
+        datagen_oracle = setup_datagen_follower_oracle(
+            _oracle_start_pos, _oracle_start_yaw, target_prim_path
+        )
+
         # Open the character barrier — characters start executing commands now,
         # guaranteed AFTER setup warmup frames so commandsDone is never stale.
         global _CMDS_DONE_LAST_VAL
@@ -3742,15 +3762,11 @@ def main() -> int:
             "last_incident_robot_pos": None,
             "last_incident_target_pos": None,
             "oracle_action": np.zeros(3, dtype=np.float64),
+            "oracle_unready_steps": 0,
             "prev_linear": 0.0,
             "prev_angular": 0.0,
             "_last_mode": "",   # for mode-switch smoother reset
         }
-        _oracle_start_pos, _oracle_start_yaw = get_robot_pose(robot)
-        datagen_oracle = setup_datagen_follower_oracle(
-            _oracle_start_pos, _oracle_start_yaw, target_prim_path
-        )
-
         # ── Per-step data recording buffers ─────────────────────────────
         ep_data = init_ep_data()
         _rec = {
@@ -4057,6 +4073,20 @@ def main() -> int:
                 _set_character_speeds(char_paths, ARGS.character_speed)
 
             oracle_pos, oracle_yaw, oracle_diag = read_datagen_oracle(datagen_oracle)
+            oracle_ready = (oracle_diag["state"] != "UNKNOWN"
+                            and oracle_diag["navmesh_available"])
+            pursuit_state["oracle_unready_steps"] = (
+                0 if oracle_ready else pursuit_state["oracle_unready_steps"] + 1
+            )
+            if pursuit_state["oracle_unready_steps"] >= 10:
+                done_reason = "controller_not_running"
+                print(
+                    f"[EP{ep_id}] FATAL: canonical datagen controller did not "
+                    f"initialize after {pursuit_state['oracle_unready_steps']} steps; "
+                    f"state={oracle_diag['state']} "
+                    f"navmesh={oracle_diag['navmesh_available']}"
+                )
+                break
             mirror_datagen_oracle_to_robot(robot, oracle_pos, oracle_yaw)
             update_chase_camera(robot)
             body_action = np.array([
