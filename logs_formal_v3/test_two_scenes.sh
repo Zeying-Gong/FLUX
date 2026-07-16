@@ -78,6 +78,7 @@ for SCENE_ID in "${SCENES[@]}"; do
       --character_speed $CHARACTER_SPEED \
       --save_images \
       --image_save_dir $CONTAINER_RUN_DIR/$SCENE_ID \
+      --output_metrics $CONTAINER_RUN_DIR/$SCENE_ID/metrics.csv \
       --headless" 2>&1 | tee "$LOG_FILE"
   DOCKER_STATUS=${PIPESTATUS[0]}
   set -e

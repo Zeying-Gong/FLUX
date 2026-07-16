@@ -62,7 +62,8 @@ def parse_args():
                    help="Explicit path to semantic map JSON.  "
                         "Auto-derived from --semantic_maps_root and scene_id when omitted.")
     p.add_argument("--occ_scale",        type=float, default=0.1)
-    p.add_argument("--robot_radius_2d",  type=float, default=0.3)
+    p.add_argument("--robot_radius_2d", type=float, default=None,
+                   help="2D collision footprint radius; defaults by robot type")
     p.add_argument("--robot_usd",
                    default="/workspace/FLUX/assets/robots/dingo_fixed.usd")
     p.add_argument("--robot_z_height", type=float, default=0.1)
@@ -134,7 +135,8 @@ def parse_args():
     p.add_argument("--datagen_safe_distance_min", type=float, default=1.2)
     p.add_argument("--datagen_safe_distance_max", type=float, default=2.0)
     p.add_argument("--datagen_too_close_distance", type=float, default=1.0)
-    p.add_argument("--datagen_planning_radius", type=float, default=0.55)
+    p.add_argument("--datagen_planning_radius", type=float, default=None,
+                   help="NavMesh agent radius; defaults by robot type")
     p.add_argument("--datagen_navmesh_snap", type=float, default=0.25)
     p.add_argument("--datagen_target_snap", type=float, default=1.0)
     p.add_argument("--datagen_lookahead", type=float, default=0.8)
@@ -145,9 +147,9 @@ def parse_args():
         default="/workspace/FLUX/datagen/follow_script/cylinder_follow_v2.py",
         help="Canonical datagen BehaviorScript used as the robot tracking oracle",
     )
-    p.add_argument("--proximity_collision_dist", type=float, default=0.5,
-                   help="Robot-target distance threshold for proximity collision abort "
-                        "(default 0.5).  Set to 0 to disable.")
+    p.add_argument("--proximity_collision_dist", type=float, default=None,
+                   help="Robot-target center-distance collision threshold; "
+                        "defaults to footprint radius + 0.30m. Set to 0 to disable.")
     # ── Resume / skip completed episodes ──────────────────────────────
     p.add_argument("--resume", action="store_true", default=False,
                    help="If set, skip episodes whose output (frames/frame_data.npz) "
@@ -170,6 +172,8 @@ _ROBOT_PRESETS = {
         "camera_link": "base_link",
         "drive_mode":  "diff_drive",
         "cam_trans":   [0.0, 0.0, 0.3],
+        "footprint_radius": 0.28,
+        "planning_radius": 0.33,
     },
     "go2": {
         "usd":         "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/"
@@ -178,6 +182,8 @@ _ROBOT_PRESETS = {
         "camera_link": "base",
         "drive_mode":  "kinematic",
         "cam_trans":   [0.0, 0.0, 0.3],
+        "footprint_radius": 0.40,
+        "planning_radius": 0.45,
     },
     "g1": {
         "usd":         "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/"
@@ -188,6 +194,8 @@ _ROBOT_PRESETS = {
         # pelvis is the ArticulationRoot (waist level). [0,0,0.3] would land inside
         # the torso mesh → black images. Push forward (X) and above torso top (Z).
         "cam_trans":   [0.2, 0.0, 0.45],
+        "footprint_radius": 0.32,
+        "planning_radius": 0.38,
     },
 }
 _preset = _ROBOT_PRESETS[ARGS.robot_type]
@@ -196,6 +204,12 @@ if ARGS.robot_usd == "/workspace/FLUX/assets/robots/dingo_fixed.usd":
     ARGS.robot_usd = _preset["usd"]
 if ARGS.robot_z_height == 0.1:
     ARGS.robot_z_height = _preset["z_height"]
+if ARGS.robot_radius_2d is None:
+    ARGS.robot_radius_2d = _preset["footprint_radius"]
+if ARGS.datagen_planning_radius is None:
+    ARGS.datagen_planning_radius = _preset["planning_radius"]
+if ARGS.proximity_collision_dist is None:
+    ARGS.proximity_collision_dist = ARGS.robot_radius_2d + 0.30
 ROBOT_DRIVE_MODE   = _preset["drive_mode"]   # "diff_drive" or "kinematic"
 _ROBOT_CAMERA_LINK = _preset["camera_link"]  # link name under /World/Robot/
 
@@ -1975,7 +1989,7 @@ def setup_datagen_follower_oracle(robot_pos, robot_yaw, target_prim_path):
     attrs = (
         ("follower:target_skelroot_path", str(target_prim_path), Sdf.ValueTypeNames.String),
         ("follower:follow_distance", float(ARGS.follow_distance), Sdf.ValueTypeNames.Float),
-        ("follower:radius", 0.35, Sdf.ValueTypeNames.Float),
+        ("follower:radius", float(ARGS.robot_radius_2d), Sdf.ValueTypeNames.Float),
         ("follower:motion_type", "omnidirectional", Sdf.ValueTypeNames.String),
         ("follower:safe_distance_min", float(ARGS.datagen_safe_distance_min), Sdf.ValueTypeNames.Float),
         ("follower:safe_distance_max", float(ARGS.datagen_safe_distance_max), Sdf.ValueTypeNames.Float),
@@ -2008,7 +2022,8 @@ def setup_datagen_follower_oracle(robot_pos, robot_yaw, target_prim_path):
     simulation_app.update()
     print(
         f"[DatagenOracle] Bound canonical controller: {script_path} "
-        f"target={target_prim_path}"
+        f"target={target_prim_path} footprint={ARGS.robot_radius_2d:.2f}m "
+        f"planning={ARGS.datagen_planning_radius:.2f}m"
     )
     return oracle
 
@@ -2071,6 +2086,12 @@ def mirror_datagen_oracle_to_robot(robot, oracle_pos, robot_yaw) -> None:
 def remove_datagen_follower_oracle() -> None:
     stage = omni.usd.get_context().get_stage()
     if stage and stage.GetPrimAtPath(DATAGEN_ORACLE_PATH).IsValid():
+        oracle = stage.GetPrimAtPath(DATAGEN_ORACLE_PATH)
+        scripts_attr = oracle.GetAttribute("omni:scripting:scripts")
+        if scripts_attr:
+            scripts_attr.Set([])
+            for _ in range(2):
+                simulation_app.update()
         stage.RemovePrim(DATAGEN_ORACLE_PATH)
         simulation_app.update()
 
@@ -3324,7 +3345,7 @@ def _episode_completed(ep_id: int) -> bool:
         distances = np.asarray(data["dist_to_target"], dtype=np.float64)
         heading = np.asarray(data["heading_error_deg"], dtype=np.float64)
         visible = np.asarray(data["target_visible"], dtype=bool)
-        uv_u = np.asarray(data["target_uv_u"], dtype=np.float64)
+        target_visible = np.asarray(data["target_visible"], dtype=bool)
         modes = np.asarray(data["mode"]).astype(str)
         contact = np.asarray(data["contact_force"], dtype=np.float64)
         if len(distances) == 0:
@@ -3334,7 +3355,7 @@ def _episode_completed(ep_id: int) -> bool:
                    & (heading <= ARGS.tracking_angle_thresh)
                    & visible)
         tracking_rate = float(np.mean(tracked))
-        visible_rate = float(np.mean(uv_u >= 0))
+        visible_rate = float(np.mean(target_visible))
         collisions = int(np.count_nonzero(contact >= COLLISION_FORCE_THRESHOLD))
         had_recovery = bool(np.any(modes == "RECOVERY"))
         target_xy = np.stack([data["target_pos_x"], data["target_pos_y"]], axis=-1)
@@ -3459,7 +3480,9 @@ def main() -> int:
     if ARGS.image_save_dir is None:
         ARGS.image_save_dir = os.path.join(_out_root, scene_id)
     if ARGS.output_metrics is None:
-        ARGS.output_metrics = os.path.join(_out_root, "metrics.csv")
+        ARGS.output_metrics = os.path.join(
+            _out_root, f"metrics_{_RUN_TIMESTAMP}.csv"
+        )
     print(f"[Paths] Output: {_out_root}/{scene_id}/")
 
     try:
@@ -3555,7 +3578,7 @@ def main() -> int:
     world.reset()
     update_sim(10)
 
-    # setup_robot_contact_sensor(world)  # disabled for depth verification test
+    setup_robot_contact_sensor(world)
 
     # For kinematic robots: build rest pose (needs dof_names, available after reset),
     # apply it immediately, and sync desired-state globals to the first episode start.
@@ -3764,6 +3787,7 @@ def main() -> int:
             "last_incident_target_pos": None,
             "oracle_action": np.zeros(3, dtype=np.float64),
             "oracle_unready_steps": 0,
+            "snap_rejected_frames": 0,
             "prev_linear": 0.0,
             "prev_angular": 0.0,
             "_last_mode": "",   # for mode-switch smoother reset
@@ -4108,7 +4132,7 @@ def main() -> int:
             pursuit_state["recovery_count"] = oracle_diag["recovery_count"]
             pursuit_state["last_recovery_reason"] = oracle_diag["recovery_reason"]
             if oracle_diag["snap_rejected"]:
-                collision_count += 1
+                pursuit_state["snap_rejected_frames"] += 1
 
             if ARGS.save_images and step % ARGS.save_image_every == 0:
                 save_rgb_depth(
@@ -4963,10 +4987,14 @@ def main() -> int:
         blocking_incident = (pursuit_state["follower_stuck_incident"]
                              or pursuit_state["target_low_motion_incident"])
 
-        # ── In-frame rate: fraction of frames where target projects into image ─
-        uv_u = np.array(ep_data.get("target_uv_u", []), dtype=np.float32)
-        in_frame_count = int((uv_u >= 0).sum()) if len(uv_u) > 0 else 0
-        visible_rate = in_frame_count / max(episode_length, 1)
+        # Visibility requires an unoccluded ray, not merely an in-frame UV.
+        target_visible = np.array(
+            ep_data.get("target_visible", []), dtype=np.float32
+        )
+        visible_rate = (float(np.mean(target_visible))
+                        if len(target_visible) > 0 else 0.0)
+        snap_rejected_frames = pursuit_state["snap_rejected_frames"]
+        snap_rejected_rate = snap_rejected_frames / max(episode_length, 1)
 
         # ── Save per-step frame data as NPZ (only for high-quality episodes) ──
         _max_final = (ARGS.max_final_dist if ARGS.max_final_dist > 0
@@ -4987,15 +5015,12 @@ def main() -> int:
             print(f"[Data] EP{ep_id} SKIPPED (tracking_rate={tracking_rate:.3f}, "
                   f"visible_rate={visible_rate:.3f}, "
                   f"collisions={collision_count}, recovery={had_recovery}, "
+                  f"snap_rejected={snap_rejected_frames}, "
                   f"blocking_incident={blocking_incident}, "
                   f"final_dist={distances[-1] if distances else -1:.2f}, "
                   f"reason={done_reason})")
 
-        success = (bool(distances)
-                   and tracking_rate >= 0.8
-                   and distances[-1] <= ARGS.tracking_dist_max
-                   and not had_recovery
-                   and done_reason in ("max_steps", "char_done"))
+        success = bool(ep_ok)
 
         if had_recovery and done_reason == "max_steps":
             done_reason = "had_recovery"
@@ -5012,6 +5037,8 @@ def main() -> int:
             "episode_length":        episode_length,
             "tracking_rate":         tracking_rate,
             "collision":             collision_count,
+            "snap_rejected_frames":  snap_rejected_frames,
+            "snap_rejected_rate":    snap_rejected_rate,
             "initial_dist":          distances[0]  if distances else 0.0,
             "final_dist":            distances[-1] if distances else 0.0,
             "avg_dist":              float(np.mean(distances))      if distances      else 0.0,

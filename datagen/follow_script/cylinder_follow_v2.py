@@ -171,6 +171,7 @@ class FollowerBehavior(BehaviorScript):
         self._last_cmd_linear = 0.0
         self._last_cmd_lateral = 0.0
         self._last_cmd_angular = 0.0
+        self._lazy_on_play_attempted = False
 
         # 从 prim 属性读取目标与可配置控制参数，要求必须显式配置目标。
         try:
@@ -534,7 +535,8 @@ class FollowerBehavior(BehaviorScript):
         # that case on_init() has run, but target/follower/navmesh are unset.
         # Initialize lazily so dynamic oracle binding follows the same setup
         # path as a script present before the initial timeline play.
-        if not self.target_prim or not self.follower_prim:
+        if (not self.target_prim or not self.follower_prim) and not self._lazy_on_play_attempted:
+            self._lazy_on_play_attempted = True
             self._log_event(
                 "lazy_on_play",
                 "on_update received before on_play; initializing now",
