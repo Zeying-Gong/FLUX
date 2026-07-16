@@ -8,7 +8,6 @@ import itertools
 import json
 import math
 import os
-import shutil
 import sys
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
@@ -152,8 +151,9 @@ def parse_args():
                         "defaults to footprint radius + 0.30m. Set to 0 to disable.")
     # ── Resume / skip completed episodes ──────────────────────────────
     p.add_argument("--resume", action="store_true", default=False,
-                   help="If set, skip episodes whose output (frames/frame_data.npz) "
-                        "already exists.")
+                   help="Skip episodes with a terminal quality marker")
+    p.add_argument("--retry_rejected", action="store_true", default=False,
+                   help="With --resume, rerun episodes marked rejected")
     return p.parse_args()
 
 
@@ -1289,7 +1289,7 @@ def clear_all_characters():
 
 def add_robot_and_articulation(
     world: World,
-    initial_xy: Optional[Tuple[float, float]] = None,
+    initial_position: Optional[Tuple[float, float, float]] = None,
 ) -> ArticulationView:
     global _ROBOT_ARTICULATION_PATH
 
@@ -1300,19 +1300,20 @@ def add_robot_and_articulation(
         print(f"[Robot] Adding reference: {ARGS.robot_usd}")
         add_reference_to_stage(ARGS.robot_usd, ROBOT_PRIM_PATH)
 
-        if initial_xy is not None:
+        if initial_position is not None:
             robot_prim = stage.GetPrimAtPath(ROBOT_PRIM_PATH)
             xformable = UsdGeom.Xformable(robot_prim)
             xformable.ClearXformOpOrder()
             translate_op = xformable.AddTranslateOp()
             translate_op.Set(Gf.Vec3d(
-                float(initial_xy[0]),
-                float(initial_xy[1]),
-                float(ARGS.robot_z_height),
+                float(initial_position[0]),
+                float(initial_position[1]),
+                float(initial_position[2]) + float(ARGS.robot_z_height),
             ))
             print(f"[Robot] USD-translated to "
-                  f"({initial_xy[0]:.2f}, {initial_xy[1]:.2f}, "
-                  f"{ARGS.robot_z_height:.2f}) before physics takes over.")
+                  f"({initial_position[0]:.2f}, {initial_position[1]:.2f}, "
+                  f"{initial_position[2] + ARGS.robot_z_height:.2f}) "
+                  f"before physics takes over.")
 
         # Disable gravity on all robot rigid bodies before first physics update.
         _setup_kinematic_root(stage)
@@ -1781,9 +1782,46 @@ def get_robot_pose(robot) -> Tuple[np.ndarray, float]:
     return np.array([pos[0], pos[1], pos[2]]), yaw
 
 
-def reset_robot(robot, start_pos_xy, start_yaw, world: World):
-    global _KIN_POS, _KIN_YAW
-    pos = np.array([start_pos_xy[0], start_pos_xy[1], ARGS.robot_z_height],
+def ensure_robot_above_ground(robot, ground_z: float) -> None:
+    """Raise the articulation if its rendered geometry penetrates the floor."""
+    global _ROBOT_BASE_Z, _KIN_POS
+    stage = omni.usd.get_context().get_stage()
+    robot_root = stage.GetPrimAtPath(ROBOT_PRIM_PATH)
+    if not robot_root.IsValid():
+        return
+    try:
+        bbox_cache = UsdGeom.BBoxCache(
+            Usd.TimeCode.Default(),
+            [UsdGeom.Tokens.default_, UsdGeom.Tokens.render],
+            useExtentsHint=True,
+        )
+        aligned = bbox_cache.ComputeWorldBound(robot_root).ComputeAlignedRange()
+        min_z = float(aligned.GetMin()[2])
+    except Exception as exc:
+        print(f"[RobotGround] WARN: bounding-box check failed: {exc}")
+        return
+    penetration = float(ground_z) - min_z
+    if penetration <= 0.03:
+        print(f"[RobotGround] geometry_min_z={min_z:.3f}, "
+              f"ground_z={ground_z:.3f}, no correction")
+        return
+    pos, yaw = get_robot_pose(robot)
+    _ROBOT_BASE_Z = float(pos[2]) + penetration + 0.01
+    corrected = np.array([pos[0], pos[1], _ROBOT_BASE_Z], dtype=np.float32)
+    quat = np.array([
+        math.cos(yaw / 2.0), 0.0, 0.0, math.sin(yaw / 2.0)
+    ], dtype=np.float32)
+    robot.set_world_pose(position=corrected, orientation=quat)
+    _KIN_POS[:] = corrected
+    print(f"[RobotGround] corrected penetration={penetration:.3f}m, "
+          f"base_z={_ROBOT_BASE_Z:.3f}")
+
+
+def reset_robot(robot, start_pos_xyz, start_yaw, world: World):
+    global _KIN_POS, _KIN_YAW, _ROBOT_BASE_Z
+    ground_z = float(start_pos_xyz[2]) if len(start_pos_xyz) >= 3 else 0.0
+    _ROBOT_BASE_Z = ground_z + float(ARGS.robot_z_height)
+    pos = np.array([start_pos_xyz[0], start_pos_xyz[1], _ROBOT_BASE_Z],
                    dtype=np.float32)
     quat = np.array([math.cos(start_yaw / 2.0),
                      0.0, 0.0,
@@ -1792,8 +1830,8 @@ def reset_robot(robot, start_pos_xy, start_yaw, world: World):
 
     # Sync desired-state globals so kinematic_move continues from correct origin.
     if ROBOT_DRIVE_MODE == "kinematic":
-        _KIN_POS[:] = [float(start_pos_xy[0]), float(start_pos_xy[1]),
-                       float(ARGS.robot_z_height)]
+        _KIN_POS[:] = [float(start_pos_xyz[0]), float(start_pos_xyz[1]),
+                       _ROBOT_BASE_Z]
         _KIN_YAW    = float(start_yaw)
 
     nd = int(robot.num_dof)
@@ -1813,6 +1851,7 @@ def reset_robot(robot, start_pos_xy, start_yaw, world: World):
         pass
     for _ in range(15):
         world.step(render=False)
+    ensure_robot_above_ground(robot, ground_z)
     check_pos, check_yaw = get_robot_pose(robot)
     print(f"[Reset] commanded pos={pos.tolist()}, "
           f"yaw={math.degrees(start_yaw):.1f} deg "
@@ -1893,7 +1932,7 @@ def kinematic_move(robot, linear: float, angular: float) -> None:
 
     _KIN_POS[0] = new_x
     _KIN_POS[1] = new_y
-    _KIN_POS[2]  = float(ARGS.robot_z_height)
+    _KIN_POS[2] = _ROBOT_BASE_Z
 
     new_pos  = _KIN_POS.astype(np.float32)
     new_quat = np.array([
@@ -1944,6 +1983,7 @@ _REST_JOINT_POSITIONS: Optional[np.ndarray] = None
 # Desired kinematic state — integrated independently of physics to avoid drift.
 _KIN_POS = np.zeros(3, dtype=np.float64)
 _KIN_YAW = 0.0
+_ROBOT_BASE_Z = float(ARGS.robot_z_height)
 DATAGEN_ORACLE_PATH = "/World/DatagenFollowerOracle"
 
 
@@ -2071,7 +2111,7 @@ def read_datagen_oracle(oracle):
 def mirror_datagen_oracle_to_robot(robot, oracle_pos, robot_yaw) -> None:
     global _KIN_POS, _KIN_YAW
     robot_pos = np.array(
-        [oracle_pos[0], oracle_pos[1], ARGS.robot_z_height], dtype=np.float32
+        [oracle_pos[0], oracle_pos[1], _ROBOT_BASE_Z], dtype=np.float32
     )
     quat = np.array([
         math.cos(robot_yaw / 2.0), 0.0, 0.0, math.sin(robot_yaw / 2.0)
@@ -2389,7 +2429,7 @@ def kinematic_move_datagen(robot, body_action, navmesh) -> None:
         _KIN_POS[:2] = projected[:2]
     elif abs(forward_vel) + abs(lateral_vel) > 1e-6:
         _KIN_BLOCKED_TOTAL += 1
-    _KIN_POS[2] = float(ARGS.robot_z_height)
+    _KIN_POS[2] = _ROBOT_BASE_Z
     quat = np.array([
         math.cos(_KIN_YAW / 2.0), 0.0, 0.0, math.sin(_KIN_YAW / 2.0)
     ], dtype=np.float32)
@@ -3336,7 +3376,20 @@ def extract_ep_id(p: str) -> int:
 
 
 def _episode_completed(ep_id: int) -> bool:
-    out_dir = os.path.join(ARGS.image_save_dir, f"episode_{ep_id:04d}", "frames")
+    episode_dir = os.path.join(ARGS.image_save_dir, f"episode_{ep_id:04d}")
+    quality_path = os.path.join(episode_dir, "quality.json")
+    if os.path.isfile(quality_path):
+        try:
+            with open(quality_path, "r", encoding="utf-8") as f:
+                status = str(json.load(f).get("status", ""))
+            if status == "accepted":
+                return True
+            if status == "rejected":
+                return not ARGS.retry_rejected
+        except (OSError, ValueError):
+            pass
+
+    out_dir = os.path.join(episode_dir, "frames")
     npz_path = os.path.join(out_dir, "frame_data.npz")
     if not os.path.isfile(npz_path):
         return False
@@ -3378,15 +3431,57 @@ def _episode_completed(ep_id: int) -> bool:
         return False
 
 
-def _remove_stale_episode_data(ep_id: int) -> None:
-    frames_dir = os.path.join(
-        ARGS.image_save_dir, f"episode_{ep_id:04d}", "frames"
-    )
-    for name in ("frame_data.npz", "preview.json"):
-        path = os.path.join(frames_dir, name)
-        if os.path.isfile(path):
-            os.remove(path)
-            print(f"[Data] Removed stale rejected output: {path}")
+def _write_quality_result(ep_id: int, accepted: bool, metrics: dict,
+                          rejection_reasons: List[str]) -> None:
+    episode_dir = os.path.join(ARGS.image_save_dir, f"episode_{ep_id:04d}")
+    frames_dir = os.path.join(episode_dir, "frames")
+    os.makedirs(frames_dir, exist_ok=True)
+    status = "accepted" if accepted else "rejected"
+    quality = {
+        "schema_version": 1,
+        "status": status,
+        "episode_id": int(ep_id),
+        "rejection_reasons": rejection_reasons,
+        "metrics": metrics,
+        "filter_config": {
+            "min_tracking_rate": ARGS.min_tracking_rate,
+            "min_visible_rate": ARGS.min_visible_rate,
+            "max_collisions": ARGS.max_collisions,
+            "allow_recovery": ARGS.allow_recovery,
+            "max_final_dist": ARGS.max_final_dist,
+            "allowed_end_reasons": ARGS.allowed_end_reasons,
+        },
+        "robot": {
+            "type": ARGS.robot_type,
+            "footprint_radius": ARGS.robot_radius_2d,
+            "planning_radius": ARGS.datagen_planning_radius,
+            "base_z": _ROBOT_BASE_Z,
+        },
+    }
+    with open(os.path.join(episode_dir, "quality.json"), "w", encoding="utf-8") as f:
+        json.dump(quality, f, indent=2)
+
+    for marker in ("_ACCEPTED", "_REJECTED"):
+        marker_path = os.path.join(episode_dir, marker)
+        if os.path.exists(marker_path):
+            os.remove(marker_path)
+    with open(os.path.join(episode_dir, f"_{status.upper()}"), "w", encoding="utf-8") as f:
+        f.write("\n")
+
+    accepted_npz = os.path.join(frames_dir, "frame_data.npz")
+    rejected_npz = os.path.join(frames_dir, "frame_data.rejected.npz")
+    accepted_preview = os.path.join(frames_dir, "preview.json")
+    rejected_preview = os.path.join(frames_dir, "preview.rejected.json")
+    if accepted:
+        for stale in (rejected_npz, rejected_preview):
+            if os.path.isfile(stale):
+                os.remove(stale)
+    else:
+        if os.path.isfile(accepted_npz):
+            os.replace(accepted_npz, rejected_npz)
+        if os.path.isfile(accepted_preview):
+            os.replace(accepted_preview, rejected_preview)
+    print(f"[Quality] EP{ep_id} status={status} reasons={rejection_reasons}")
 
 
 def setup_episode_full(
@@ -3418,7 +3513,7 @@ def setup_episode_full(
     print(f"[Episode setup] start_pos={robot_start_pos_xyz}, "
           f"start_yaw={math.degrees(robot_start_yaw):.1f} deg, "
           f"target_prim={target_prim_path}")
-    reset_robot(robot, robot_start_pos_xyz[:2], robot_start_yaw, world)
+    reset_robot(robot, robot_start_pos_xyz, robot_start_yaw, world)
 
     update_chase_camera(robot)
     for _ in range(3):
@@ -3559,6 +3654,8 @@ def main() -> int:
     first_start_pos_xyz = first_robot_block["start_pos"]
     first_start_yaw     = float(first_robot_block.get("start_orientation", 0.0))
     init_xy = (float(first_start_pos_xyz[0]), float(first_start_pos_xyz[1]))
+    init_ground_z = (float(first_start_pos_xyz[2])
+                     if len(first_start_pos_xyz) >= 3 else 0.0)
     print(f"[Init] First episode robot start: xy={init_xy}, "
           f"yaw={math.degrees(first_start_yaw):.1f} deg")
 
@@ -3568,7 +3665,9 @@ def main() -> int:
     update_sim(5)
     print("[World] Physics initialized.")
 
-    robot = add_robot_and_articulation(world, initial_xy=init_xy)
+    robot = add_robot_and_articulation(
+        world, initial_position=(init_xy[0], init_xy[1], init_ground_z)
+    )
     left_idx, right_idx = resolve_wheel_dof_order(robot)
     global _WHEEL_DOF_LEFT, _WHEEL_DOF_RIGHT
     _WHEEL_DOF_LEFT, _WHEEL_DOF_RIGHT = left_idx, right_idx
@@ -3583,13 +3682,14 @@ def main() -> int:
     # For kinematic robots: build rest pose (needs dof_names, available after reset),
     # apply it immediately, and sync desired-state globals to the first episode start.
     if ROBOT_DRIVE_MODE == "kinematic":
-        global _KIN_POS, _KIN_YAW
+        global _KIN_POS, _KIN_YAW, _ROBOT_BASE_Z
+        _ROBOT_BASE_Z = init_ground_z + float(ARGS.robot_z_height)
         _build_rest_joint_positions(robot)
         try:
             robot.set_joint_positions(_REST_JOINT_POSITIONS)
         except Exception as e:
             print(f"[KinRobot] Could not set initial joint positions: {e}")
-        _KIN_POS[:] = [float(init_xy[0]), float(init_xy[1]), float(ARGS.robot_z_height)]
+        _KIN_POS[:] = [float(init_xy[0]), float(init_xy[1]), _ROBOT_BASE_Z]
         _KIN_YAW    = float(first_start_yaw)
 
     init_quat = np.array(
@@ -3599,7 +3699,7 @@ def main() -> int:
     for _ in range(5):
         try:
             robot.set_world_pose(
-                position=np.array([init_xy[0], init_xy[1], ARGS.robot_z_height],
+                position=np.array([init_xy[0], init_xy[1], _ROBOT_BASE_Z],
                                   dtype=np.float32),
                 orientation=init_quat,
             )
@@ -3624,6 +3724,7 @@ def main() -> int:
         pass
     for _ in range(60):
         world.step(render=False)
+    ensure_robot_above_ground(robot, init_ground_z)
     init_pos, init_yaw = get_robot_pose(robot)
     print(f"[Robot] settled at {init_pos.tolist()}, "
           f"yaw={math.degrees(init_yaw):.1f} deg")
@@ -3866,7 +3967,7 @@ def main() -> int:
                       f"nearest_free={nearest_free[:2].tolist() if nearest_free is not None else None}")
                 if nearest_free is not None:
                     _KIN_POS[:] = [float(nearest_free[0]), float(nearest_free[1]),
-                                   float(ARGS.robot_z_height)]
+                                   _ROBOT_BASE_Z]
                     snap_quat = np.array([math.cos(robot_yaw / 2.0), 0.0, 0.0,
                                           math.sin(robot_yaw / 2.0)], dtype=np.float32)
                     robot.set_world_pose(
@@ -3941,15 +4042,9 @@ def main() -> int:
 
             # ── Proximity collision check ─────────────────────────────────
             if ARGS.proximity_collision_dist > 0 and dist_to_target < ARGS.proximity_collision_dist:
-                ep_dir = os.path.join(ARGS.image_save_dir, f"episode_{ep_id:04d}")
-                if os.path.isdir(ep_dir):
-                    shutil.rmtree(ep_dir, ignore_errors=True)
-                    print(f"[EP{ep_id}] step={step} PROXIMITY COLLISION "
-                          f"dist={dist_to_target:.3f}m < {ARGS.proximity_collision_dist}m, "
-                          f"deleted {ep_dir}")
-                else:
-                    print(f"[EP{ep_id}] step={step} PROXIMITY COLLISION "
-                          f"dist={dist_to_target:.3f}m < {ARGS.proximity_collision_dist}m")
+                print(f"[EP{ep_id}] step={step} PROXIMITY COLLISION "
+                      f"dist={dist_to_target:.3f}m < {ARGS.proximity_collision_dist}m; "
+                      "retaining output with rejected quality marker")
                 _stop_drive(robot)
                 for _ in range(3):
                     world.step(render=False)
@@ -5000,30 +5095,24 @@ def main() -> int:
         _max_final = (ARGS.max_final_dist if ARGS.max_final_dist > 0
                       else ARGS.tracking_dist_max)
         _allowed_reasons = [s.strip() for s in ARGS.allowed_end_reasons.split(",")]
-        ep_ok = (distances and tracking_rate >= ARGS.min_tracking_rate
-                 and visible_rate >= ARGS.min_visible_rate
-                 and collision_count <= ARGS.max_collisions
-                 and (ARGS.allow_recovery or not had_recovery)
-                 and not blocking_incident
-                 and distances[-1] <= _max_final
-                 and done_reason in _allowed_reasons)
-        if ep_ok:
-            save_episode_npz(ep_data, ep_id, ARGS.image_save_dir,
-                              episode_dict=episode)
-        else:
-            _remove_stale_episode_data(ep_id)
-            print(f"[Data] EP{ep_id} SKIPPED (tracking_rate={tracking_rate:.3f}, "
-                  f"visible_rate={visible_rate:.3f}, "
-                  f"collisions={collision_count}, recovery={had_recovery}, "
-                  f"snap_rejected={snap_rejected_frames}, "
-                  f"blocking_incident={blocking_incident}, "
-                  f"final_dist={distances[-1] if distances else -1:.2f}, "
-                  f"reason={done_reason})")
-
-        success = bool(ep_ok)
-
         if had_recovery and done_reason == "max_steps":
             done_reason = "had_recovery"
+
+        quality_checks = {
+            "has_distance_samples": bool(distances),
+            "tracking_rate": tracking_rate >= ARGS.min_tracking_rate,
+            "visible_rate": visible_rate >= ARGS.min_visible_rate,
+            "collision_count": collision_count <= ARGS.max_collisions,
+            "recovery": ARGS.allow_recovery or not had_recovery,
+            "blocking_incident": not blocking_incident,
+            "final_distance": bool(distances) and distances[-1] <= _max_final,
+            "end_reason": done_reason in _allowed_reasons,
+        }
+        rejection_reasons = [
+            name for name, passed in quality_checks.items() if not passed
+        ]
+        ep_ok = all(quality_checks.values())
+        success = bool(ep_ok)
 
         metrics = {
             "episode_id":            ep_id,
@@ -5045,6 +5134,16 @@ def main() -> int:
             "avg_heading_error_deg": float(np.mean(heading_errors)) if heading_errors else 0.0,
             "done_reason":           done_reason,
         }
+        save_episode_npz(
+            ep_data, ep_id, ARGS.image_save_dir, episode_dict=episode
+        )
+        _write_quality_result(ep_id, ep_ok, metrics, rejection_reasons)
+        print(f"[Data] EP{ep_id} {'ACCEPTED' if ep_ok else 'REJECTED'} "
+              f"(tracking_rate={tracking_rate:.3f}, visible_rate={visible_rate:.3f}, "
+              f"collisions={collision_count}, recovery={had_recovery}, "
+              f"snap_rejected={snap_rejected_frames}, "
+              f"final_dist={distances[-1] if distances else -1:.2f}, "
+              f"reason={done_reason}, failed_checks={rejection_reasons})")
         all_metrics.append(metrics)
         print(f"[EP{ep_id}] done | success={success} len={episode_length} "
               f"tr={tracking_rate:.3f} had_recovery={had_recovery} reason={done_reason} "

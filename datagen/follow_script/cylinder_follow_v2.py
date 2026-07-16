@@ -1463,9 +1463,9 @@ class FollowerBehavior(BehaviorScript):
 
         edge_dist = min(self.human_center_x, 1.0 - self.human_center_x)
         bbox_weight = float(np.clip(
-            0.55 + 2.0 * max(0.0, 0.3 - edge_dist),
-            0.55,
-            0.9,
+            0.80 + 1.5 * max(0.0, 0.3 - edge_dist),
+            0.80,
+            1.0,
         ))
         return bbox_weight * vis_angle + (1.0 - bbox_weight) * human_cross
 
@@ -1477,23 +1477,28 @@ class FollowerBehavior(BehaviorScript):
         path_points = self.cached_path if self.cached_path else None
         if next_waypoint is None:
             if self.navmesh is not None:
-                next_waypoint = follower_pos.copy()
+                # A global path can temporarily fail at a narrow corner or when
+                # the moving target is off the clearance mesh. Keep pursuing
+                # locally; _project_motion_to_navmesh validates every small
+                # displacement and will hold before crossing an obstacle.
+                next_waypoint = target_pos.copy()
                 self._current_nav_waypoint = next_waypoint.copy()
                 self._log_event(
-                    "nav_hold_no_safe_path",
-                    "nav path unavailable; holding instead of driving toward target through obstacles",
+                    "nav_local_pursuit_fallback",
+                    "nav path unavailable; using NavMesh-validated local pursuit",
                     cooldown=0.8,
                     level="warn",
                 )
-                return np.zeros(3, dtype=np.float32), next_waypoint
-            next_waypoint = target_pos
-            path_points = None
-            self._log_event(
-                "nav_fallback_target",
-                "nav path unavailable; using target direction as Habitat fallback",
-                cooldown=0.8,
-                level="warn",
-            )
+                path_points = None
+            else:
+                next_waypoint = target_pos
+                path_points = None
+                self._log_event(
+                    "nav_fallback_target",
+                    "nav path unavailable; using target direction as Habitat fallback",
+                    cooldown=0.8,
+                    level="warn",
+                )
 
         avoidance_wp = self._compute_avoidance_waypoint(
             follower_pos, follower_yaw, next_waypoint
@@ -1586,7 +1591,9 @@ class FollowerBehavior(BehaviorScript):
             dir_human,
         )
         if self._nav_dominant:
-            if self.motion_type == "omnidirectional" and self.human_in_frame:
+            if self.motion_type == "omnidirectional":
+                # Omni translation can follow the safe path while the body and
+                # camera continue facing the target, including after visual loss.
                 yaw_error = visual_yaw_error
             else:
                 yaw_error = nav_cross
@@ -1612,6 +1619,16 @@ class FollowerBehavior(BehaviorScript):
             move_alignment,
         )
         lateral_speed = 0.75 * self.lateral_velocity * lateral_alignment
+
+        if self.human_in_frame:
+            center_error = abs(self.human_center_x - 0.5)
+            if center_error > 0.15:
+                recenter_scale = float(np.clip(
+                    1.0 - 2.0 * (center_error - 0.15), 0.35, 1.0
+                ))
+                move_speed *= recenter_scale
+                lateral_speed *= recenter_scale
+                yaw_speed *= 1.0 + min(center_error, 0.5)
 
         if path_points is not None and len(path_points) >= 3:
             seg_idx = int(np.clip(

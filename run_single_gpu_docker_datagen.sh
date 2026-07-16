@@ -20,6 +20,8 @@ LOG_DIR="/workspace/FLUX/logs_formal_v3"
 LOG_NAME="collect_datagen_${ROBOT_ONLY:-all}_${CAM_ONLY:-all}_$(date '+%Y%m%d_%H%M%S')_gpu${GPU}"
 VIDEO_ARGS=()
 [ "${SAVE_VIDEO:-0}" = "1" ] && VIDEO_ARGS+=(--save_video)
+RETRY_ARGS=()
+[ "${RETRY_REJECTED:-0}" = "1" ] && RETRY_ARGS+=(--retry_rejected)
 
 echo "[GPU$GPU] Processing scenes $S ~ $E (total ${#ALL_SCENES[@]} / BATCH_SIZE=$BATCH_SIZE)"
 ALL_COMBOS="go2:realsense_d435i go2:zed dingo:realsense_d435i dingo:zed g1:realsense_d435i g1:zed"
@@ -40,9 +42,9 @@ for combo in $COMBOS; do
     OUT_DIR="$LOG_DIR/${robot}_${cam}_datagen/$scene"
     # Only validated NPZ files count as completed episodes. Image-only
     # directories can be leftovers from episodes rejected by quality filters.
-    VALID_EPISODES=$(find "$OUT_DIR" -path '*/frames/frame_data.npz' -type f 2>/dev/null | wc -l)
-    if [ "$VALID_EPISODES" -ge "$NUM_EPISODES" ]; then
-      echo "[GPU$GPU] $(date '+%H:%M:%S') SKIP (valid=$VALID_EPISODES): $scene"
+    COMPLETED_EPISODES=$(find "$OUT_DIR" \( -name _ACCEPTED -o -name _REJECTED \) -type f 2>/dev/null | wc -l)
+    if [ "$COMPLETED_EPISODES" -ge "$NUM_EPISODES" ] && [ "${RETRY_REJECTED:-0}" != "1" ]; then
+      echo "[GPU$GPU] $(date '+%H:%M:%S') SKIP (completed=$COMPLETED_EPISODES): $scene"
       continue
     fi
     # ── 场景级超时守卫: 超过 SCENE_TIMEOUT 自动跳过 ──
@@ -83,6 +85,7 @@ for combo in $COMBOS; do
           --save_images --start_idx $batch_start --end_idx $batch_end \
           --headless \
           "${VIDEO_ARGS[@]}" \
+          "${RETRY_ARGS[@]}" \
           --resume \
           >> $LOG_DIR/$LOG_NAME.log 2>&1 &
         BGPID=$!
