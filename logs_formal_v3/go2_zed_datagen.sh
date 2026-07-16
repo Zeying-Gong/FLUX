@@ -49,5 +49,5 @@ for GPU in 0 1 2 3; do
     -v "$ISAAC_CACHE_DIR/glcache:/root/.cache/nvidia/GLCache" \
     -v "$ISAAC_CACHE_DIR/computecache:/root/.nv/ComputeCache" \
     -w /workspace quay.io/zeyinggong/flux:v2_deploy \
-    -c "bash /workspace/run_single_gpu_docker_datagen.sh $GPU $S $E go2 zed"
+    -c "bash /workspace/FLUX/run_single_gpu_docker_datagen.sh $GPU $S $E go2 zed"
 done
