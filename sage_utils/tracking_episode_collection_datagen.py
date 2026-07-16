@@ -3694,7 +3694,10 @@ def main() -> int:
           f"yaw={math.degrees(first_start_yaw):.1f} deg")
 
     print("[World] Creating World + physicsScene...")
-    world = World(physics_dt=ARGS.physics_dt, rendering_dt=ARGS.physics_dt * 3)
+    world = World(
+        physics_dt=ARGS.physics_dt,
+        rendering_dt=ARGS.physics_dt * ARGS.decimation,
+    )
     world.initialize_physics()
     update_sim(5)
     print("[World] Physics initialized.")
@@ -4215,7 +4218,11 @@ def main() -> int:
             )
             for _ in range(ARGS.decimation):
                 world.step(render=False)
-                _set_character_speeds(char_paths, ARGS.character_speed)
+            # BehaviorScript and CharacterBehavior are driven by the Kit app
+            # update, not World.step(render=False). Run exactly once per
+            # controller step to avoid the previous 2x script update rate.
+            simulation_app.update()
+            _set_character_speeds(char_paths, ARGS.character_speed)
 
             oracle_pos, oracle_yaw, oracle_diag = read_datagen_oracle(datagen_oracle)
             oracle_ready = (oracle_diag["state"] != "UNKNOWN"
