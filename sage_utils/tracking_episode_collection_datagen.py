@@ -7,6 +7,7 @@ import glob
 import json
 import math
 import os
+import shutil
 import sys
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
@@ -137,6 +138,9 @@ def parse_args():
     p.add_argument("--datagen_lookahead", type=float, default=0.8)
     p.add_argument("--datagen_max_lateral_vel", type=float, default=1.5)
     p.add_argument("--datagen_dynamic_radius", type=float, default=0.45)
+    p.add_argument("--proximity_collision_dist", type=float, default=0.5,
+                   help="Robot-target distance threshold for proximity collision abort "
+                        "(default 0.5).  Set to 0 to disable.")
     # ── Resume / skip completed episodes ──────────────────────────────
     p.add_argument("--resume", action="store_true", default=False,
                    help="If set, skip episodes whose output (frames/frame_data.npz) "
@@ -1601,40 +1605,8 @@ def recolor_episode_characters(episode: dict,
     # return
 
 def _set_character_speeds(char_paths: Dict[str, str], speed_frac: float):
-    """Override the animation graph 'Walk' variable on each character.
-
-    The character behavior script drives Walk→1.0 every frame (full animation
-    speed).  Call this AFTER each simulation step to clamp Walk back down,
-    effectively slowing the character's baked walk animation.
-    """
-    if speed_frac >= 0.99:
-        return
-    try:
-        import omni.anim.graph.core as ag
-    except ImportError:
-        return
-    stage = omni.usd.get_context().get_stage()
-    for char_name, prim_path in char_paths.items():
-        prim = stage.GetPrimAtPath(prim_path)
-        if not prim or not prim.IsValid():
-            continue
-        for desc in prim.GetChildren():
-            if desc.GetTypeName() not in ("SkelRoot", "Xform"):
-                continue
-            skel = desc if desc.GetTypeName() == "SkelRoot" else None
-            if skel is None:
-                for child in desc.GetChildren():
-                    if child.GetTypeName() == "SkelRoot":
-                        skel = child
-                        break
-            if skel is None:
-                continue
-            try:
-                graph = ag.get_animation_graph(skel.GetPath())
-                if graph:
-                    graph.set_variable("Walk", float(speed_frac))
-            except Exception:
-                pass
+    import carb
+    carb.settings.get_settings().set("/exts/people_sim/character_walk_speed", float(speed_frac))
 
 
 def _write_episode_commands(commands_dict: dict):
@@ -2482,21 +2454,14 @@ def save_rgb_depth(cam: IsaacCamera, step_idx: int, save_dir: str, episode_id: i
         episode_dir = os.path.join(save_dir, f"episode_{episode_id:04d}")
         rgb_dir     = os.path.join(episode_dir, "rgb")
         depth_mm_dir = os.path.join(episode_dir, "depth_mm")
-        depth_viz_dir = os.path.join(episode_dir, "depth_viz")
         os.makedirs(rgb_dir,      exist_ok=True)
         os.makedirs(depth_mm_dir, exist_ok=True)
-        os.makedirs(depth_viz_dir, exist_ok=True)
         # RGB
         Image.fromarray(rgb).save(os.path.join(rgb_dir, f"{step_idx:05d}.png"))
         # Depth in millimeters (uint16) — for training / metric use
         depth_mm = (depth * 1000.0).clip(0, 65535).astype(np.uint16)
         Image.fromarray(depth_mm, mode="I;16").save(
             os.path.join(depth_mm_dir, f"{step_idx:05d}.png"))
-        # Depth color-mapped visualization — only first frame for inspection
-        if is_first_episode_frame:
-            _depth_viz = _colormap_depth(depth)
-            Image.fromarray(_depth_viz).save(
-                os.path.join(depth_viz_dir, f"{step_idx:05d}.png"))
         # Bbox crop: only on first frame (visual navigation target)
         if target_bbox is not None and is_first_episode_frame:
             save_bbox_crop(rgb, target_bbox, step_idx, save_dir, episode_id)
@@ -3009,30 +2974,33 @@ def save_bbox_crop(rgb: np.ndarray, bbox: Tuple[float, float, float, float],
         print(f"[BBoxCrop] WARN: {e}")
 
 
-def save_episode_video(save_dir: str, episode_id: int) -> Optional[str]:
-    """Stream saved RGB frames into an MP4 at the controller frame rate."""
-    rgb_dir = os.path.join(save_dir, f"episode_{episode_id:04d}", "rgb")
-    frame_paths = sorted(glob.glob(os.path.join(rgb_dir, "*.png")))
-    if not frame_paths:
-        print(f"[Video] EP{episode_id}: no RGB frames found in {rgb_dir}")
-        return None
-    output_path = os.path.join(
-        save_dir, f"episode_{episode_id:04d}", "tracking.mp4"
-    )
+def save_episode_video(save_dir: str, episode_id: int):
     fps = 1.0 / (ARGS.physics_dt * ARGS.decimation)
     try:
         import imageio.v2 as imageio
-        with imageio.get_writer(output_path, fps=fps, codec="libx264") as writer:
-            for frame_path in frame_paths:
-                writer.append_data(imageio.imread(frame_path))
-        print(
-            f"[Video] EP{episode_id}: saved {output_path} "
-            f"({len(frame_paths)} frames @ {fps:.1f} FPS)"
-        )
-        return output_path
-    except Exception as exc:
-        print(f"[Video] EP{episode_id}: failed to encode MP4: {exc}")
-        return None
+    except ImportError:
+        print("[Video] imageio not available, skipping videos")
+        return
+
+    ep_dir = os.path.join(save_dir, f"episode_{episode_id:04d}")
+
+    # RGB video
+    rgb_dir = os.path.join(ep_dir, "rgb")
+    rgb_frames = sorted(glob.glob(os.path.join(rgb_dir, "*.png")))
+    if rgb_frames:
+        rgb_out = os.path.join(ep_dir, "rgb_video.mp4")
+        try:
+            with imageio.get_writer(rgb_out, fps=fps, codec="libx264") as w:
+                for fp in rgb_frames:
+                    w.append_data(imageio.imread(fp))
+            print(f"[Video] EP{episode_id}: saved {rgb_out} "
+                  f"({len(rgb_frames)} frames @ {fps:.1f} FPS)")
+        except Exception as e:
+            print(f"[Video] EP{episode_id}: RGB video failed: {e}")
+    else:
+        print(f"[Video] EP{episode_id}: no RGB frames, skipping rgb_video.mp4")
+
+
 
 
 def resolve_target_character(episode: dict,
@@ -3447,7 +3415,8 @@ def main() -> int:
         global _CMDS_DONE_LAST_VAL
         _CMDS_DONE_LAST_VAL = None  # reset log-suppression tracker for new episode
         carb.settings.get_settings().set("/exts/people_sim/character_barrier_open", True)
-        print(f"[EP{ep_id}] Character barrier opened — commands start now.")
+        print(f"[EP{ep_id}] Character barrier opened — commands start now. "
+              f"(character_speed={ARGS.character_speed})")
 
         step           = 0
         tracking_steps = 0
@@ -3568,6 +3537,8 @@ def main() -> int:
             if len(_TARGET_POS_HIST) > _TARGET_POS_HIST_LEN:
                 _TARGET_POS_HIST.pop(0)
 
+
+
             # Update pedestrian velocity history and build dynamic OCC.
             update_ped_vel_hist(char_paths, target_prim_path)
             ped_fc = get_all_ped_forecasts(char_paths, target_prim_path)
@@ -3592,6 +3563,26 @@ def main() -> int:
 
             delta = target_pos[:2] - robot_pos[:2]
             dist_to_target = float(np.linalg.norm(delta))
+
+            # ── Proximity collision check ─────────────────────────────────
+            if ARGS.proximity_collision_dist > 0 and dist_to_target < ARGS.proximity_collision_dist:
+                ep_dir = os.path.join(ARGS.image_save_dir, f"episode_{ep_id:04d}")
+                if os.path.isdir(ep_dir):
+                    shutil.rmtree(ep_dir, ignore_errors=True)
+                    print(f"[EP{ep_id}] step={step} PROXIMITY COLLISION "
+                          f"dist={dist_to_target:.3f}m < {ARGS.proximity_collision_dist}m, "
+                          f"deleted {ep_dir}")
+                else:
+                    print(f"[EP{ep_id}] step={step} PROXIMITY COLLISION "
+                          f"dist={dist_to_target:.3f}m < {ARGS.proximity_collision_dist}m")
+                _stop_drive(robot)
+                for _ in range(3):
+                    world.step(render=False)
+                    update_chase_camera(robot)
+                    simulation_app.update()
+                done_reason = "proximity_collision"
+                break
+
             if dist_to_target > 1e-6:
                 desired_yaw = math.atan2(float(delta[1]), float(delta[0]))
             else:
@@ -3734,6 +3725,7 @@ def main() -> int:
                 kinematic_move_datagen(robot, body_action, nm)
                 update_chase_camera(robot)
                 simulation_app.update()
+                _set_character_speeds(char_paths, ARGS.character_speed)
 
             if ARGS.save_images and step % ARGS.save_image_every == 0:
                 save_rgb_depth(

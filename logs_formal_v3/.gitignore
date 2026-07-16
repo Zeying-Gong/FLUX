@@ -1,0 +1,19 @@
+# 只保留脚本和文档，排除海量数据
+collect_*.log
+go2_zed/
+go2_realsense_d435i/
+go2_realsense_d435i_archives/
+go2_zed_datagen/
+go2_default_datagen/
+test_go2_zed_datagen/
+*.csv
+*.tar.gz
+
+# 测试运行数据 - 排除图片/深度等大文件，保留元数据
+test_runs/*/rgb/
+test_runs/*/depth_viz/
+test_runs/*/depth_mm/
+test_runs/*/debug_occ/
+test_runs/*/target_crops/
+test_runs/*/frames/
+test_runs/*/*.log

@@ -1,0 +1,13 @@
+run_name=two_scenes_test_20260716_103403
+scenes=0001_839920 0039_839888
+gpu_id=0
+max_steps=300
+save_video=1
+character_speed=0.5
+repo_dir=/mnt/nvme1/zeyingg/FLUX
+sage3d_dir=/mnt/ssd1/zeyingg/SAGE-3D_Official
+git_commit=579645e55caf9759d5338c9a69ed4e1f0e98cb3b
+started_at=2026-07-16T10:34:03+08:00
+OK: scene 0001_839920 done
+OK: scene 0039_839888 done
+finished_at=2026-07-16T10:49:23+08:00

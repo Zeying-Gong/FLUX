@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 GPU_ID="${GPU_ID:-0}"
-MAX_STEPS="${MAX_STEPS:-600}"
+MAX_STEPS="${MAX_STEPS:-300}"
 SAVE_VIDEO="${SAVE_VIDEO:-1}"
 CHARACTER_SPEED="${CHARACTER_SPEED:-0.5}"
 RENDER_WARMUP_FRAMES="${RENDER_WARMUP_FRAMES:-180}"
@@ -13,8 +13,8 @@ SAGE3D_DIR="${SAGE3D_DIR:-/mnt/ssd1/zeyingg/SAGE-3D_Official}"
 ISAAC_CACHE_DIR="${ISAAC_CACHE_DIR:-$HOME/.cache/flux-isaac-sim}"
 RUN_TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
 RUN_NAME="two_scenes_test_${RUN_TIMESTAMP}"
-HOST_RUN_DIR="$REPO_DIR/logs_formal_v2/test_runs/$RUN_NAME"
-CONTAINER_RUN_DIR="/workspace/FLUX/logs_formal_v2/test_runs/$RUN_NAME"
+HOST_RUN_DIR="$REPO_DIR/logs_formal_v3/test_runs/$RUN_NAME"
+CONTAINER_RUN_DIR="/workspace/FLUX/logs_formal_v3/test_runs/$RUN_NAME"
 
 SCENES=("0001_839920" "0039_839888")
 
@@ -57,6 +57,7 @@ for SCENE_ID in "${SCENES[@]}"; do
     -e RENDER_WARMUP_FRAMES="$RENDER_WARMUP_FRAMES" \
     --entrypoint bash --runtime=nvidia --gpus "device=$GPU_ID" --network=host \
     -v "$REPO_DIR:/workspace/FLUX" \
+    -v "$REPO_DIR/sage_utils/patched_base_command.py:/isaac-sim/extscache/omni.anim.people-0.7.9+107.3.3/omni/anim/people/scripts/commands/base_command.py" \
     -v "$SAGE3D_DIR:/workspace/SAGE-3D_Official" \
     -v "$ISAAC_CACHE_DIR/kit:/isaac-sim/kit/cache" \
     -v "$ISAAC_CACHE_DIR/ov:/root/.cache/ov" \
