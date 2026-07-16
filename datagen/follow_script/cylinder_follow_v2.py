@@ -529,6 +529,19 @@ class FollowerBehavior(BehaviorScript):
     # ------------------------------------------------------------------
 
     def on_update(self, _current_time: float, delta_time: float):
+        # Kit can dynamically instantiate a newly bound BehaviorScript after
+        # the timeline is already playing without delivering on_play(). In
+        # that case on_init() has run, but target/follower/navmesh are unset.
+        # Initialize lazily so dynamic oracle binding follows the same setup
+        # path as a script present before the initial timeline play.
+        if not self.target_prim or not self.follower_prim:
+            self._log_event(
+                "lazy_on_play",
+                "on_update received before on_play; initializing now",
+                cooldown=2.0,
+                level="warn",
+            )
+            self.on_play()
         if not self.target_prim or not self.follower_prim:
             self._log_event("invalid_prims", "on_update skipped: invalid target/follower prim", cooldown=2.0, level="warn")
             return

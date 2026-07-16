@@ -1951,13 +1951,15 @@ def setup_datagen_follower_oracle(robot_pos, robot_yaw, target_prim_path):
     ext_manager = omni.kit.app.get_app().get_extension_manager()
     if not ext_manager.is_extension_enabled("omni.kit.scripting"):
         ext_manager.set_extension_enabled_immediate("omni.kit.scripting", True)
-    timeline = omni.timeline.get_timeline_interface()
-    was_playing = timeline.is_playing()
-    if was_playing:
-        timeline.stop()
-        simulation_app.update()
     if stage.GetPrimAtPath(DATAGEN_ORACLE_PATH).IsValid():
         stage.RemovePrim(DATAGEN_ORACLE_PATH)
+
+    target_prim = stage.GetPrimAtPath(str(target_prim_path))
+    target_skelroot = _find_skelroot(target_prim) if target_prim.IsValid() else None
+    if target_skelroot is not None:
+        target_prim_path = str(target_skelroot.GetPath())
+    if not stage.GetPrimAtPath(str(target_prim_path)).IsValid():
+        raise RuntimeError(f"Datagen oracle target is invalid: {target_prim_path}")
 
     oracle = UsdGeom.Xform.Define(stage, DATAGEN_ORACLE_PATH).GetPrim()
     xformable = UsdGeom.Xformable(oracle)
@@ -2004,11 +2006,10 @@ def setup_datagen_follower_oracle(robot_pos, robot_yaw, target_prim_path):
         )
     scripts_attr.Set([Sdf.AssetPath(script_path)])
     simulation_app.update()
-    if was_playing:
-        timeline.play()
-        for _ in range(3):
-            simulation_app.update()
-    print(f"[DatagenOracle] Bound canonical controller: {script_path}")
+    print(
+        f"[DatagenOracle] Bound canonical controller: {script_path} "
+        f"target={target_prim_path}"
+    )
     return oracle
 
 
@@ -3708,8 +3709,8 @@ def main() -> int:
         build_target_traj_cache(episode, char_paths, target_prim_path)
         reset_collision_state()
 
-        # Bind while the character barrier is closed. setup_datagen_follower_oracle
-        # restarts the timeline so Kit reliably invokes BehaviorScript on_init/on_play.
+        # Bind while the character barrier is closed. The canonical script
+        # lazily runs on_play if Kit dynamically binds it to a playing timeline.
         carb.settings.get_settings().set(
             "/exts/people_sim/character_barrier_open", False
         )
@@ -4086,6 +4087,7 @@ def main() -> int:
                     f"state={oracle_diag['state']} "
                     f"navmesh={oracle_diag['navmesh_available']}"
                 )
+                step += 1
                 break
             mirror_datagen_oracle_to_robot(robot, oracle_pos, oracle_yaw)
             update_chase_camera(robot)
