@@ -87,6 +87,13 @@ def parse_args():
     p.add_argument("--image_save_dir",   type=str, default=None)
     p.add_argument("--output_metrics",   type=str, default=None)
     p.add_argument("--headless", action="store_true", default=False)
+    p.add_argument(
+        "--hide_robot_body",
+        action=argparse.BooleanOptionalAction,
+        default=os.environ.get("HIDE_ROBOT_BODY", "1").lower()
+        in {"1", "true", "yes", "on"},
+        help="Hide robot render geometry while retaining camera and collision state",
+    )
     p.add_argument("--follow_distance", type=float, default=1.5)
     p.add_argument("--chase_distance", type=float, default=1.5)
     p.add_argument("--chase_height", type=float, default=0.8)
@@ -127,6 +134,8 @@ def parse_args():
                    help="If >0, abort episode early when running tracking rate "
                         "stays below this threshold after --early_abort_min_steps "
                         "(default 0.0 = disabled)")
+    p.add_argument("--max_consecutive_snap_rejected", type=int, default=8,
+                   help="Abort after this many consecutive NavMesh motion rejections")
     p.add_argument("--character_speed", type=float, default=0.5,
                    help="Character walk speed fraction [0-1]. "
                         "1.0 = full animation speed (~1.2 m/s typical). "
@@ -182,8 +191,10 @@ _ROBOT_PRESETS = {
         "camera_link": "base",
         "drive_mode":  "kinematic",
         "cam_trans":   [0.0, 0.0, 0.3],
-        "footprint_radius": 0.40,
-        "planning_radius": 0.45,
+        # Tracking uses a common Dingo-sized abstract camera carrier. The
+        # selected robot model only changes camera/base height.
+        "footprint_radius": 0.28,
+        "planning_radius": 0.33,
     },
     "g1": {
         "usd":         "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/"
@@ -194,8 +205,8 @@ _ROBOT_PRESETS = {
         # pelvis is the ArticulationRoot (waist level). [0,0,0.3] would land inside
         # the torso mesh → black images. Push forward (X) and above torso top (Z).
         "cam_trans":   [0.2, 0.0, 0.45],
-        "footprint_radius": 0.32,
-        "planning_radius": 0.38,
+        "footprint_radius": 0.28,
+        "planning_radius": 0.33,
     },
 }
 _preset = _ROBOT_PRESETS[ARGS.robot_type]
@@ -1287,6 +1298,24 @@ def clear_all_characters():
             simulation_app.update()
 
 
+def hide_robot_visual_geometry(stage) -> None:
+    """Hide robot meshes without hiding the policy camera or disabling physics."""
+    if not ARGS.hide_robot_body:
+        return
+    root = stage.GetPrimAtPath(ROBOT_PRIM_PATH)
+    hidden = 0
+    for prim in Usd.PrimRange(root):
+        if prim.GetTypeName() not in {
+            "Mesh", "Cube", "Sphere", "Capsule", "Cylinder", "Cone"
+        }:
+            continue
+        imageable = UsdGeom.Imageable(prim)
+        if imageable:
+            imageable.MakeInvisible()
+            hidden += 1
+    print(f"[Robot] Hidden {hidden} visual geometry prims; camera remains active")
+
+
 def add_robot_and_articulation(
     world: World,
     initial_position: Optional[Tuple[float, float, float]] = None,
@@ -1317,6 +1346,7 @@ def add_robot_and_articulation(
 
         # Disable gravity on all robot rigid bodies before first physics update.
         _setup_kinematic_root(stage)
+        hide_robot_visual_geometry(stage)
 
         update_sim(60)
 
@@ -1818,8 +1848,9 @@ def ensure_robot_above_ground(robot, ground_z: float) -> None:
 
 
 def reset_robot(robot, start_pos_xyz, start_yaw, world: World):
-    global _KIN_POS, _KIN_YAW, _ROBOT_BASE_Z
+    global _KIN_POS, _KIN_YAW, _ROBOT_BASE_Z, _ROBOT_GROUND_Z
     ground_z = float(start_pos_xyz[2]) if len(start_pos_xyz) >= 3 else 0.0
+    _ROBOT_GROUND_Z = ground_z
     _ROBOT_BASE_Z = ground_z + float(ARGS.robot_z_height)
     pos = np.array([start_pos_xyz[0], start_pos_xyz[1], _ROBOT_BASE_Z],
                    dtype=np.float32)
@@ -1984,6 +2015,7 @@ _REST_JOINT_POSITIONS: Optional[np.ndarray] = None
 _KIN_POS = np.zeros(3, dtype=np.float64)
 _KIN_YAW = 0.0
 _ROBOT_BASE_Z = float(ARGS.robot_z_height)
+_ROBOT_GROUND_Z = 0.0
 DATAGEN_ORACLE_PATH = "/World/DatagenFollowerOracle"
 
 
@@ -3456,6 +3488,8 @@ def _write_quality_result(ep_id: int, accepted: bool, metrics: dict,
             "footprint_radius": ARGS.robot_radius_2d,
             "planning_radius": ARGS.datagen_planning_radius,
             "base_z": _ROBOT_BASE_Z,
+            "ground_z": _ROBOT_GROUND_Z,
+            "hidden": ARGS.hide_robot_body,
         },
     }
     with open(os.path.join(episode_dir, "quality.json"), "w", encoding="utf-8") as f:
@@ -3682,7 +3716,8 @@ def main() -> int:
     # For kinematic robots: build rest pose (needs dof_names, available after reset),
     # apply it immediately, and sync desired-state globals to the first episode start.
     if ROBOT_DRIVE_MODE == "kinematic":
-        global _KIN_POS, _KIN_YAW, _ROBOT_BASE_Z
+        global _KIN_POS, _KIN_YAW, _ROBOT_BASE_Z, _ROBOT_GROUND_Z
+        _ROBOT_GROUND_Z = init_ground_z
         _ROBOT_BASE_Z = init_ground_z + float(ARGS.robot_z_height)
         _build_rest_joint_positions(robot)
         try:
@@ -3889,6 +3924,7 @@ def main() -> int:
             "oracle_action": np.zeros(3, dtype=np.float64),
             "oracle_unready_steps": 0,
             "snap_rejected_frames": 0,
+            "consecutive_snap_rejected": 0,
             "prev_linear": 0.0,
             "prev_angular": 0.0,
             "_last_mode": "",   # for mode-switch smoother reset
@@ -3960,21 +3996,11 @@ def main() -> int:
             # inside an obstacle cell.  Detect and recover to nearest free cell
             # so subsequent navmesh plans don't start from an invalid position.
             if ROBOT_DRIVE_MODE == "kinematic" and _detect_in_obstacle(robot_pos, occ):
-                nearest_free = _find_nearest_free(robot_pos, occ)
                 print(f"[EP{ep_id}] step={step} ABNORMAL STATE: robot "
                       f"({robot_pos[0]:.2f},{robot_pos[1]:.2f}) inside obstacle! "
-                      f"_KIN_BLOCKED_TOTAL={_KIN_BLOCKED_TOTAL} "
-                      f"nearest_free={nearest_free[:2].tolist() if nearest_free is not None else None}")
-                if nearest_free is not None:
-                    _KIN_POS[:] = [float(nearest_free[0]), float(nearest_free[1]),
-                                   _ROBOT_BASE_Z]
-                    snap_quat = np.array([math.cos(robot_yaw / 2.0), 0.0, 0.0,
-                                          math.sin(robot_yaw / 2.0)], dtype=np.float32)
-                    robot.set_world_pose(
-                        position=_KIN_POS.astype(np.float32), orientation=snap_quat)
-                    print(f"[EP{ep_id}] step={step} Snapped kinematic pos → "
-                          f"({nearest_free[0]:.2f},{nearest_free[1]:.2f})")
-                pursuit_state["path"] = None   # force replan from clean position
+                      f"_KIN_BLOCKED_TOTAL={_KIN_BLOCKED_TOTAL}; aborting episode")
+                done_reason = "robot_in_obstacle"
+                break
 
             # Track recent target positions (for velocity-based EVADE fallback).
             _TARGET_POS_HIST.append(target_pos[:2].copy())
@@ -3996,7 +4022,7 @@ def main() -> int:
                 if step % 5 == 0 or collision_count == 1:
                     print(f"[EP{ep_id}] step={step} COLLISION "
                           f"force={contact_force:.1f} N count={collision_count}")
-                if collision_count >= 3:
+                if collision_count >= 1:
                     done_reason = "collision"
                     _stop_drive(robot)
                     for _ in range(3):
@@ -4189,7 +4215,6 @@ def main() -> int:
             )
             for _ in range(ARGS.decimation):
                 world.step(render=False)
-                simulation_app.update()
                 _set_character_speeds(char_paths, ARGS.character_speed)
 
             oracle_pos, oracle_yaw, oracle_diag = read_datagen_oracle(datagen_oracle)
@@ -4228,6 +4253,20 @@ def main() -> int:
             pursuit_state["last_recovery_reason"] = oracle_diag["recovery_reason"]
             if oracle_diag["snap_rejected"]:
                 pursuit_state["snap_rejected_frames"] += 1
+                pursuit_state["consecutive_snap_rejected"] += 1
+            else:
+                pursuit_state["consecutive_snap_rejected"] = 0
+            if (ARGS.max_consecutive_snap_rejected > 0
+                    and pursuit_state["consecutive_snap_rejected"]
+                    >= ARGS.max_consecutive_snap_rejected):
+                done_reason = "navmesh_collision"
+                print(
+                    f"[EP{ep_id}] step={step} emergency stop: "
+                    f"snap rejected for "
+                    f"{pursuit_state['consecutive_snap_rejected']} consecutive steps"
+                )
+                step += 1
+                break
 
             if ARGS.save_images and step % ARGS.save_image_every == 0:
                 save_rgb_depth(
@@ -5090,6 +5129,17 @@ def main() -> int:
                         if len(target_visible) > 0 else 0.0)
         snap_rejected_frames = pursuit_state["snap_rejected_frames"]
         snap_rejected_rate = snap_rejected_frames / max(episode_length, 1)
+        robot_xy = np.column_stack([
+            np.asarray(ep_data.get("robot_pos_x", []), dtype=np.float32),
+            np.asarray(ep_data.get("robot_pos_y", []), dtype=np.float32),
+        ])
+        robot_step_distances = (
+            np.linalg.norm(np.diff(robot_xy, axis=0), axis=1)
+            if len(robot_xy) > 1 else np.zeros(0, dtype=np.float32)
+        )
+        robot_path_length = float(robot_step_distances.sum())
+        max_robot_step = (float(robot_step_distances.max())
+                          if len(robot_step_distances) else 0.0)
 
         # ── Save per-step frame data as NPZ (only for high-quality episodes) ──
         _max_final = (ARGS.max_final_dist if ARGS.max_final_dist > 0
@@ -5128,6 +5178,8 @@ def main() -> int:
             "collision":             collision_count,
             "snap_rejected_frames":  snap_rejected_frames,
             "snap_rejected_rate":    snap_rejected_rate,
+            "robot_path_length":     robot_path_length,
+            "max_robot_step":        max_robot_step,
             "initial_dist":          distances[0]  if distances else 0.0,
             "final_dist":            distances[-1] if distances else 0.0,
             "avg_dist":              float(np.mean(distances))      if distances      else 0.0,
