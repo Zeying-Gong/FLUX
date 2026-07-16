@@ -23,7 +23,7 @@ _CLOTHING_PROFILES = None
 _RUN_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 def _default_log_root() -> str:
-    return f"/workspace/FLUX/logs_formal_v2/tracking_{_RUN_TIMESTAMP}"
+    return f"/workspace/FLUX/logs_formal_v3/tracking_{_RUN_TIMESTAMP}"
 
 def parse_args():
     p = argparse.ArgumentParser(
@@ -3000,7 +3000,24 @@ def save_episode_video(save_dir: str, episode_id: int):
     else:
         print(f"[Video] EP{episode_id}: no RGB frames, skipping rgb_video.mp4")
 
-
+    # Depth video (convert metric uint16 depth → colormap on-the-fly)
+    depth_dir = os.path.join(ep_dir, "depth_mm")
+    depth_frames = sorted(glob.glob(os.path.join(depth_dir, "*.png")))
+    if depth_frames:
+        depth_out = os.path.join(ep_dir, "depth_video.mp4")
+        try:
+            from PIL import Image as _PIL
+            with imageio.get_writer(depth_out, fps=fps, codec="libx264") as w:
+                for fp in depth_frames:
+                    _d = np.asarray(_PIL.open(fp), dtype=np.float32) / 1000.0
+                    _viz = _colormap_depth(_d)
+                    w.append_data(_viz)
+            print(f"[Video] EP{episode_id}: saved {depth_out} "
+                  f"({len(depth_frames)} frames @ {fps:.1f} FPS)")
+        except Exception as e:
+            print(f"[Video] EP{episode_id}: depth video failed: {e}")
+    else:
+        print(f"[Video] EP{episode_id}: no depth frames, skipping depth_video.mp4")
 
 
 def resolve_target_character(episode: dict,
