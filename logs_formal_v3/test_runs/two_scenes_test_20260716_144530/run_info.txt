@@ -1,0 +1,13 @@
+run_name=two_scenes_test_20260716_144530
+scenes=0001_839920 0039_839888
+gpu_id=0
+max_steps=30
+save_video=1
+character_speed=0.5
+repo_dir=/mnt/nvme1/zeyingg/FLUX
+sage3d_dir=/mnt/ssd1/zeyingg/SAGE-3D_Official
+git_commit=0751e2d25a4d495b5e95f9ec40a316341642cde4
+started_at=2026-07-16T14:45:30+08:00
+OK: scene 0001_839920 done
+WARN: scene 0039_839888 exited with code 137
+finished_at=2026-07-16T14:52:06+08:00
