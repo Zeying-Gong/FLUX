@@ -101,6 +101,8 @@ class FollowerBehavior(BehaviorScript):
         self._nav_dominant = False
         self._snap_slide_count = 0
         self.snap_slide_hold_threshold = 3
+        self._previous_projection_origin = None
+        self._projection_cycle_count = 0
         self.target_pos_history = []   # 用于观察 human 朝 robot 移动
         self._prev_target_motion_pos = None
         self.human_in_frame = False
@@ -976,6 +978,11 @@ class FollowerBehavior(BehaviorScript):
         self._set_diagnostic_attr(
             "follower:snap_slide_count",
             int(self._snap_slide_count),
+            Sdf.ValueTypeNames.Int,
+        )
+        self._set_diagnostic_attr(
+            "follower:projection_cycle_count",
+            int(self._projection_cycle_count),
             Sdf.ValueTypeNames.Int,
         )
         self._set_diagnostic_attr(
@@ -2479,6 +2486,59 @@ class FollowerBehavior(BehaviorScript):
             )
         return False
 
+    def _is_immediate_projection_return(
+        self, previous_origin, current_pos, candidate_pos
+    ):
+        """Reject A->B->A NavMesh projection cycles while actively navigating."""
+        if previous_origin is None or self._last_state != "NAV_OMNI":
+            return False
+        previous_origin = np.asarray(previous_origin, dtype=np.float32)
+        current_pos = np.asarray(current_pos, dtype=np.float32)
+        candidate_pos = np.asarray(candidate_pos, dtype=np.float32)
+        previous_step = current_pos[:2] - previous_origin[:2]
+        candidate_step = candidate_pos[:2] - current_pos[:2]
+        previous_len = float(np.linalg.norm(previous_step))
+        candidate_len = float(np.linalg.norm(candidate_step))
+        min_cycle_step = max(0.01, float(self.stuck_move_eps) * 0.5)
+        if previous_len < min_cycle_step or candidate_len < min_cycle_step:
+            return False
+        return_tolerance = max(
+            float(self.stuck_move_eps) * 2.0,
+            float(self.my_radius) * 0.3,
+        )
+        returns_to_origin = (
+            float(np.linalg.norm(candidate_pos[:2] - previous_origin[:2]))
+            <= return_tolerance
+        )
+        direction_cos = float(np.dot(previous_step, candidate_step)) / max(
+            previous_len * candidate_len, 1e-6
+        )
+        return returns_to_origin and direction_cos <= -0.8
+
+    def _invalidate_oscillating_route(
+        self, mode, previous_origin, current_pos, candidate_pos
+    ):
+        self.cached_path = []
+        self.cached_waypoint_idx = 0
+        self.last_target_pos = None
+        self._current_nav_waypoint = None
+        self._last_path_detour_active = False
+        self._path_query_failed = True
+        self._projection_cycle_count += 1
+        self._reset_snap_slide_count()
+        self._log_event(
+            f"projection_two_point_cycle_{mode}",
+            (
+                f"reject A-B-A projection cycle({mode}): "
+                f"A=({previous_origin[0]:.3f},{previous_origin[1]:.3f}), "
+                f"B=({current_pos[0]:.3f},{current_pos[1]:.3f}), "
+                f"candidate=({candidate_pos[0]:.3f},{candidate_pos[1]:.3f}); "
+                "invalidating route"
+            ),
+            cooldown=0.5,
+            level="warn",
+        )
+
     def _project_motion_to_navmesh(self, current_pos, desired_pos, desired_dir, mode):
         """Constrain motion to NavMesh while preserving progress near edges.
 
@@ -2493,6 +2553,8 @@ class FollowerBehavior(BehaviorScript):
 
         desired_pos = np.asarray(desired_pos, dtype=np.float32)
         current_pos = np.asarray(current_pos, dtype=np.float32)
+        previous_origin = self._previous_projection_origin
+        self._previous_projection_origin = current_pos.copy()
         desired_pos = self._preserve_follower_center_z(desired_pos, current_pos)
         current_pos = self._preserve_follower_center_z(current_pos, current_pos)
         desired_step = desired_pos[:2] - current_pos[:2]
@@ -2527,10 +2589,21 @@ class FollowerBehavior(BehaviorScript):
             regress_limit = -max(0.01, step_len * 0.5)
             route_ok = route_progress is None or route_progress >= regress_limit
             step_ok = projected_step <= max_projected_step
+            immediate_return = self._is_immediate_projection_return(
+                previous_origin, current_pos, snapped_pos
+            )
+            if immediate_return:
+                self._log_event(
+                    f"projection_return_candidate_{mode}",
+                    "ignoring NavMesh candidate that returns to the previous origin",
+                    cooldown=0.5,
+                    level="warn",
+                )
             if (
                 (projected_step >= min_progress or step_len < 1e-6)
                 and route_ok
                 and step_ok
+                and not immediate_return
             ):
                 result = desired_pos.copy()
                 result[0] = snapped_pos[0]
@@ -2547,7 +2620,8 @@ class FollowerBehavior(BehaviorScript):
                     cooldown=0.5,
                     level="warn",
                 )
-                if route_ok and projected_step >= min_progress:
+                if (route_ok and projected_step >= min_progress
+                        and not immediate_return):
                     result, bounded_step = self._limit_projected_step(
                         current_pos,
                         snapped_pos,
@@ -2589,18 +2663,29 @@ class FollowerBehavior(BehaviorScript):
                         self._current_nav_waypoint,
                         max_projected_step,
                     )
-                self._log_event(
-                    f"snap_waypoint_{mode}",
-                    (
-                        f"snap waypoint({mode}): "
-                        f"dist={waypoint_dist:.3f}->{bounded_dist:.3f}, "
-                        f"limit={waypoint_snap_dist:.3f}"
-                    ),
-                    cooldown=0.5,
-                    level="warn",
+                immediate_return = self._is_immediate_projection_return(
+                    previous_origin, current_pos, result
                 )
-                self._reset_snap_slide_count()
-                return self._preserve_follower_center_z(result, current_pos), False
+                if immediate_return:
+                    self._log_event(
+                        f"skip_returning_waypoint_{mode}",
+                        "skip waypoint candidate that closes an A-B-A cycle",
+                        cooldown=0.5,
+                        level="warn",
+                    )
+                else:
+                    self._log_event(
+                        f"snap_waypoint_{mode}",
+                        (
+                            f"snap waypoint({mode}): "
+                            f"dist={waypoint_dist:.3f}->{bounded_dist:.3f}, "
+                            f"limit={waypoint_snap_dist:.3f}"
+                        ),
+                        cooldown=0.5,
+                        level="warn",
+                    )
+                    self._reset_snap_slide_count()
+                    return self._preserve_follower_center_z(result, current_pos), False
 
         direction_candidates = []
         desired_norm = float(np.linalg.norm(desired_dir))
@@ -2669,6 +2754,10 @@ class FollowerBehavior(BehaviorScript):
             regress_limit = -max(0.02, step_len)
             if route_progress is not None and route_progress < regress_limit:
                 continue
+            if self._is_immediate_projection_return(
+                previous_origin, current_pos, motion_target
+            ):
+                continue
 
             displacement = motion_target[:2] - current_pos[:2]
             progress = float(np.dot(displacement / max(moved, 1e-6), reference_dir))
@@ -2694,7 +2783,11 @@ class FollowerBehavior(BehaviorScript):
             route_progress = self._motion_route_progress(current_pos, snapped_pos)
             regress_limit = -max(0.01, step_len * 0.5)
             route_ok = route_progress is None or route_progress >= regress_limit
-            if route_ok and projected_step >= min_progress:
+            immediate_return = self._is_immediate_projection_return(
+                previous_origin, current_pos, snapped_pos
+            )
+            if (route_ok and projected_step >= min_progress
+                    and not immediate_return):
                 if projected_step > max_projected_step:
                     result, _ = self._limit_projected_step(
                         current_pos,
@@ -2720,7 +2813,18 @@ class FollowerBehavior(BehaviorScript):
                 level="warn",
             )
 
-        self._reset_snap_slide_count()
+        if (
+            previous_origin is not None
+            and snapped_pos is not None
+            and self._is_immediate_projection_return(
+                previous_origin, current_pos, snapped_pos
+            )
+        ):
+            self._invalidate_oscillating_route(
+                mode, previous_origin, current_pos, snapped_pos
+            )
+        else:
+            self._reset_snap_slide_count()
         return self._preserve_follower_center_z(current_pos, current_pos), True
 
     def _compute_path(

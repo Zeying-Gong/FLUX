@@ -2137,6 +2137,7 @@ def read_datagen_oracle(oracle):
         "recovery_count": int(attr("follower:stuck_recovery_count", 0)),
         "recovery_reason": str(attr("follower:last_recovery_reason", "")),
         "snap_rejected": bool(attr("follower:snap_rejected", False)),
+        "projection_cycle_count": int(attr("follower:projection_cycle_count", 0)),
         "navmesh_available": bool(attr("follower:navmesh_available", False)),
     }
     return np.array([pos[0], pos[1], pos[2]], dtype=np.float64), robot_yaw, diagnostics
@@ -3930,6 +3931,7 @@ def main() -> int:
             "oracle_unready_steps": 0,
             "snap_rejected_frames": 0,
             "consecutive_snap_rejected": 0,
+            "projection_cycle_count": 0,
             "consecutive_robot_in_obstacle": 0,
             "prev_linear": 0.0,
             "prev_angular": 0.0,
@@ -4283,6 +4285,10 @@ def main() -> int:
             pursuit_state["recovery_frames"] += int(oracle_diag["recovery_active"])
             pursuit_state["recovery_count"] = oracle_diag["recovery_count"]
             pursuit_state["last_recovery_reason"] = oracle_diag["recovery_reason"]
+            pursuit_state["projection_cycle_count"] = max(
+                pursuit_state["projection_cycle_count"],
+                oracle_diag["projection_cycle_count"],
+            )
             if oracle_diag["snap_rejected"]:
                 pursuit_state["snap_rejected_frames"] += 1
                 pursuit_state["consecutive_snap_rejected"] += 1
@@ -5210,6 +5216,7 @@ def main() -> int:
             "collision":             collision_count,
             "snap_rejected_frames":  snap_rejected_frames,
             "snap_rejected_rate":    snap_rejected_rate,
+            "projection_cycle_count": pursuit_state["projection_cycle_count"],
             "robot_path_length":     robot_path_length,
             "max_robot_step":        max_robot_step,
             "initial_dist":          distances[0]  if distances else 0.0,
