@@ -3558,6 +3558,7 @@ def setup_episode_full(
           f"start_yaw={math.degrees(robot_start_yaw):.1f} deg, "
           f"target_prim={target_prim_path}")
     reset_robot(robot, robot_start_pos_xyz, robot_start_yaw, world)
+    hide_robot_visual_geometry(omni.usd.get_context().get_stage())
 
     update_chase_camera(robot)
     for _ in range(3):
@@ -3722,6 +3723,9 @@ def main() -> int:
     setup_robot_contact_report(omni.usd.get_context().get_stage())
 
     world.reset()
+    # Articulation reset may repopulate or resync referenced render prims.
+    # Reapply inherited visibility before the next rendered Kit update.
+    hide_robot_visual_geometry(omni.usd.get_context().get_stage())
     update_sim(10)
 
     setup_robot_contact_sensor(world)
