@@ -10,6 +10,7 @@ MAX_STEPS="${MAX_STEPS:-300}"
 SAVE_VIDEO="${SAVE_VIDEO:-1}"
 CHARACTER_SPEED="${CHARACTER_SPEED:-0.5}"
 RENDER_WARMUP_FRAMES="${RENDER_WARMUP_FRAMES:-180}"
+COLLECTOR="${COLLECTOR:-tracking_episode_collection_datagen.py}"
 SAGE3D_DIR="${SAGE3D_DIR:-/mnt/ssd1/zeyingg/SAGE-3D_Official}"
 ISAAC_CACHE_DIR="${ISAAC_CACHE_DIR:-$HOME/.cache/flux-isaac-sim}"
 RUN_TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
@@ -18,8 +19,8 @@ HOST_RUN_DIR="$REPO_DIR/logs_formal_v3/test_runs/$RUN_NAME"
 CONTAINER_RUN_DIR="/workspace/FLUX/logs_formal_v3/test_runs/$RUN_NAME"
 EPISODE_DIR="$SAGE3D_DIR/SAGE-3D_data/v3_tracking_episodes/$SCENE_ID"
 
-[ -f "$REPO_DIR/sage_utils/tracking_episode_collection_datagen.py" ] || {
-  echo "Missing datagen collector. Pull the latest dev branch." >&2
+[ -f "$REPO_DIR/sage_utils/$COLLECTOR" ] || {
+  echo "Missing collector: sage_utils/$COLLECTOR. Pull the latest dev branch." >&2
   exit 1
 }
 [ -d "$EPISODE_DIR" ] || {
@@ -45,6 +46,7 @@ LOG_FILE="$HOST_RUN_DIR/console.log"
   echo "save_video=$SAVE_VIDEO"
   echo "character_speed=$CHARACTER_SPEED"
   echo "render_warmup_frames=$RENDER_WARMUP_FRAMES"
+  echo "collector=$COLLECTOR"
   echo "repo_dir=$REPO_DIR"
   echo "sage3d_dir=$SAGE3D_DIR"
   echo "cache_dir=$ISAAC_CACHE_DIR"
@@ -75,7 +77,7 @@ docker run --rm -i \
   -w /workspace \
   quay.io/zeyinggong/flux:v2_deploy \
   -c "/isaac-sim/python.sh \
-    /workspace/FLUX/sage_utils/tracking_episode_collection_datagen.py \
+    /workspace/FLUX/sage_utils/$COLLECTOR \
     --episode_dir /workspace/SAGE-3D_Official/SAGE-3D_data/v3_tracking_episodes/$SCENE_ID \
     --robot_type go2 \
     --camera_type zed \
