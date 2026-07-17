@@ -1,0 +1,11 @@
+run_name=two_scenes_test_20260716_203229
+scenes=0001_839920 0039_839888
+gpu_id=0
+max_steps=600
+save_video=1
+character_speed=0.5
+repo_dir=/mnt/nvme1/zeyingg/FLUX
+sage3d_dir=/mnt/ssd1/zeyingg/SAGE-3D_Official
+git_commit=c805dbd35312ff2a8ed4a858292ab5f56abac8c5
+started_at=2026-07-16T20:32:29+08:00
+WARN: scene 0001_839920 exited with code 141
