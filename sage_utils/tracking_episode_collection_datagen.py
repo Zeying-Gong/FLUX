@@ -184,7 +184,7 @@ _ROBOT_PRESETS = {
         "drive_mode":  "diff_drive",
         "cam_trans":   [0.0, 0.0, 0.3],
         "footprint_radius": 0.28,
-        "planning_radius": 0.33,
+        "planning_radius": 0.28,
     },
     "go2": {
         "usd":         "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/"
@@ -196,7 +196,7 @@ _ROBOT_PRESETS = {
         # Tracking uses a common Dingo-sized abstract camera carrier. The
         # selected robot model only changes camera/base height.
         "footprint_radius": 0.28,
-        "planning_radius": 0.33,
+        "planning_radius": 0.28,
     },
     "g1": {
         "usd":         "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/"
@@ -208,7 +208,7 @@ _ROBOT_PRESETS = {
         # the torso mesh → black images. Push forward (X) and above torso top (Z).
         "cam_trans":   [0.2, 0.0, 0.45],
         "footprint_radius": 0.28,
-        "planning_radius": 0.33,
+        "planning_radius": 0.28,
     },
 }
 _preset = _ROBOT_PRESETS[ARGS.robot_type]
@@ -3329,18 +3329,16 @@ def save_episode_video(save_dir: str, episode_id: int):
     else:
         print(f"[Video] EP{episode_id}: no RGB frames, skipping rgb_video.mp4")
 
-    # Depth video (convert metric uint16 depth → colormap on-the-fly)
+    # Depth video: encode the saved grayscale uint16 frames directly. The MP4
+    # is for inspection; depth_mm PNG files remain the lossless metric source.
     depth_dir = os.path.join(ep_dir, "depth_mm")
     depth_frames = sorted(glob.glob(os.path.join(depth_dir, "*.png")))
     if depth_frames:
         depth_out = os.path.join(ep_dir, "depth_video.mp4")
         try:
-            from PIL import Image as _PIL
             with imageio.get_writer(depth_out, fps=fps, codec="libx264") as w:
                 for fp in depth_frames:
-                    _d = np.asarray(_PIL.open(fp), dtype=np.float32) / 1000.0
-                    _viz = _colormap_depth(_d)
-                    w.append_data(_viz)
+                    w.append_data(imageio.imread(fp))
             print(f"[Video] EP{episode_id}: saved {depth_out} "
                   f"({len(depth_frames)} frames @ {fps:.1f} FPS)")
         except Exception as e:
@@ -4078,14 +4076,30 @@ def main() -> int:
             if pursuit_state["target_low_motion_frames"] >= max(
                     1, int(round(3.0 / _incident_dt))):
                 # A character normally remains stationary after its command queue
-                # finishes.  Check the authoritative completion flag before
-                # classifying the same observation as a blocking incident.
-                if _read_commands_done(target_prim_path, step):
+                # finishes. Check both the authoritative completion flag and the
+                # final GoTo waypoint because commandsDone is unreliable for some
+                # dynamically rebound CharacterBehavior instances.
+                _final_target_dist = float("inf")
+                if _TARGET_TRAJ_CACHE:
+                    _final_target_xy = np.asarray(
+                        _TARGET_TRAJ_CACHE[-1][:2], dtype=np.float64
+                    )
+                    _final_target_dist = float(np.linalg.norm(
+                        target_pos[:2] - _final_target_xy
+                    ))
+                _at_final_goto = _final_target_dist <= 0.25
+                _tracking_at_endpoint = (
+                    ARGS.datagen_too_close_distance <= dist_to_target
+                    <= ARGS.tracking_dist_max
+                )
+                if (_read_commands_done(target_prim_path, step)
+                        or (_at_final_goto and _tracking_at_endpoint)):
                     _tgt_done = True
                     _tgt_done_step = step
                     done_reason = "char_done"
                     print(f"[EP{ep_id}] step={step} EPISODE END: char_done "
-                          f"(commandsDone observed during low-motion check, "
+                          f"(low-motion endpoint check: "
+                          f"final_goto_dist={_final_target_dist:.3f}m, "
                           f"final dist={dist_to_target:.2f}m)")
                 else:
                     pursuit_state["target_low_motion_incident"] = True
