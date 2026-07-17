@@ -3781,8 +3781,8 @@ def main() -> int:
     print(f"[Robot] settled at {init_pos.tolist()}, "
           f"yaw={math.degrees(init_yaw):.1f} deg")
 
-    init_chase_camera(distance=ARGS.chase_distance, height=ARGS.chase_height)
-    update_chase_camera(robot)
+    # init_chase_camera(distance=ARGS.chase_distance, height=ARGS.chase_height)
+    # update_chase_camera(robot)
     update_sim(3)
 
     cam = spawn_policy_camera()
