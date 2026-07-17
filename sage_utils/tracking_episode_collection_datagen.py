@@ -115,8 +115,8 @@ def parse_args():
     p.add_argument("--max_collisions", type=int, default=0,
                    help="Max collisions allowed to save data (default 0)")
     p.add_argument("--allow_recovery", action=argparse.BooleanOptionalAction,
-                   default=False,
-                   help="Allow episodes with recovery events in saved data")
+                   default=True,
+                   help="Allow episodes with recovery events in saved data (default: enabled)")
     p.add_argument("--max_final_dist", type=float, default=3.0,
                    help="Max final distance to target (default: 3.0)")
     p.add_argument("--allowed_end_reasons", type=str,
@@ -2796,13 +2796,13 @@ def save_rgb_depth(cam: IsaacCamera, step_idx: int, save_dir: str, episode_id: i
 
     Output structure:
       rgb/{step:05d}.png      — 640×360 uint8 RGB
-      depth_mm/{step:05d}.png — 640×360 uint16, depth in millimeters (I;16 PNG)
+      depth/{step:05d}.png — 640×360 uint16, depth in millimeters (I;16 PNG)
       depth_viz/{step:05d}.png — 640×360 uint8 jet-colormap depth (for visual inspection)
 
     Reading depth in Python:
         from PIL import Image
         import numpy as np
-        depth_mm = np.asarray(Image.open("depth_mm/00000.png"), dtype=np.uint16)
+        depth_mm = np.asarray(Image.open("depth/00000.png"), dtype=np.uint16)
         depth_m  = depth_mm.astype(np.float32) / 1000.0
 
     target_crops/{step}.png  — bbox crop of target (only first frame by default,
@@ -2821,15 +2821,15 @@ def save_rgb_depth(cam: IsaacCamera, step_idx: int, save_dir: str, episode_id: i
             depth = np.zeros((CAM_H, CAM_W), dtype=np.float32)
         episode_dir = os.path.join(save_dir, f"episode_{episode_id:04d}")
         rgb_dir     = os.path.join(episode_dir, "rgb")
-        depth_mm_dir = os.path.join(episode_dir, "depth_mm")
+        depth_dir = os.path.join(episode_dir, "depth")
         os.makedirs(rgb_dir,      exist_ok=True)
-        os.makedirs(depth_mm_dir, exist_ok=True)
+        os.makedirs(depth_dir, exist_ok=True)
         # RGB
         Image.fromarray(rgb).save(os.path.join(rgb_dir, f"{step_idx:05d}.png"))
         # Depth in millimeters (uint16) — for training / metric use
         depth_mm = (depth * 1000.0).clip(0, 65535).astype(np.uint16)
         Image.fromarray(depth_mm, mode="I;16").save(
-            os.path.join(depth_mm_dir, f"{step_idx:05d}.png"))
+            os.path.join(depth_dir, f"{step_idx:05d}.png"))
         # Bbox crop: only on first frame (visual navigation target)
         if target_bbox is not None and is_first_episode_frame:
             save_bbox_crop(rgb, target_bbox, step_idx, save_dir, episode_id)
@@ -3369,8 +3369,8 @@ def save_episode_video(save_dir: str, episode_id: int):
         print(f"[Video] EP{episode_id}: no RGB frames, skipping rgb_video.mp4")
 
     # Depth video: encode the saved grayscale uint16 frames directly. The MP4
-    # is for inspection; depth_mm PNG files remain the lossless metric source.
-    depth_dir = os.path.join(ep_dir, "depth_mm")
+    # is for inspection; depth PNG files remain the lossless metric source.
+    depth_dir = os.path.join(ep_dir, "depth")
     depth_frames = sorted(glob.glob(os.path.join(depth_dir, "*.png")))
     if depth_frames:
         depth_out = os.path.join(ep_dir, "depth_video.mp4")
