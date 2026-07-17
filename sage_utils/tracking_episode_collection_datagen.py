@@ -437,13 +437,20 @@ def setup_robot_contact_sensor(world: "World") -> None:
     if _ROBOT_ARTICULATION_PATH is None:
         return
     try:
+        stage = omni.usd.get_context().get_stage()
+        contact_path = _ROBOT_ARTICULATION_PATH
+        contact_prim = stage.GetPrimAtPath(contact_path)
+        if not contact_prim.HasAPI(UsdPhysics.RigidBodyAPI):
+            contact_path = _find_first_rigid_body_path(stage, ROBOT_PRIM_PATH)
+        if contact_path is None:
+            raise RuntimeError("no robot rigid body available for contact reporting")
         _robot_rigid_view = RigidPrimView(
-            prim_paths_expr=_ROBOT_ARTICULATION_PATH,
+            prim_paths_expr=contact_path,
             name="robot_base_contact_view",
             track_contact_forces=True,
         )
         world.scene.add(_robot_rigid_view)
-        print(f"[Collision] RigidPrimView contact sensor on {_ROBOT_ARTICULATION_PATH}.")
+        print(f"[Collision] RigidPrimView contact sensor on {contact_path}.")
     except Exception as e:
         print(f"[Collision] WARN: RigidPrimView setup failed: {e}")
         _robot_rigid_view = None
@@ -1327,6 +1334,28 @@ def hide_robot_visual_geometry(stage) -> None:
           "camera remains active")
 
 
+def sanitize_diff_drive_articulation_root(stage) -> None:
+    """Remove an invalid container rigid body before PhysX creates its views."""
+    if ROBOT_DRIVE_MODE != "diff_drive":
+        return
+    root = stage.GetPrimAtPath(ROBOT_PRIM_PATH)
+    if not root or not root.IsValid() or not root.HasAPI(UsdPhysics.RigidBodyAPI):
+        return
+    has_child_rigid_body = any(
+        prim != root and prim.HasAPI(UsdPhysics.RigidBodyAPI)
+        for prim in Usd.PrimRange(root)
+    )
+    if not has_child_rigid_body:
+        return
+    if root.RemoveAPI(UsdPhysics.RigidBodyAPI):
+        print(f"[Robot] Removed invalid container RigidBodyAPI from "
+              f"{ROBOT_PRIM_PATH}; child link rigid bodies remain active")
+    else:
+        raise RuntimeError(
+            f"Failed to remove invalid RigidBodyAPI from {ROBOT_PRIM_PATH}"
+        )
+
+
 def add_robot_and_articulation(
     world: World,
     initial_position: Optional[Tuple[float, float, float]] = None,
@@ -1339,6 +1368,7 @@ def add_robot_and_articulation(
             raise FileNotFoundError(f"Robot USD not found: {ARGS.robot_usd}")
         print(f"[Robot] Adding reference: {ARGS.robot_usd}")
         add_reference_to_stage(ARGS.robot_usd, ROBOT_PRIM_PATH)
+        sanitize_diff_drive_articulation_root(stage)
 
         if initial_position is not None:
             robot_prim = stage.GetPrimAtPath(ROBOT_PRIM_PATH)
