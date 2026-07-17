@@ -1,0 +1,15 @@
+run_name=go2_zed_datagen_0039_839888_20260717_222626
+scene_id=0039_839888
+gpu_id=0
+max_steps=300
+save_video=1
+character_speed=0.5
+render_warmup_frames=180
+collector=tracking_episode_collection_camera_only.py
+repo_dir=/mnt/nvme1/zeyingg/FLUX
+sage3d_dir=/mnt/ssd1/zeyingg/SAGE-3D_Official
+cache_dir=/home/zeyingg/.cache/flux-isaac-sim
+git_commit=5879a4bf31992eef82e842618264a96a2df4a96f
+started_at=2026-07-17T22:26:26+08:00
+finished_at=2026-07-17T22:29:22+08:00
+exit_code=0
