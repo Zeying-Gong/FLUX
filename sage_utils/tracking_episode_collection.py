@@ -52,7 +52,7 @@ def parse_args():
                    help="Explicit path to semantic map JSON.  "
                         "Auto-derived from --semantic_maps_root and scene_id when omitted.")
     p.add_argument("--occ_scale",        type=float, default=0.1)
-    p.add_argument("--robot_radius_2d",  type=float, default=0.3)
+    p.add_argument("--robot_radius_2d",  type=float, default=0.2)
     p.add_argument("--robot_usd",
                    default="/workspace/FLUX/assets/robots/dingo_fixed.usd")
     p.add_argument("--robot_z_height", type=float, default=0.1)
@@ -294,7 +294,7 @@ REPLAN_TARGET_THR = 0.5
 LOOKAHEAD_DIST    = 0.6
 WAYPOINT_REACH    = 0.3
 MAX_PLAN_FAILS    = 5
-NM_AGENT_RADIUS   = 0.25
+NM_AGENT_RADIUS   = 0.20
 
 STUCK_WINDOW          = 8
 STUCK_POS_THRESH      = 0.12
@@ -3270,6 +3270,13 @@ def main() -> int:
 
             delta = target_pos[:2] - robot_pos[:2]
             dist_to_target = float(np.linalg.norm(delta))
+            _ped_collision_dist = float(ARGS.robot_radius_2d) + 0.30
+            if dist_to_target < _ped_collision_dist:
+                print(f"[EP{ep_id}] step={step} PEDESTRIAN COLLISION target "
+                      f"dist={dist_to_target:.3f}m < {_ped_collision_dist:.3f}m")
+                done_reason = "pedestrian_collision"
+                _stop_drive(robot)
+                break
             if dist_to_target > 1e-6:
                 desired_yaw = math.atan2(float(delta[1]), float(delta[0]))
             else:
@@ -3296,6 +3303,7 @@ def main() -> int:
 
             # ── Non-target pedestrian: distance + angle + camera FOV ────
             _ped_min_step = float("inf")
+            _ped_nearest_name = ""
             _ped_detail_parts: List[str] = []
             for _pn, _pp_path in char_paths.items():
                 if _pp_path == target_prim_path:
@@ -3315,9 +3323,17 @@ def main() -> int:
                     f"{_pn}:d={_pd:.2f}m ang={_pang:+.1f}° fov={_fov_tag}")
                 if _pd < _ped_min_step:
                     _ped_min_step = _pd
+                    _ped_nearest_name = _pn
             if _ped_min_step < float("inf"):
                 ep_min_ped_dist = min(ep_min_ped_dist, _ped_min_step)
             _rec["ped_min"] = _ped_min_step
+            if _ped_min_step < _ped_collision_dist:
+                print(f"[EP{ep_id}] step={step} PEDESTRIAN COLLISION "
+                      f"character={_ped_nearest_name} dist={_ped_min_step:.3f}m "
+                      f"< {_ped_collision_dist:.3f}m")
+                done_reason = "pedestrian_collision"
+                _stop_drive(robot)
+                break
 
             # Target angle relative to robot heading (separate from dist which is already tracked)
             _tgt_ang = math.degrees(math.atan2(

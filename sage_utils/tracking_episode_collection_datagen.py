@@ -183,8 +183,8 @@ _ROBOT_PRESETS = {
         "camera_link": "base_link",
         "drive_mode":  "diff_drive",
         "cam_trans":   [0.0, 0.0, 0.3],
-        "footprint_radius": 0.28,
-        "planning_radius": 0.28,
+        "footprint_radius": 0.20,
+        "planning_radius": 0.20,
     },
     "go2": {
         "usd":         "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/"
@@ -195,8 +195,8 @@ _ROBOT_PRESETS = {
         "cam_trans":   [0.0, 0.0, 0.3],
         # Tracking uses a common Dingo-sized abstract camera carrier. The
         # selected robot model only changes camera/base height.
-        "footprint_radius": 0.28,
-        "planning_radius": 0.28,
+        "footprint_radius": 0.20,
+        "planning_radius": 0.20,
     },
     "g1": {
         "usd":         "/workspace/FLUX/assets/isaacsim_assets/Assets/Isaac/4.5/"
@@ -207,8 +207,8 @@ _ROBOT_PRESETS = {
         # pelvis is the ArticulationRoot (waist level). [0,0,0.3] would land inside
         # the torso mesh → black images. Push forward (X) and above torso top (Z).
         "cam_trans":   [0.2, 0.0, 0.45],
-        "footprint_radius": 0.28,
-        "planning_radius": 0.28,
+        "footprint_radius": 0.20,
+        "planning_radius": 0.20,
     },
 }
 _preset = _ROBOT_PRESETS[ARGS.robot_type]
@@ -354,7 +354,7 @@ REPLAN_TARGET_THR = 0.5
 LOOKAHEAD_DIST    = 0.6
 WAYPOINT_REACH    = 0.3
 MAX_PLAN_FAILS    = 5
-NM_AGENT_RADIUS   = 0.25
+NM_AGENT_RADIUS   = 0.20
 
 STUCK_WINDOW          = 8
 STUCK_POS_THRESH      = 0.12
@@ -4149,6 +4149,7 @@ def main() -> int:
 
             # ── Non-target pedestrian: distance + angle + camera FOV ────
             _ped_min_step = float("inf")
+            _ped_nearest_name = ""
             _ped_detail_parts: List[str] = []
             for _pn, _pp_path in char_paths.items():
                 if _pp_path == target_prim_path:
@@ -4168,9 +4169,18 @@ def main() -> int:
                     f"{_pn}:d={_pd:.2f}m ang={_pang:+.1f}° fov={_fov_tag}")
                 if _pd < _ped_min_step:
                     _ped_min_step = _pd
+                    _ped_nearest_name = _pn
             if _ped_min_step < float("inf"):
                 ep_min_ped_dist = min(ep_min_ped_dist, _ped_min_step)
             _rec["ped_min"] = _ped_min_step
+            _non_target_collision_dist = float(ARGS.robot_radius_2d) + 0.30
+            if _ped_min_step < _non_target_collision_dist:
+                print(f"[EP{ep_id}] step={step} PEDESTRIAN COLLISION "
+                      f"character={_ped_nearest_name} dist={_ped_min_step:.3f}m "
+                      f"< {_non_target_collision_dist:.3f}m")
+                done_reason = "pedestrian_collision"
+                _stop_drive(robot)
+                break
 
             # Target angle relative to robot heading (separate from dist which is already tracked)
             _tgt_ang = math.degrees(math.atan2(

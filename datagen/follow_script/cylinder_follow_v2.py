@@ -50,7 +50,7 @@ class FollowerBehavior(BehaviorScript):
         self.follower_prim_path = str(self.prim_path)
 
         # Habitat 对齐参数（来自 hssd_spot_human_social_nav.yaml）
-        self.my_radius = 0.35
+        self.my_radius = 0.20
         self.follow_distance = 1.5    # 兼容旧配置；控制实际使用 safe_dis_max/path_stop_distance
         self.too_close_distance = 1.0 # 低于该距离必须后退，避免贴近碰撞
         self.safe_dis_min = 1.2       # 慢速带外沿：1.0~1.2m 减速贴近
@@ -88,7 +88,7 @@ class FollowerBehavior(BehaviorScript):
         self.last_target_pos = None    # 上次规划时的目标位置
         self.max_navmesh_snap = 0.25   # 候选点投影到 navmesh 的最大允许偏差（米）
         self.target_navmesh_snap = 1.0 # 目标 SkelRoot 在货架转角可允许更远投影
-        self.planning_radius = 0.55    # 正常跟随用更保守的 NavMesh 半径，给货架角留余量
+        self.planning_radius = 0.20    # Overridden by follower:planning_radius when configured.
         self.path_stop_distance = self.too_close_distance  # 进入目标半径后暂停；NavMesh 路线仍规划到目标
         self._current_nav_waypoint = None
         self._last_nav_path_distance = None
