@@ -1,0 +1,45 @@
+{
+  "camera": {
+    "model": "pinhole",
+    "axes": "ros",
+    "width": 1280,
+    "height": 720,
+    "intrinsics": {
+      "fx": 521.8461538461539,
+      "fy": 521.8461538461539,
+      "cx": 640.0,
+      "cy": 360.0,
+      "k": [
+        [
+          521.8461538461539,
+          0.0,
+          640.0
+        ],
+        [
+          0.0,
+          521.8461538461539,
+          360.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    "extrinsics_robot_to_camera": {
+      "translation": [
+        0.0,
+        0.0,
+        0.3
+      ],
+      "camera_link": "base"
+    },
+    "clipping_range": [
+      0.01,
+      100.0
+    ],
+    "focal_length_mm": 2.12,
+    "horizontal_aperture_mm": 5.2
+  }
+}
