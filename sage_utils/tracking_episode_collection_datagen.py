@@ -1301,10 +1301,18 @@ def clear_all_characters():
 
 
 def hide_robot_visual_geometry(stage) -> None:
-    """Hide robot meshes without hiding the policy camera or disabling physics."""
+    """Hide the robot render subtree without disabling its camera or physics."""
     if not ARGS.hide_robot_body:
         return
     root = stage.GetPrimAtPath(ROBOT_PRIM_PATH)
+    if not root or not root.IsValid():
+        return
+
+    # Hide at the reference root so payloads and instance geometry populated by
+    # later Kit updates inherit invisibility too. Camera render products remain
+    # usable when their prim is under an invisible render subtree.
+    UsdGeom.Imageable(root).MakeInvisible()
+
     hidden = 0
     for prim in Usd.PrimRange(root):
         if prim.GetTypeName() not in {
@@ -1315,7 +1323,8 @@ def hide_robot_visual_geometry(stage) -> None:
         if imageable:
             imageable.MakeInvisible()
             hidden += 1
-    print(f"[Robot] Hidden {hidden} visual geometry prims; camera remains active")
+    print(f"[Robot] Hidden render subtree and {hidden} loaded geometry prims; "
+          "camera remains active")
 
 
 def add_robot_and_articulation(
