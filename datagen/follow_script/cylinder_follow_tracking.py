@@ -110,6 +110,8 @@ class FollowerBehavior(BehaviorScript):
         self.target_pos_history = []   # Recent observed human trail for path fallback.
         self.target_pos_history_limit = 300
         self._corridor_center_offset = 0.0
+        self._turn_only_elapsed = 0.0
+        self._trail_override_until = 0.0
         self._consecutive_path_failures = 0
         self._prev_target_motion_pos = None
         self.human_in_frame = False
@@ -708,6 +710,31 @@ class FollowerBehavior(BehaviorScript):
                     ])
                 angle_to_waypoint = self._get_angle(robot_forward_2d, to_waypoint_2d)
                 self._log_state_transition("NAV_OMNI", tracking_distance, angle_to_human, angle_to_waypoint)
+
+        turning_without_progress = (
+            not too_close_active
+            and abs(float(body_cmd[0])) < 0.05
+            and abs(float(body_cmd[2])) > 0.5
+        )
+        if turning_without_progress:
+            self._turn_only_elapsed += float(delta_time)
+        else:
+            self._turn_only_elapsed = max(
+                0.0, self._turn_only_elapsed - 2.0 * float(delta_time)
+            )
+        if self._turn_only_elapsed >= 0.8:
+            self._trail_override_until = self._debug_time + 1.5
+            self._consecutive_path_failures = max(
+                self._consecutive_path_failures, 3
+            )
+            self.cached_path = []
+            self._turn_only_elapsed = 0.0
+            self._log_event(
+                "turn_only_route_invalidated",
+                "route produced 0.8s turn-only motion; switching to human trail",
+                cooldown=0.8,
+                level="warn",
+            )
 
         self._apply_body_command(body_cmd, to_human_2d, delta_time, follower_yaw)
         updated_follower_pos, _ = self._get_prim_pose(self.follower_prim)
@@ -1630,7 +1657,10 @@ class FollowerBehavior(BehaviorScript):
         """Habitat oracle to_navmesh_waypoint mapped to Isaac body velocities."""
         next_waypoint = self._get_next_waypoint(follower_pos, target_pos, dist_to_human)
         path_points = self.cached_path if self.cached_path else None
-        if self._consecutive_path_failures >= 3:
+        if (
+            self._consecutive_path_failures >= 3
+            or self._debug_time < self._trail_override_until
+        ):
             trail_waypoint = self._historical_trail_waypoint(follower_pos)
             if trail_waypoint is not None:
                 next_waypoint = trail_waypoint

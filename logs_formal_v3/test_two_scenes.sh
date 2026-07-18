@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 GPU_ID="${GPU_ID:-0}"
-MAX_STEPS="${MAX_STEPS:-300}"
+MAX_STEPS="${MAX_STEPS:-600}"
 SAVE_VIDEO="${SAVE_VIDEO:-1}"
 COLLECTOR="${COLLECTOR:-tracking_episode_collection_camera_only.py}"
 FOLLOWER_SCRIPT="${FOLLOWER_SCRIPT:-/workspace/FLUX/datagen/follow_script/cylinder_follow_tracking.py}"

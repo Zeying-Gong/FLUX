@@ -41,7 +41,7 @@ def parse_args():
                         "of --episode_dir when omitted.")
     p.add_argument("--start_idx", type=int, default=0)
     p.add_argument("--end_idx",   type=int, default=-1)
-    p.add_argument("--max_steps", type=int, default=300)
+    p.add_argument("--max_steps", type=int, default=600)
     p.add_argument("--collision_root",  default="/World/scene_collision")
     p.add_argument("--volume_padding",  type=float, default=1.2)
     p.add_argument("--fallback_size",   type=float, default=100.0)
