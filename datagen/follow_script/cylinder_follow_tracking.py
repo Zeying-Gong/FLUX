@@ -677,7 +677,15 @@ class FollowerBehavior(BehaviorScript):
                 follower_pos, follower_yaw, target_pos, to_human_2d, dist_to_human
             )
             tracking_distance = self._get_tracking_distance(dist_to_human)
-            if self._should_pause_for_goal_radius(tracking_distance):
+            if (
+                self._is_human_stationary()
+                and dist_to_human <= float(self.safe_dis_min)
+            ):
+                body_cmd[:] = 0.0
+                self._log_state_transition(
+                    "AT_GOAL", tracking_distance, angle_to_human, None
+                )
+            elif self._should_pause_for_goal_radius(tracking_distance):
                 body_cmd[:2] = 0.0
                 body_cmd[2] = 0.0
                 self._log_state_transition("AT_GOAL", tracking_distance, angle_to_human, None)
@@ -1442,9 +1450,13 @@ class FollowerBehavior(BehaviorScript):
         self.human_center_x = self.last_seen_center_x
 
     def _is_human_stationary(self):
-        if len(self.target_pos_history) < 5:
+        stationary_window = 30
+        if len(self.target_pos_history) < stationary_window:
             return False
-        points = np.asarray([p[:2] for p in self.target_pos_history], dtype=np.float32)
+        points = np.asarray(
+            [p[:2] for p in self.target_pos_history[-stationary_window:]],
+            dtype=np.float32,
+        )
         displacement = float(np.linalg.norm(points[-1] - points[0]))
         return displacement < 0.05
 
@@ -1652,7 +1664,7 @@ class FollowerBehavior(BehaviorScript):
         return centered
 
     def _replace_abrupt_route_with_trail(
-        self, follower_pos, follower_yaw, waypoint
+        self, follower_pos, follower_yaw, target_pos, waypoint
     ):
         """Reject a sudden side/back waypoint when the human trail stays ahead."""
         if (
@@ -1675,27 +1687,54 @@ class FollowerBehavior(BehaviorScript):
             self._cross2d(robot_forward, route_dir),
             float(np.clip(np.dot(robot_forward, route_dir), -1.0, 1.0)),
         ))
-        if route_error < math.radians(50.0):
+        if route_error < math.radians(35.0):
             return waypoint, False
 
         trail_waypoint = self._historical_trail_waypoint(follower_pos)
-        if trail_waypoint is None:
-            return waypoint, False
-        trail_waypoint = np.asarray(trail_waypoint, dtype=np.float32)
-        trail_vec = trail_waypoint[:2] - follower_pos[:2]
-        trail_norm = float(np.linalg.norm(trail_vec))
-        if trail_norm < 1e-4:
-            return waypoint, False
-        trail_dir = trail_vec / trail_norm
-        trail_error = abs(math.atan2(
-            self._cross2d(robot_forward, trail_dir),
-            float(np.clip(np.dot(robot_forward, trail_dir), -1.0, 1.0)),
-        ))
+        trail_error = float("inf")
+        if trail_waypoint is not None:
+            trail_waypoint = np.asarray(trail_waypoint, dtype=np.float32)
+            trail_vec = trail_waypoint[:2] - follower_pos[:2]
+            trail_norm = float(np.linalg.norm(trail_vec))
+            if trail_norm > 1e-4:
+                trail_dir = trail_vec / trail_norm
+                trail_error = abs(math.atan2(
+                    self._cross2d(robot_forward, trail_dir),
+                    float(np.clip(np.dot(robot_forward, trail_dir), -1.0, 1.0)),
+                ))
 
-        trail_is_forward = trail_error <= math.radians(35.0)
-        trail_is_clearly_better = trail_error + math.radians(20.0) < route_error
-        if not (trail_is_forward and trail_is_clearly_better):
-            return waypoint, False
+        use_trail = (
+            trail_waypoint is not None
+            and trail_error <= math.radians(35.0)
+            and trail_error + math.radians(15.0) < route_error
+        )
+        if not use_trail:
+            target_pos = np.asarray(target_pos, dtype=np.float32)
+            target_vec = target_pos[:2] - follower_pos[:2]
+            target_norm = float(np.linalg.norm(target_vec))
+            if target_norm < 1e-4:
+                return waypoint, False
+            target_dir = target_vec / target_norm
+            target_error = abs(math.atan2(
+                self._cross2d(robot_forward, target_dir),
+                float(np.clip(np.dot(robot_forward, target_dir), -1.0, 1.0)),
+            ))
+            if not self.human_in_frame or target_error > math.radians(25.0):
+                return waypoint, False
+
+            local_target = follower_pos.copy()
+            local_target[:2] += target_dir * min(0.55, target_norm)
+            projected = self._project_to_navmesh(
+                local_target, agent_radius=self.my_radius
+            )
+            if projected is None:
+                return waypoint, False
+            snap = float(np.linalg.norm(projected[:2] - local_target[:2]))
+            if snap > max(0.05, float(self.my_radius) * 0.5):
+                return waypoint, False
+            trail_waypoint = np.asarray(projected, dtype=np.float32)
+            trail_waypoint[2] = follower_pos[2]
+            trail_error = target_error
 
         self._log_event(
             "abrupt_route_rejected",
@@ -1761,7 +1800,7 @@ class FollowerBehavior(BehaviorScript):
 
         next_waypoint, route_replaced_by_trail = (
             self._replace_abrupt_route_with_trail(
-                follower_pos, follower_yaw, next_waypoint
+                follower_pos, follower_yaw, target_pos, next_waypoint
             )
         )
         if route_replaced_by_trail:

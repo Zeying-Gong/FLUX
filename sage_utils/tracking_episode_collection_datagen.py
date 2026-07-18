@@ -3969,6 +3969,7 @@ def main() -> int:
             "recovery_active_frames": 0,
             "target_low_motion_incident": False,
             "target_low_motion_frames": 0,
+            "target_motion_distance": 0.0,
             "last_incident_robot_pos": None,
             "last_incident_target_pos": None,
             "oracle_action": np.zeros(3, dtype=np.float64),
@@ -4115,10 +4116,37 @@ def main() -> int:
             _prev_inc_target = pursuit_state["last_incident_target_pos"]
             _target_step = (float(np.linalg.norm(target_pos[:2] - _prev_inc_target))
                             if _prev_inc_target is not None else float("inf"))
+            if math.isfinite(_target_step):
+                pursuit_state["target_motion_distance"] += _target_step
             pursuit_state["target_low_motion_frames"] = (
                 pursuit_state["target_low_motion_frames"] + 1
                 if _target_step <= 0.001 else 0
             )
+            _tracking_at_stop = (
+                ARGS.datagen_too_close_distance <= dist_to_target
+                <= ARGS.tracking_dist_max
+            )
+            _completed_observed_walk = (
+                pursuit_state["target_motion_distance"] >= 1.0
+                and _tracking_at_stop
+                and tracking_steps / max(step + 1, 1) >= ARGS.min_tracking_rate
+            )
+            if (
+                pursuit_state["target_low_motion_frames"] >= max(
+                    1, int(round(1.0 / _incident_dt))
+                )
+                and _completed_observed_walk
+            ):
+                _tgt_done = True
+                _tgt_done_step = step
+                done_reason = "char_done"
+                print(
+                    f"[EP{ep_id}] step={step} EPISODE END: char_done "
+                    f"(observed walk completed then stationary for >=1.0s, "
+                    f"walk={pursuit_state['target_motion_distance']:.3f}m, "
+                    f"final dist={dist_to_target:.2f}m)"
+                )
+                break
             if pursuit_state["target_low_motion_frames"] >= max(
                     1, int(round(3.0 / _incident_dt))):
                 # A character normally remains stationary after its command queue
@@ -4150,6 +4178,7 @@ def main() -> int:
                           f"(low-motion endpoint check: "
                           f"final_goto_dist={_final_target_dist:.3f}m, "
                           f"tolerance={_final_goto_tolerance:.3f}m, "
+                          f"observed_walk={pursuit_state['target_motion_distance']:.3f}m, "
                           f"final dist={dist_to_target:.2f}m)")
                 else:
                     pursuit_state["target_low_motion_incident"] = True
