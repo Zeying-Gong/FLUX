@@ -1,0 +1,17 @@
+run_name=two_scenes_test_20260718_080846
+scenes=0001_839920 0039_839888
+gpu_id=0
+max_steps=300
+save_video=1
+collector=tracking_episode_collection_camera_only.py
+character_speed=0.5
+datagen_planning_radius=0.15
+datagen_navmesh_snap=0.35
+max_consecutive_snap_rejected=40
+repo_dir=/mnt/nvme1/zeyingg/FLUX
+sage3d_dir=/mnt/ssd1/zeyingg/SAGE-3D_Official
+git_commit=6d2e2ecda8d1477d60e40a5530b5c16446e88fd2
+started_at=2026-07-18T08:08:46+08:00
+OK: scene 0001_839920 done
+OK: scene 0039_839888 done
+finished_at=2026-07-18T08:21:26+08:00
