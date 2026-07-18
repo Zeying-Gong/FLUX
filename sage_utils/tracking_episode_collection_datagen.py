@@ -531,6 +531,7 @@ _PED_HIST_LEN = 4
 
 # Oracle target trajectory (populated per episode from episode GoTo commands).
 _TARGET_TRAJ_CACHE: List[List[float]] = []
+_TARGET_FINAL_COMMAND_POS: Optional[np.ndarray] = None
 # Recent target positions used for velocity-based approach detection (fallback).
 _TARGET_POS_HIST:   List[np.ndarray]  = []
 _TARGET_POS_HIST_LEN = 6
@@ -559,9 +560,10 @@ def build_char_traj_cache(episode: dict,
 def build_target_traj_cache(episode: dict, char_paths: Dict[str, str],
                              target_prim_path: str) -> None:
     """Extract oracle GoTo path for the target character (used for proactive evasion)."""
-    global _TARGET_TRAJ_CACHE, _TARGET_POS_HIST
+    global _TARGET_TRAJ_CACHE, _TARGET_POS_HIST, _TARGET_FINAL_COMMAND_POS
     _TARGET_TRAJ_CACHE.clear()
     _TARGET_POS_HIST.clear()
+    _TARGET_FINAL_COMMAND_POS = None
     target_name = next((k for k, v in char_paths.items() if v == target_prim_path), None)
     if target_name is None:
         return
@@ -570,8 +572,19 @@ def build_target_traj_cache(episode: dict, char_paths: Dict[str, str],
     for cmd in commands:
         if cmd.get("cmd") == "GoTo":
             pts.extend(cmd.get("path", []))
+            params = cmd.get("params", [])
+            if len(params) >= 2:
+                try:
+                    _TARGET_FINAL_COMMAND_POS = np.asarray(
+                        [float(params[0]), float(params[1])], dtype=np.float64
+                    )
+                except (TypeError, ValueError):
+                    pass
     _TARGET_TRAJ_CACHE = pts
-    print(f"[Oracle] Target '{target_name}' path: {len(pts)} oracle points loaded")
+    print(
+        f"[Oracle] Target '{target_name}' path: {len(pts)} oracle points loaded, "
+        f"final_command={_TARGET_FINAL_COMMAND_POS}"
+    )
 
 
 def predict_target_future_pos(target_pos: np.ndarray,
@@ -1815,31 +1828,6 @@ def _read_commands_done(char_prim_path: str, step: int = -1) -> bool:
     except Exception as e:
         print(f"[cmdsDone] step={step} ERROR: {e}")
         return False
-
-
-def _read_command_queue(char_prim_path: str):
-    """Return (available, remaining commands) from CharacterBehavior scriptData."""
-    try:
-        stage = omni.usd.get_context().get_stage()
-        prim = stage.GetPrimAtPath(char_prim_path)
-        if not prim or not prim.IsValid():
-            return False, []
-        skelroot = _find_skelroot(prim)
-        if skelroot is None:
-            candidates = [
-                p for p in stage.Traverse()
-                if p.GetTypeName() == "SkelRoot"
-                and str(p.GetPath()).startswith(str(prim.GetPath()))
-            ]
-            skelroot = candidates[0] if candidates else prim
-        attr = skelroot.GetAttribute("omni:scripting:scriptData")
-        if not attr or not attr.IsValid():
-            return False, []
-        value = attr.Get()
-        return True, list(value) if value is not None else []
-    except Exception as e:
-        print(f"[commandQueue] ERROR: {e}")
-        return False, []
 
 
 def _find_skelroot(prim) -> Optional[Usd.Prim]:
@@ -3994,7 +3982,6 @@ def main() -> int:
             "recovery_active_frames": 0,
             "target_low_motion_incident": False,
             "target_low_motion_frames": 0,
-            "command_queue_seen_nonempty": False,
             "last_incident_robot_pos": None,
             "last_incident_target_pos": None,
             "oracle_action": np.zeros(3, dtype=np.float64),
@@ -4146,22 +4133,27 @@ def main() -> int:
                 if _target_step <= 0.001 else 0
             )
 
-            _queue_available, _remaining_commands = _read_command_queue(
-                target_prim_path
+            _final_command_dist = float("inf")
+            if _TARGET_FINAL_COMMAND_POS is not None:
+                _final_command_dist = float(np.linalg.norm(
+                    target_pos[:2] - _TARGET_FINAL_COMMAND_POS
+                ))
+            _tracking_at_final_command = (
+                ARGS.datagen_too_close_distance <= dist_to_target
+                <= ARGS.tracking_dist_max
             )
-            if _remaining_commands:
-                pursuit_state["command_queue_seen_nonempty"] = True
             if (
-                _queue_available
-                and pursuit_state["command_queue_seen_nonempty"]
-                and not _remaining_commands
+                pursuit_state["target_low_motion_frames"] >= 5
+                and _final_command_dist <= 0.25
+                and _tracking_at_final_command
             ):
                 _tgt_done = True
                 _tgt_done_step = step
                 done_reason = "char_done"
                 print(
                     f"[EP{ep_id}] step={step} EPISODE END: char_done "
-                    f"(scriptData command queue exhausted, "
+                    f"(final GoTo command reached, "
+                    f"endpoint_error={_final_command_dist:.3f}m, "
                     f"final dist={dist_to_target:.2f}m)"
                 )
                 break
