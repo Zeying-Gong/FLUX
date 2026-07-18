@@ -1,6 +1,10 @@
 """
 Follower Behavior Script v2 — 对齐 Habitat Social Nav 的 turn-or-go 状态机
 
+Tracking-only variant. The untouched datagen baseline is kept in
+``cylinder_follow_v2.py``; online collection experiments must use this file so
+their navigation, safety, and camera-only changes do not alter that baseline.
+
 核心改动（相比 v1）：
 - 删除解耦速度模型（decoupled speed），改用 Habitat 的 turn-or-go
 - 路径点选择：取 path_points[1]（第二个点），而非 path_points[-2]
@@ -50,7 +54,7 @@ class FollowerBehavior(BehaviorScript):
         self.follower_prim_path = str(self.prim_path)
 
         # Habitat 对齐参数（来自 hssd_spot_human_social_nav.yaml）
-        self.my_radius = 0.35
+        self.my_radius = 0.20
         self.follow_distance = 1.5    # 兼容旧配置；控制实际使用 safe_dis_max/path_stop_distance
         self.too_close_distance = 1.0 # 低于该距离必须后退，避免贴近碰撞
         self.safe_dis_min = 1.2       # 慢速带外沿：1.0~1.2m 减速贴近
@@ -88,7 +92,7 @@ class FollowerBehavior(BehaviorScript):
         self.last_target_pos = None    # 上次规划时的目标位置
         self.max_navmesh_snap = 0.25   # 候选点投影到 navmesh 的最大允许偏差（米）
         self.target_navmesh_snap = 1.0 # 目标 SkelRoot 在货架转角可允许更远投影
-        self.planning_radius = 0.55    # 正常跟随用更保守的 NavMesh 半径，给货架角留余量
+        self.planning_radius = 0.20    # Overridden by follower:planning_radius when configured.
         self.path_stop_distance = self.too_close_distance  # 进入目标半径后暂停；NavMesh 路线仍规划到目标
         self._current_nav_waypoint = None
         self._last_nav_path_distance = None
@@ -101,7 +105,11 @@ class FollowerBehavior(BehaviorScript):
         self._nav_dominant = False
         self._snap_slide_count = 0
         self.snap_slide_hold_threshold = 3
-        self.target_pos_history = []   # 用于观察 human 朝 robot 移动
+        self._previous_projection_origin = None
+        self._projection_cycle_count = 0
+        self.target_pos_history = []   # Recent observed human trail for path fallback.
+        self.target_pos_history_limit = 300
+        self._consecutive_path_failures = 0
         self._prev_target_motion_pos = None
         self.human_in_frame = False
         self.human_center_x = 0.5
@@ -171,6 +179,7 @@ class FollowerBehavior(BehaviorScript):
         self._last_cmd_linear = 0.0
         self._last_cmd_lateral = 0.0
         self._last_cmd_angular = 0.0
+        self._lazy_on_play_attempted = False
 
         # 从 prim 属性读取目标与可配置控制参数，要求必须显式配置目标。
         try:
@@ -529,6 +538,20 @@ class FollowerBehavior(BehaviorScript):
     # ------------------------------------------------------------------
 
     def on_update(self, _current_time: float, delta_time: float):
+        # Kit can dynamically instantiate a newly bound BehaviorScript after
+        # the timeline is already playing without delivering on_play(). In
+        # that case on_init() has run, but target/follower/navmesh are unset.
+        # Initialize lazily so dynamic oracle binding follows the same setup
+        # path as a script present before the initial timeline play.
+        if (not self.target_prim or not self.follower_prim) and not self._lazy_on_play_attempted:
+            self._lazy_on_play_attempted = True
+            self._log_event(
+                "lazy_on_play",
+                "on_update received before on_play; initializing now",
+                cooldown=2.0,
+                level="warn",
+            )
+            self.on_play()
         if not self.target_prim or not self.follower_prim:
             self._log_event("invalid_prims", "on_update skipped: invalid target/follower prim", cooldown=2.0, level="warn")
             return
@@ -563,7 +586,7 @@ class FollowerBehavior(BehaviorScript):
         tracking_distance = dist_to_human
         self._last_tracking_distance = tracking_distance
         self.target_pos_history.append(target_pos.copy())
-        if len(self.target_pos_history) > 5:
+        if len(self.target_pos_history) > self.target_pos_history_limit:
             self.target_pos_history.pop(0)
 
         # follower 前向向量（Isaac Sim XY 平面）
@@ -585,7 +608,8 @@ class FollowerBehavior(BehaviorScript):
         if dist_to_human < self.safe_dis_min and close_target_should_retreat:
             detour_path = self._compute_follow_path(follower_pos, target_pos) or []
             if (
-                detour_path
+                dist_to_human >= self._too_close_distance()
+                and detour_path
                 and len(detour_path) >= 2
                 and self._last_path_detour_active
                 and self._last_nav_path_distance is not None
@@ -636,6 +660,12 @@ class FollowerBehavior(BehaviorScript):
         # === 状态1: TOO_CLOSE — Habitat oracle retreat ===
         if too_close_active and not force_nav_for_detour:
             self._log_state_transition("TOO_CLOSE", dist_to_human, angle_to_human, None)
+            # A retreat command must not inherit forward momentum from the
+            # previous chase command. The follower is kinematic, so preserving
+            # that momentum only delays braking and can cross the pedestrian's
+            # proximity boundary before the next collection-frame check.
+            self.prev_linear_vel = min(float(self.prev_linear_vel), 0.0)
+            self.prev_body_action[0] = min(float(self.prev_body_action[0]), 0.0)
             body_cmd, next_waypoint = self._compute_habitat_retreat_command(
                 follower_pos, target_pos, to_human_2d, dist_to_human
             )
@@ -964,6 +994,11 @@ class FollowerBehavior(BehaviorScript):
             Sdf.ValueTypeNames.Int,
         )
         self._set_diagnostic_attr(
+            "follower:projection_cycle_count",
+            int(self._projection_cycle_count),
+            Sdf.ValueTypeNames.Int,
+        )
+        self._set_diagnostic_attr(
             "follower:effective_path_stop_distance",
             float(self._last_effective_path_stop_distance),
             Sdf.ValueTypeNames.Float,
@@ -1097,13 +1132,18 @@ class FollowerBehavior(BehaviorScript):
             command_speed > 0.1
             and tracking_distance > self.safe_dis_max + 0.05
         )
+        same_waypoint_no_progress = (
+            waypoint_progress is not None
+            and waypoint_progress < max(0.005, self.stuck_move_eps * 0.5)
+        )
         no_route_progress = (
             previous_tracking is not None
             and progress_delta < max(0.01, self.stuck_move_eps * 0.5)
-            and moved < max(self.stuck_move_eps * 1.25, self.my_radius * 0.04)
             and (
-                waypoint_progress is None
-                or waypoint_progress < max(0.005, self.stuck_move_eps * 0.5)
+                same_waypoint_no_progress
+                or (waypoint_progress is None
+                    and moved < max(self.stuck_move_eps * 1.25,
+                                    self.my_radius * 0.04))
             )
         )
 
@@ -1448,11 +1488,55 @@ class FollowerBehavior(BehaviorScript):
 
         edge_dist = min(self.human_center_x, 1.0 - self.human_center_x)
         bbox_weight = float(np.clip(
-            0.55 + 2.0 * max(0.0, 0.3 - edge_dist),
-            0.55,
-            0.9,
+            0.80 + 1.5 * max(0.0, 0.3 - edge_dist),
+            0.80,
+            1.0,
         ))
         return bbox_weight * vis_angle + (1.0 - bbox_weight) * human_cross
+
+    def _historical_trail_waypoint(self, follower_pos):
+        """Pick a recent human position ahead as a narrow-passage breadcrumb."""
+        if self.navmesh is None or len(self.target_pos_history) < 4:
+            return None
+        follower_pos = np.asarray(follower_pos, dtype=np.float32)
+        min_distance = max(0.35, float(self.my_radius) * 2.0)
+        for max_distance in (1.25, 2.0):
+            for point in reversed(self.target_pos_history[:-2]):
+                point = np.asarray(point, dtype=np.float32)
+                distance = float(np.linalg.norm(point[:2] - follower_pos[:2]))
+                if distance < min_distance or distance > max_distance:
+                    continue
+                projected = self._project_to_navmesh(
+                    point, agent_radius=self.my_radius
+                )
+                if projected is None:
+                    continue
+                snap = float(np.linalg.norm(projected[:2] - point[:2]))
+                if snap > float(self.max_navmesh_snap):
+                    continue
+                projected = np.asarray(projected, dtype=np.float32)
+                projected[2] = follower_pos[2]
+                trail_path = self._compute_path(
+                    follower_pos,
+                    projected,
+                    agent_radius=self.my_radius,
+                )
+                if not trail_path or len(trail_path) < 2:
+                    continue
+                # Follow the validated route to the breadcrumb instead of
+                # pointing straight across the inside of a corridor corner.
+                waypoint = self._select_carrot_point(
+                    follower_pos,
+                    trail_path,
+                    lookahead_dist=max(0.30, float(self.my_radius) * 2.0),
+                    start_segment_idx=0,
+                    stop_at_waypoint_idx=1,
+                )
+                if waypoint is not None:
+                    waypoint = np.asarray(waypoint, dtype=np.float32)
+                    waypoint[2] = follower_pos[2]
+                    return waypoint
+        return None
 
     def _compute_habitat_nav_command(
         self, follower_pos, follower_yaw, target_pos, to_human_2d, dist_to_human
@@ -1460,25 +1544,46 @@ class FollowerBehavior(BehaviorScript):
         """Habitat oracle to_navmesh_waypoint mapped to Isaac body velocities."""
         next_waypoint = self._get_next_waypoint(follower_pos, target_pos, dist_to_human)
         path_points = self.cached_path if self.cached_path else None
+        if self._consecutive_path_failures >= 3:
+            trail_waypoint = self._historical_trail_waypoint(follower_pos)
+            if trail_waypoint is not None:
+                next_waypoint = trail_waypoint
+                path_points = None
+                self._current_nav_waypoint = trail_waypoint.copy()
+                self._log_event(
+                    "historical_trail_fallback",
+                    (
+                        f"path failed {self._consecutive_path_failures} times; "
+                        f"following observed human trail point "
+                        f"({trail_waypoint[0]:.2f},{trail_waypoint[1]:.2f})"
+                    ),
+                    cooldown=0.5,
+                    level="warn",
+                )
         if next_waypoint is None:
             if self.navmesh is not None:
-                next_waypoint = follower_pos.copy()
+                # A global path can temporarily fail at a narrow corner or when
+                # the moving target is off the clearance mesh. Keep pursuing
+                # locally; _project_motion_to_navmesh validates every small
+                # displacement and will hold before crossing an obstacle.
+                next_waypoint = target_pos.copy()
                 self._current_nav_waypoint = next_waypoint.copy()
                 self._log_event(
-                    "nav_hold_no_safe_path",
-                    "nav path unavailable; holding instead of driving toward target through obstacles",
+                    "nav_local_pursuit_fallback",
+                    "nav path unavailable; using NavMesh-validated local pursuit",
                     cooldown=0.8,
                     level="warn",
                 )
-                return np.zeros(3, dtype=np.float32), next_waypoint
-            next_waypoint = target_pos
-            path_points = None
-            self._log_event(
-                "nav_fallback_target",
-                "nav path unavailable; using target direction as Habitat fallback",
-                cooldown=0.8,
-                level="warn",
-            )
+                path_points = None
+            else:
+                next_waypoint = target_pos
+                path_points = None
+                self._log_event(
+                    "nav_fallback_target",
+                    "nav path unavailable; using target direction as Habitat fallback",
+                    cooldown=0.8,
+                    level="warn",
+                )
 
         avoidance_wp = self._compute_avoidance_waypoint(
             follower_pos, follower_yaw, next_waypoint
@@ -1570,11 +1675,17 @@ class FollowerBehavior(BehaviorScript):
             robot_forward_2d,
             dir_human,
         )
-        if self._nav_dominant:
-            if self.motion_type == "omnidirectional" and self.human_in_frame:
-                yaw_error = visual_yaw_error
-            else:
-                yaw_error = nav_cross
+        if self.motion_type == "differential":
+            # A differential base must point along its translation route. If
+            # visual target centering is blended into body yaw at a corner,
+            # the speed gate waits for alignment with the NavMesh waypoint
+            # while yaw keeps steering back toward the pedestrian. That
+            # conflicting pair of objectives produces an in-place spin.
+            yaw_error = nav_cross
+        elif self._nav_dominant:
+            # Omni translation can follow the safe path while the body and
+            # camera continue facing the target, including after visual loss.
+            yaw_error = visual_yaw_error
         else:
             yaw_error = (
                 (1.0 - self.visual_confidence) * nav_cross
@@ -1597,6 +1708,16 @@ class FollowerBehavior(BehaviorScript):
             move_alignment,
         )
         lateral_speed = 0.75 * self.lateral_velocity * lateral_alignment
+
+        if self.human_in_frame:
+            center_error = abs(self.human_center_x - 0.5)
+            if center_error > 0.15:
+                recenter_scale = float(np.clip(
+                    1.0 - 2.0 * (center_error - 0.15), 0.35, 1.0
+                ))
+                move_speed *= recenter_scale
+                lateral_speed *= recenter_scale
+                yaw_speed *= 1.0 + min(center_error, 0.5)
 
         if path_points is not None and len(path_points) >= 3:
             seg_idx = int(np.clip(
@@ -1628,6 +1749,30 @@ class FollowerBehavior(BehaviorScript):
             move_speed = max(move_speed, 0.35 * self.forward_velocity)
             lateral_speed *= 0.6
             yaw_speed *= 1.2
+
+        if self.motion_type == "differential":
+            nav_heading_error = abs(math.atan2(nav_cross, move_alignment))
+            if nav_heading_error > float(self.turn_and_go_thresh):
+                # A differential base cannot translate sideways. Advancing
+                # through a sharp heading error cuts corridor corners and can
+                # make NavMesh projection alternate between both boundaries.
+                # Reduce speed continuously to avoid a visible stop/go camera
+                # jerk at the turn-and-go threshold.
+                stop_turn_error = max(
+                    float(self.turn_and_go_thresh) + 0.1,
+                    1.2,
+                )
+                turn_scale = float(np.clip(
+                    (stop_turn_error - nav_heading_error)
+                    / max(
+                        stop_turn_error - float(self.turn_and_go_thresh),
+                        1e-6,
+                    ),
+                    0.0,
+                    1.0,
+                ))
+                move_speed *= turn_scale
+                lateral_speed = 0.0
 
         cmd = np.array([
             float(np.clip(move_speed, -0.2 * self.forward_velocity, 0.85 * self.forward_velocity)),
@@ -2442,6 +2587,66 @@ class FollowerBehavior(BehaviorScript):
             )
         return False
 
+    def _is_immediate_projection_return(
+        self, previous_origin, current_pos, candidate_pos
+    ):
+        """Reject A->B->A NavMesh projection cycles while actively navigating."""
+        if previous_origin is None or self._last_state != "NAV_OMNI":
+            return False
+        previous_origin = np.asarray(previous_origin, dtype=np.float32)
+        current_pos = np.asarray(current_pos, dtype=np.float32)
+        candidate_pos = np.asarray(candidate_pos, dtype=np.float32)
+        previous_step = current_pos[:2] - previous_origin[:2]
+        candidate_step = candidate_pos[:2] - current_pos[:2]
+        previous_len = float(np.linalg.norm(previous_step))
+        candidate_len = float(np.linalg.norm(candidate_step))
+        min_cycle_step = max(0.01, float(self.stuck_move_eps) * 0.5)
+        if previous_len < min_cycle_step or candidate_len < min_cycle_step:
+            return False
+        return_tolerance = max(
+            float(self.stuck_move_eps) * 2.0,
+            float(self.my_radius) * 0.3,
+        )
+        returns_to_origin = (
+            float(np.linalg.norm(candidate_pos[:2] - previous_origin[:2]))
+            <= return_tolerance
+        )
+        direction_cos = float(np.dot(previous_step, candidate_step)) / max(
+            previous_len * candidate_len, 1e-6
+        )
+        return returns_to_origin and direction_cos <= -0.8
+
+    def _invalidate_oscillating_route(
+        self, mode, previous_origin, current_pos, candidate_pos
+    ):
+        self.cached_path = []
+        self.cached_waypoint_idx = 0
+        self.last_target_pos = None
+        self._current_nav_waypoint = None
+        self._last_path_detour_active = False
+        self._path_query_failed = True
+        self._projection_cycle_count += 1
+        if self._projection_cycle_count >= 2:
+            # Let the regular stuck handler select a non-local recovery point
+            # on its next update instead of spending another second bouncing
+            # between the same two NavMesh projections.
+            self._stuck_elapsed = max(
+                float(self._stuck_elapsed), float(self.stuck_recovery_sec)
+            )
+        self._reset_snap_slide_count()
+        self._log_event(
+            f"projection_two_point_cycle_{mode}",
+            (
+                f"reject A-B-A projection cycle({mode}): "
+                f"A=({previous_origin[0]:.3f},{previous_origin[1]:.3f}), "
+                f"B=({current_pos[0]:.3f},{current_pos[1]:.3f}), "
+                f"candidate=({candidate_pos[0]:.3f},{candidate_pos[1]:.3f}); "
+                "invalidating route"
+            ),
+            cooldown=0.5,
+            level="warn",
+        )
+
     def _project_motion_to_navmesh(self, current_pos, desired_pos, desired_dir, mode):
         """Constrain motion to NavMesh while preserving progress near edges.
 
@@ -2456,6 +2661,8 @@ class FollowerBehavior(BehaviorScript):
 
         desired_pos = np.asarray(desired_pos, dtype=np.float32)
         current_pos = np.asarray(current_pos, dtype=np.float32)
+        previous_origin = self._previous_projection_origin
+        self._previous_projection_origin = current_pos.copy()
         desired_pos = self._preserve_follower_center_z(desired_pos, current_pos)
         current_pos = self._preserve_follower_center_z(current_pos, current_pos)
         desired_step = desired_pos[:2] - current_pos[:2]
@@ -2490,10 +2697,21 @@ class FollowerBehavior(BehaviorScript):
             regress_limit = -max(0.01, step_len * 0.5)
             route_ok = route_progress is None or route_progress >= regress_limit
             step_ok = projected_step <= max_projected_step
+            immediate_return = self._is_immediate_projection_return(
+                previous_origin, current_pos, snapped_pos
+            )
+            if immediate_return:
+                self._log_event(
+                    f"projection_return_candidate_{mode}",
+                    "ignoring NavMesh candidate that returns to the previous origin",
+                    cooldown=0.5,
+                    level="warn",
+                )
             if (
                 (projected_step >= min_progress or step_len < 1e-6)
                 and route_ok
                 and step_ok
+                and not immediate_return
             ):
                 result = desired_pos.copy()
                 result[0] = snapped_pos[0]
@@ -2510,7 +2728,8 @@ class FollowerBehavior(BehaviorScript):
                     cooldown=0.5,
                     level="warn",
                 )
-                if route_ok and projected_step >= min_progress:
+                if (route_ok and projected_step >= min_progress
+                        and not immediate_return):
                     result, bounded_step = self._limit_projected_step(
                         current_pos,
                         snapped_pos,
@@ -2552,18 +2771,29 @@ class FollowerBehavior(BehaviorScript):
                         self._current_nav_waypoint,
                         max_projected_step,
                     )
-                self._log_event(
-                    f"snap_waypoint_{mode}",
-                    (
-                        f"snap waypoint({mode}): "
-                        f"dist={waypoint_dist:.3f}->{bounded_dist:.3f}, "
-                        f"limit={waypoint_snap_dist:.3f}"
-                    ),
-                    cooldown=0.5,
-                    level="warn",
+                immediate_return = self._is_immediate_projection_return(
+                    previous_origin, current_pos, result
                 )
-                self._reset_snap_slide_count()
-                return self._preserve_follower_center_z(result, current_pos), False
+                if immediate_return:
+                    self._log_event(
+                        f"skip_returning_waypoint_{mode}",
+                        "skip waypoint candidate that closes an A-B-A cycle",
+                        cooldown=0.5,
+                        level="warn",
+                    )
+                else:
+                    self._log_event(
+                        f"snap_waypoint_{mode}",
+                        (
+                            f"snap waypoint({mode}): "
+                            f"dist={waypoint_dist:.3f}->{bounded_dist:.3f}, "
+                            f"limit={waypoint_snap_dist:.3f}"
+                        ),
+                        cooldown=0.5,
+                        level="warn",
+                    )
+                    self._reset_snap_slide_count()
+                    return self._preserve_follower_center_z(result, current_pos), False
 
         direction_candidates = []
         desired_norm = float(np.linalg.norm(desired_dir))
@@ -2632,6 +2862,10 @@ class FollowerBehavior(BehaviorScript):
             regress_limit = -max(0.02, step_len)
             if route_progress is not None and route_progress < regress_limit:
                 continue
+            if self._is_immediate_projection_return(
+                previous_origin, current_pos, motion_target
+            ):
+                continue
 
             displacement = motion_target[:2] - current_pos[:2]
             progress = float(np.dot(displacement / max(moved, 1e-6), reference_dir))
@@ -2657,7 +2891,11 @@ class FollowerBehavior(BehaviorScript):
             route_progress = self._motion_route_progress(current_pos, snapped_pos)
             regress_limit = -max(0.01, step_len * 0.5)
             route_ok = route_progress is None or route_progress >= regress_limit
-            if route_ok and projected_step >= min_progress:
+            immediate_return = self._is_immediate_projection_return(
+                previous_origin, current_pos, snapped_pos
+            )
+            if (route_ok and projected_step >= min_progress
+                    and not immediate_return):
                 if projected_step > max_projected_step:
                     result, _ = self._limit_projected_step(
                         current_pos,
@@ -2683,7 +2921,18 @@ class FollowerBehavior(BehaviorScript):
                 level="warn",
             )
 
-        self._reset_snap_slide_count()
+        if (
+            previous_origin is not None
+            and snapped_pos is not None
+            and self._is_immediate_projection_return(
+                previous_origin, current_pos, snapped_pos
+            )
+        ):
+            self._invalidate_oscillating_route(
+                mode, previous_origin, current_pos, snapped_pos
+            )
+        else:
+            self._reset_snap_slide_count()
         return self._preserve_follower_center_z(current_pos, current_pos), True
 
     def _compute_path(
@@ -2859,6 +3108,7 @@ class FollowerBehavior(BehaviorScript):
 
         new_path = self._compute_follow_path(follower_pos, target_pos) or []
         if new_path and len(new_path) >= 2:
+            self._consecutive_path_failures = 0
             self.cached_path = new_path
             self.cached_waypoint_idx = self._initial_waypoint_idx_for_path(
                 follower_pos,
@@ -2876,6 +3126,7 @@ class FollowerBehavior(BehaviorScript):
                 cooldown=0.5,
             )
         elif self.cached_path and len(self.cached_path) >= 2:
+            self._consecutive_path_failures += 1
             self._path_query_failed = True
             self._log_event(
                 "replan_keep_cache",
@@ -2884,6 +3135,7 @@ class FollowerBehavior(BehaviorScript):
                 level="warn",
             )
         else:
+            self._consecutive_path_failures += 1
             self._path_query_failed = True
             self.cached_path = []
             self.last_target_pos = target_pos.copy()

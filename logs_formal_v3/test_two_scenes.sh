@@ -8,6 +8,7 @@ GPU_ID="${GPU_ID:-0}"
 MAX_STEPS="${MAX_STEPS:-300}"
 SAVE_VIDEO="${SAVE_VIDEO:-1}"
 COLLECTOR="${COLLECTOR:-tracking_episode_collection_camera_only.py}"
+FOLLOWER_SCRIPT="${FOLLOWER_SCRIPT:-/workspace/FLUX/datagen/follow_script/cylinder_follow_tracking.py}"
 ROBOT_TYPE="${ROBOT_TYPE:-go2}"
 CAMERA_TYPE="${CAMERA_TYPE:-zed}"
 CHARACTER_SPEED="${CHARACTER_SPEED:-0.5}"
@@ -43,6 +44,7 @@ mkdir -p "$HOST_RUN_DIR" \
   echo "max_steps=$MAX_STEPS"
   echo "save_video=$SAVE_VIDEO"
   echo "collector=$COLLECTOR"
+  echo "follower_script=$FOLLOWER_SCRIPT"
   echo "robot_type=$ROBOT_TYPE"
   echo "camera_type=$CAMERA_TYPE"
   echo "robot_radius_2d=$ROBOT_RADIUS_2D"
@@ -97,6 +99,7 @@ for SCENE_ID in "${SCENES[@]}"; do
       --datagen_planning_radius $DATAGEN_PLANNING_RADIUS \
       --datagen_navmesh_snap $DATAGEN_NAVMESH_SNAP \
       --max_consecutive_snap_rejected $MAX_CONSECUTIVE_SNAP_REJECTED \
+      --datagen_follower_script $FOLLOWER_SCRIPT \
       --save_images \
       --image_save_dir $CONTAINER_RUN_DIR/$SCENE_ID \
       --output_metrics $CONTAINER_RUN_DIR/$SCENE_ID/metrics.csv \

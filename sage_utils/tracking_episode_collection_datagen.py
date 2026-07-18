@@ -154,8 +154,9 @@ def parse_args():
     p.add_argument("--datagen_dynamic_radius", type=float, default=0.45)
     p.add_argument(
         "--datagen_follower_script",
-        default="/workspace/FLUX/datagen/follow_script/cylinder_follow_v2.py",
-        help="Canonical datagen BehaviorScript used as the robot tracking oracle",
+        default="/workspace/FLUX/datagen/follow_script/cylinder_follow_tracking.py",
+        help="BehaviorScript used as the robot tracking oracle; the tracking "
+             "collector defaults to its isolated optimized variant",
     )
     p.add_argument("--proximity_collision_dist", type=float, default=None,
                    help="Robot-target center-distance collision threshold; "
@@ -2068,11 +2069,11 @@ def _set_prim_attr(prim, name, value, value_type) -> None:
 
 
 def setup_datagen_follower_oracle(robot_pos, robot_yaw, target_prim_path):
-    """Bind datagen's canonical follower BehaviorScript to an invisible oracle."""
+    """Bind the selected follower BehaviorScript to an invisible oracle."""
     script_path = os.path.abspath(ARGS.datagen_follower_script)
     if not os.path.isfile(script_path):
         raise FileNotFoundError(
-            f"Canonical datagen follower script not found: {script_path}"
+            f"Datagen follower script not found: {script_path}"
         )
     stage = omni.usd.get_context().get_stage()
     ext_manager = omni.kit.app.get_app().get_extension_manager()
