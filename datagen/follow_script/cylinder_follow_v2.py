@@ -2525,6 +2525,13 @@ class FollowerBehavior(BehaviorScript):
         self._last_path_detour_active = False
         self._path_query_failed = True
         self._projection_cycle_count += 1
+        if self._projection_cycle_count >= 2:
+            # Let the regular stuck handler select a non-local recovery point
+            # on its next update instead of spending another second bouncing
+            # between the same two NavMesh projections.
+            self._stuck_elapsed = max(
+                float(self._stuck_elapsed), float(self.stuck_recovery_sec)
+            )
         self._reset_snap_slide_count()
         self._log_event(
             f"projection_two_point_cycle_{mode}",

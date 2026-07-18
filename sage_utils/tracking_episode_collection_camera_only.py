@@ -104,6 +104,11 @@ def no_geometry_operation(*_args, **_kwargs):
     return None
 
 
+def no_physical_occupancy_collision(_position, _occupancy):
+    """NavMesh projection is authoritative for the geometry-free carrier."""
+    return False
+
+
 def configure_camera_only_mode():
     collector.ROBOT_DRIVE_MODE = "kinematic"
     collector.ROBOT_JOINT_NAMES = []
@@ -112,6 +117,7 @@ def configure_camera_only_mode():
     collector.setup_robot_contact_sensor = disable_contact_sensor
     collector.hide_robot_visual_geometry = no_geometry_operation
     collector.ensure_robot_above_ground = no_geometry_operation
+    collector._detect_in_obstacle = no_physical_occupancy_collision
     print("[CameraOnly] Datagen collector patched before scene initialization")
 
 

@@ -11,10 +11,15 @@ SAVE_VIDEO="${SAVE_VIDEO:-1}"
 CHARACTER_SPEED="${CHARACTER_SPEED:-0.5}"
 RENDER_WARMUP_FRAMES="${RENDER_WARMUP_FRAMES:-180}"
 COLLECTOR="${COLLECTOR:-tracking_episode_collection_datagen.py}"
+ROBOT_TYPE="${ROBOT_TYPE:-go2}"
+CAMERA_TYPE="${CAMERA_TYPE:-zed}"
+DATAGEN_PLANNING_RADIUS="${DATAGEN_PLANNING_RADIUS:-0.20}"
+DATAGEN_NAVMESH_SNAP="${DATAGEN_NAVMESH_SNAP:-0.25}"
+MAX_CONSECUTIVE_SNAP_REJECTED="${MAX_CONSECUTIVE_SNAP_REJECTED:-20}"
 SAGE3D_DIR="${SAGE3D_DIR:-/mnt/ssd1/zeyingg/SAGE-3D_Official}"
 ISAAC_CACHE_DIR="${ISAAC_CACHE_DIR:-$HOME/.cache/flux-isaac-sim}"
 RUN_TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
-RUN_NAME="go2_zed_datagen_${SCENE_ID}_${RUN_TIMESTAMP}"
+RUN_NAME="${ROBOT_TYPE}_${CAMERA_TYPE}_datagen_${SCENE_ID}_${RUN_TIMESTAMP}"
 HOST_RUN_DIR="$REPO_DIR/logs_formal_v3/test_runs/$RUN_NAME"
 CONTAINER_RUN_DIR="/workspace/FLUX/logs_formal_v3/test_runs/$RUN_NAME"
 EPISODE_DIR="$SAGE3D_DIR/SAGE-3D_data/v3_tracking_episodes/$SCENE_ID"
@@ -47,6 +52,11 @@ LOG_FILE="$HOST_RUN_DIR/console.log"
   echo "character_speed=$CHARACTER_SPEED"
   echo "render_warmup_frames=$RENDER_WARMUP_FRAMES"
   echo "collector=$COLLECTOR"
+  echo "robot_type=$ROBOT_TYPE"
+  echo "camera_type=$CAMERA_TYPE"
+  echo "datagen_planning_radius=$DATAGEN_PLANNING_RADIUS"
+  echo "datagen_navmesh_snap=$DATAGEN_NAVMESH_SNAP"
+  echo "max_consecutive_snap_rejected=$MAX_CONSECUTIVE_SNAP_REJECTED"
   echo "repo_dir=$REPO_DIR"
   echo "sage3d_dir=$SAGE3D_DIR"
   echo "cache_dir=$ISAAC_CACHE_DIR"
@@ -79,12 +89,15 @@ docker run --rm -i \
   -c "/isaac-sim/python.sh \
     /workspace/FLUX/sage_utils/$COLLECTOR \
     --episode_dir /workspace/SAGE-3D_Official/SAGE-3D_data/v3_tracking_episodes/$SCENE_ID \
-    --robot_type go2 \
-    --camera_type zed \
+    --robot_type $ROBOT_TYPE \
+    --camera_type $CAMERA_TYPE \
     --start_idx 0 \
     --end_idx 1 \
     --max_steps $MAX_STEPS \
     --character_speed $CHARACTER_SPEED \
+    --datagen_planning_radius $DATAGEN_PLANNING_RADIUS \
+    --datagen_navmesh_snap $DATAGEN_NAVMESH_SNAP \
+    --max_consecutive_snap_rejected $MAX_CONSECUTIVE_SNAP_REJECTED \
     --save_images \
     --image_save_dir $CONTAINER_RUN_DIR/$SCENE_ID \
     --output_metrics $CONTAINER_RUN_DIR/$SCENE_ID/metrics.csv \

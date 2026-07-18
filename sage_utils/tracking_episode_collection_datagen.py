@@ -4130,7 +4130,10 @@ def main() -> int:
                     _final_target_dist = float(np.linalg.norm(
                         target_pos[:2] - _final_target_xy
                     ))
-                _at_final_goto = _final_target_dist <= 0.25
+                _final_goto_tolerance = max(
+                    0.25, float(ARGS.datagen_target_snap)
+                )
+                _at_final_goto = _final_target_dist <= _final_goto_tolerance
                 _tracking_at_endpoint = (
                     ARGS.datagen_too_close_distance <= dist_to_target
                     <= ARGS.tracking_dist_max
@@ -4143,12 +4146,15 @@ def main() -> int:
                     print(f"[EP{ep_id}] step={step} EPISODE END: char_done "
                           f"(low-motion endpoint check: "
                           f"final_goto_dist={_final_target_dist:.3f}m, "
+                          f"tolerance={_final_goto_tolerance:.3f}m, "
                           f"final dist={dist_to_target:.2f}m)")
                 else:
                     pursuit_state["target_low_motion_incident"] = True
                     done_reason = "target_low_motion"
                     print(f"[EP{ep_id}] step={step} blocking incident: "
-                          f"target_low_motion for >=3.0s without commandsDone")
+                          f"target_low_motion for >=3.0s without commandsDone; "
+                          f"final_goto_dist={_final_target_dist:.3f}m, "
+                          f"tolerance={_final_goto_tolerance:.3f}m")
                 break
             pursuit_state["last_incident_robot_pos"] = robot_pos[:2].copy()
             pursuit_state["last_incident_target_pos"] = target_pos[:2].copy()
