@@ -109,6 +109,7 @@ class FollowerBehavior(BehaviorScript):
         self._projection_cycle_count = 0
         self.target_pos_history = []   # Recent observed human trail for path fallback.
         self.target_pos_history_limit = 300
+        self._corridor_center_offset = 0.0
         self._consecutive_path_failures = 0
         self._prev_target_motion_pos = None
         self.human_in_frame = False
@@ -1538,6 +1539,91 @@ class FollowerBehavior(BehaviorScript):
                     return waypoint
         return None
 
+    def _center_corridor_waypoint(self, follower_pos, waypoint):
+        """Bias a local waypoint toward equal left/right NavMesh clearance."""
+        if self.navmesh is None or waypoint is None:
+            return waypoint
+
+        follower_pos = np.asarray(follower_pos, dtype=np.float32)
+        waypoint = np.asarray(waypoint, dtype=np.float32)
+        route = waypoint[:2] - follower_pos[:2]
+        route_norm = float(np.linalg.norm(route))
+        if route_norm < 1e-4:
+            return waypoint
+
+        forward = route / route_norm
+        left = np.array([-forward[1], forward[0]], dtype=np.float32)
+        lookahead = float(np.clip(route_norm, 0.30, 0.55))
+        probe_center = follower_pos.copy()
+        probe_center[:2] += forward * lookahead
+
+        probe_step = 0.05
+        max_probe = 0.60
+        snap_limit = max(0.025, min(0.06, float(self.my_radius) * 0.25))
+
+        def side_clearance(sign):
+            clearance = 0.0
+            for offset in np.arange(probe_step, max_probe + 1e-6, probe_step):
+                candidate = probe_center.copy()
+                candidate[:2] += left * float(sign * offset)
+                projected = self._project_to_navmesh(
+                    candidate, agent_radius=self.my_radius
+                )
+                if projected is None:
+                    break
+                snap = float(np.linalg.norm(projected[:2] - candidate[:2]))
+                if snap > snap_limit:
+                    break
+                clearance = float(offset)
+            return clearance
+
+        left_clearance = side_clearance(1.0)
+        right_clearance = side_clearance(-1.0)
+        corridor_width = left_clearance + right_clearance
+        corridor_detected = (
+            left_clearance < max_probe - 1e-6
+            and right_clearance < max_probe - 1e-6
+            and corridor_width <= 1.0
+        )
+        desired_offset = 0.0
+        if corridor_detected:
+            desired_offset = float(np.clip(
+                0.5 * (left_clearance - right_clearance),
+                -0.12,
+                0.12,
+            ))
+
+        self._corridor_center_offset = (
+            0.75 * float(self._corridor_center_offset)
+            + 0.25 * desired_offset
+        )
+        if abs(self._corridor_center_offset) < 0.01:
+            return waypoint
+
+        centered = probe_center.copy()
+        centered[:2] += left * self._corridor_center_offset
+        projected = self._project_to_navmesh(
+            centered, agent_radius=self.my_radius
+        )
+        if projected is None:
+            return waypoint
+        snap = float(np.linalg.norm(projected[:2] - centered[:2]))
+        if snap > snap_limit:
+            return waypoint
+
+        centered = np.asarray(projected, dtype=np.float32)
+        centered[2] = follower_pos[2]
+        self._log_event(
+            "corridor_centering",
+            (
+                f"corridor center: left={left_clearance:.2f}, "
+                f"right={right_clearance:.2f}, "
+                f"offset={self._corridor_center_offset:+.3f}"
+            ),
+            cooldown=0.8,
+        )
+        return centered
+
     def _compute_habitat_nav_command(
         self, follower_pos, follower_yaw, target_pos, to_human_2d, dist_to_human
     ):
@@ -1585,6 +1671,9 @@ class FollowerBehavior(BehaviorScript):
                     level="warn",
                 )
 
+        next_waypoint = self._center_corridor_waypoint(
+            follower_pos, next_waypoint
+        )
         avoidance_wp = self._compute_avoidance_waypoint(
             follower_pos, follower_yaw, next_waypoint
         )
@@ -2454,8 +2543,8 @@ class FollowerBehavior(BehaviorScript):
         radius = self.my_radius if agent_radius is None else float(agent_radius)
         sample_spacing = max(0.08, min(0.25, radius * 0.5))
         snap_limit = max(
-            0.025,
-            min(float(self.max_navmesh_snap) * 0.35, radius * 0.15),
+            0.04,
+            min(float(self.max_navmesh_snap) * 0.35, radius * 0.5),
         )
         points = [np.asarray(point, dtype=np.float32) for point in path_points]
         for idx in range(len(points) - 1):
