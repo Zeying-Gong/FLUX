@@ -1651,6 +1651,64 @@ class FollowerBehavior(BehaviorScript):
         )
         return centered
 
+    def _replace_abrupt_route_with_trail(
+        self, follower_pos, follower_yaw, waypoint
+    ):
+        """Reject a sudden side/back waypoint when the human trail stays ahead."""
+        if (
+            self.motion_type != "differential"
+            or waypoint is None
+            or len(self.target_pos_history) < 8
+        ):
+            return waypoint, False
+
+        follower_pos = np.asarray(follower_pos, dtype=np.float32)
+        waypoint = np.asarray(waypoint, dtype=np.float32)
+        robot_forward, _ = self._forward_left_vectors(follower_yaw)
+
+        route_vec = waypoint[:2] - follower_pos[:2]
+        route_norm = float(np.linalg.norm(route_vec))
+        if route_norm < 1e-4:
+            return waypoint, False
+        route_dir = route_vec / route_norm
+        route_error = abs(math.atan2(
+            self._cross2d(robot_forward, route_dir),
+            float(np.clip(np.dot(robot_forward, route_dir), -1.0, 1.0)),
+        ))
+        if route_error < math.radians(50.0):
+            return waypoint, False
+
+        trail_waypoint = self._historical_trail_waypoint(follower_pos)
+        if trail_waypoint is None:
+            return waypoint, False
+        trail_waypoint = np.asarray(trail_waypoint, dtype=np.float32)
+        trail_vec = trail_waypoint[:2] - follower_pos[:2]
+        trail_norm = float(np.linalg.norm(trail_vec))
+        if trail_norm < 1e-4:
+            return waypoint, False
+        trail_dir = trail_vec / trail_norm
+        trail_error = abs(math.atan2(
+            self._cross2d(robot_forward, trail_dir),
+            float(np.clip(np.dot(robot_forward, trail_dir), -1.0, 1.0)),
+        ))
+
+        trail_is_forward = trail_error <= math.radians(35.0)
+        trail_is_clearly_better = trail_error + math.radians(20.0) < route_error
+        if not (trail_is_forward and trail_is_clearly_better):
+            return waypoint, False
+
+        self._log_event(
+            "abrupt_route_rejected",
+            (
+                f"abrupt route rejected before turning: "
+                f"route={math.degrees(route_error):.1f}deg, "
+                f"trail={math.degrees(trail_error):.1f}deg"
+            ),
+            cooldown=0.6,
+            level="warn",
+        )
+        return trail_waypoint, True
+
     def _compute_habitat_nav_command(
         self, follower_pos, follower_yaw, target_pos, to_human_2d, dist_to_human
     ):
@@ -1700,6 +1758,15 @@ class FollowerBehavior(BehaviorScript):
                     cooldown=0.8,
                     level="warn",
                 )
+
+        next_waypoint, route_replaced_by_trail = (
+            self._replace_abrupt_route_with_trail(
+                follower_pos, follower_yaw, next_waypoint
+            )
+        )
+        if route_replaced_by_trail:
+            path_points = None
+            self._current_nav_waypoint = next_waypoint.copy()
 
         next_waypoint = self._center_corridor_waypoint(
             follower_pos, next_waypoint
