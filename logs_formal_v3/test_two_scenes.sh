@@ -7,7 +7,7 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 GPU_ID="${GPU_ID:-0}"
 MAX_STEPS="${MAX_STEPS:-300}"
 SAVE_VIDEO="${SAVE_VIDEO:-1}"
-COLLECTOR="${COLLECTOR:-tracking_episode_collection_datagen.py}"
+COLLECTOR="${COLLECTOR:-tracking_episode_collection_camera_only.py}"
 ROBOT_TYPE="${ROBOT_TYPE:-go2}"
 CAMERA_TYPE="${CAMERA_TYPE:-zed}"
 CHARACTER_SPEED="${CHARACTER_SPEED:-0.5}"
@@ -66,7 +66,7 @@ for SCENE_ID in "${SCENES[@]}"; do
   echo "--- Processing scene $SCENE_ID (2 episodes) ---"
 
   set +e
-  docker run --rm -i \
+  docker run --rm \
     --name "flux_${RUN_NAME}_${SCENE_ID}" \
     -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y \
     -e SAVE_VIDEO="$SAVE_VIDEO" \

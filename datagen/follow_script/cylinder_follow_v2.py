@@ -1748,7 +1748,22 @@ class FollowerBehavior(BehaviorScript):
                 # A differential base cannot translate sideways. Advancing
                 # through a sharp heading error cuts corridor corners and can
                 # make NavMesh projection alternate between both boundaries.
-                move_speed = 0.0
+                # Reduce speed continuously to avoid a visible stop/go camera
+                # jerk at the turn-and-go threshold.
+                stop_turn_error = max(
+                    float(self.turn_and_go_thresh) + 0.1,
+                    1.2,
+                )
+                turn_scale = float(np.clip(
+                    (stop_turn_error - nav_heading_error)
+                    / max(
+                        stop_turn_error - float(self.turn_and_go_thresh),
+                        1e-6,
+                    ),
+                    0.0,
+                    1.0,
+                ))
+                move_speed *= turn_scale
                 lateral_speed = 0.0
 
         cmd = np.array([
