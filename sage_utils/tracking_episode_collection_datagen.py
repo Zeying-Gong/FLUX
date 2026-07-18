@@ -120,7 +120,7 @@ def parse_args():
     p.add_argument("--max_final_dist", type=float, default=3.0,
                    help="Max final distance to target (default: 3.0)")
     p.add_argument("--allowed_end_reasons", type=str,
-                   default="max_steps,char_done",
+                   default="max_steps,char_done,target_stopped",
                    help="Comma-separated done_reasons that count as success")
     p.add_argument("--min_visible_rate", type=float, default=0.8,
                    help="Min fraction of frames where target is in camera view "
@@ -3499,20 +3499,10 @@ def _episode_completed(ep_id: int) -> bool:
         visible_rate = float(np.mean(target_visible))
         collisions = int(np.count_nonzero(contact >= COLLISION_FORCE_THRESHOLD))
         had_recovery = bool(np.any(modes == "RECOVERY"))
-        target_xy = np.stack([data["target_pos_x"], data["target_pos_y"]], axis=-1)
-        target_low = np.linalg.norm(np.diff(target_xy, axis=0), axis=1) <= 0.001
-        low_motion_frames = max(
-            (len(list(group)) for value, group in itertools.groupby(target_low) if value),
-            default=0,
-        )
-        blocking_incident = low_motion_frames >= max(
-            1, int(round(3.0 / (ARGS.physics_dt * ARGS.decimation)))
-        )
         return (tracking_rate >= ARGS.min_tracking_rate
                 and visible_rate >= ARGS.min_visible_rate
                 and collisions <= ARGS.max_collisions
                 and (ARGS.allow_recovery or not had_recovery)
-                and not blocking_incident
                 and float(distances[-1]) <= ARGS.max_final_dist)
     except (KeyError, OSError, ValueError) as exc:
         print(f"[Resume] EP{ep_id} output validation failed: {exc}")
@@ -3981,6 +3971,7 @@ def main() -> int:
             "follower_stuck_frames": 0,
             "recovery_active_frames": 0,
             "target_low_motion_incident": False,
+            "target_stopped_early": False,
             "target_low_motion_frames": 0,
             "last_incident_robot_pos": None,
             "last_incident_target_pos": None,
@@ -4190,12 +4181,14 @@ def main() -> int:
                           f"tolerance={_final_goto_tolerance:.3f}m, "
                           f"final dist={dist_to_target:.2f}m)")
                 else:
-                    pursuit_state["target_low_motion_incident"] = True
-                    done_reason = "target_low_motion"
-                    print(f"[EP{ep_id}] step={step} blocking incident: "
-                          f"target_low_motion for >=3.0s without commandsDone; "
+                    pursuit_state["target_stopped_early"] = True
+                    done_reason = "target_stopped"
+                    print(f"[EP{ep_id}] step={step} target stopped: "
+                          f"low motion for >=3.0s before final GoTo; "
                           f"final_goto_dist={_final_target_dist:.3f}m, "
-                          f"tolerance={_final_goto_tolerance:.3f}m")
+                          f"tolerance={_final_goto_tolerance:.3f}m; "
+                          f"ending neutrally because follower quality is independent "
+                          f"of pedestrian command completion")
                 break
             pursuit_state["last_incident_robot_pos"] = robot_pos[:2].copy()
             pursuit_state["last_incident_target_pos"] = target_pos[:2].copy()
@@ -5270,8 +5263,7 @@ def main() -> int:
         episode_length = step
         tracking_rate  = tracking_steps / max(episode_length, 1)
         had_recovery   = pursuit_state["any_recovery"]
-        blocking_incident = (pursuit_state["follower_stuck_incident"]
-                             or pursuit_state["target_low_motion_incident"])
+        blocking_incident = pursuit_state["follower_stuck_incident"]
 
         # Visibility requires an unoccluded ray, not merely an in-frame UV.
         target_visible = np.array(
@@ -5325,6 +5317,7 @@ def main() -> int:
             "last_recovery_reason":  pursuit_state["last_recovery_reason"],
             "follower_stuck_incident": int(pursuit_state["follower_stuck_incident"]),
             "target_low_motion_incident": int(pursuit_state["target_low_motion_incident"]),
+            "target_stopped_early": int(pursuit_state["target_stopped_early"]),
             "episode_length":        episode_length,
             "tracking_rate":         tracking_rate,
             "collision":             collision_count,
