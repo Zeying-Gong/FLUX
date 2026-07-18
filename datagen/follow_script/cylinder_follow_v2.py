@@ -604,7 +604,8 @@ class FollowerBehavior(BehaviorScript):
         if dist_to_human < self.safe_dis_min and close_target_should_retreat:
             detour_path = self._compute_follow_path(follower_pos, target_pos) or []
             if (
-                detour_path
+                dist_to_human >= self._too_close_distance()
+                and detour_path
                 and len(detour_path) >= 2
                 and self._last_path_detour_active
                 and self._last_nav_path_distance is not None
@@ -655,6 +656,12 @@ class FollowerBehavior(BehaviorScript):
         # === 状态1: TOO_CLOSE — Habitat oracle retreat ===
         if too_close_active and not force_nav_for_detour:
             self._log_state_transition("TOO_CLOSE", dist_to_human, angle_to_human, None)
+            # A retreat command must not inherit forward momentum from the
+            # previous chase command. The follower is kinematic, so preserving
+            # that momentum only delays braking and can cross the pedestrian's
+            # proximity boundary before the next collection-frame check.
+            self.prev_linear_vel = min(float(self.prev_linear_vel), 0.0)
+            self.prev_body_action[0] = min(float(self.prev_body_action[0]), 0.0)
             body_cmd, next_waypoint = self._compute_habitat_retreat_command(
                 follower_pos, target_pos, to_human_2d, dist_to_human
             )
@@ -1505,7 +1512,26 @@ class FollowerBehavior(BehaviorScript):
                     continue
                 projected = np.asarray(projected, dtype=np.float32)
                 projected[2] = follower_pos[2]
-                return projected
+                trail_path = self._compute_path(
+                    follower_pos,
+                    projected,
+                    agent_radius=self.my_radius,
+                )
+                if not trail_path or len(trail_path) < 2:
+                    continue
+                # Follow the validated route to the breadcrumb instead of
+                # pointing straight across the inside of a corridor corner.
+                waypoint = self._select_carrot_point(
+                    follower_pos,
+                    trail_path,
+                    lookahead_dist=max(0.30, float(self.my_radius) * 2.0),
+                    start_segment_idx=0,
+                    stop_at_waypoint_idx=1,
+                )
+                if waypoint is not None:
+                    waypoint = np.asarray(waypoint, dtype=np.float32)
+                    waypoint[2] = follower_pos[2]
+                    return waypoint
         return None
 
     def _compute_habitat_nav_command(
@@ -1715,6 +1741,15 @@ class FollowerBehavior(BehaviorScript):
             move_speed = max(move_speed, 0.35 * self.forward_velocity)
             lateral_speed *= 0.6
             yaw_speed *= 1.2
+
+        if self.motion_type == "differential":
+            nav_heading_error = abs(math.atan2(nav_cross, move_alignment))
+            if nav_heading_error > float(self.turn_and_go_thresh):
+                # A differential base cannot translate sideways. Advancing
+                # through a sharp heading error cuts corridor corners and can
+                # make NavMesh projection alternate between both boundaries.
+                move_speed = 0.0
+                lateral_speed = 0.0
 
         cmd = np.array([
             float(np.clip(move_speed, -0.2 * self.forward_velocity, 0.85 * self.forward_velocity)),
