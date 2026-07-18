@@ -1817,6 +1817,31 @@ def _read_commands_done(char_prim_path: str, step: int = -1) -> bool:
         return False
 
 
+def _read_command_queue(char_prim_path: str):
+    """Return (available, remaining commands) from CharacterBehavior scriptData."""
+    try:
+        stage = omni.usd.get_context().get_stage()
+        prim = stage.GetPrimAtPath(char_prim_path)
+        if not prim or not prim.IsValid():
+            return False, []
+        skelroot = _find_skelroot(prim)
+        if skelroot is None:
+            candidates = [
+                p for p in stage.Traverse()
+                if p.GetTypeName() == "SkelRoot"
+                and str(p.GetPath()).startswith(str(prim.GetPath()))
+            ]
+            skelroot = candidates[0] if candidates else prim
+        attr = skelroot.GetAttribute("omni:scripting:scriptData")
+        if not attr or not attr.IsValid():
+            return False, []
+        value = attr.Get()
+        return True, list(value) if value is not None else []
+    except Exception as e:
+        print(f"[commandQueue] ERROR: {e}")
+        return False, []
+
+
 def _find_skelroot(prim) -> Optional[Usd.Prim]:
     for desc in Usd.PrimRange(prim):
         if desc.GetTypeName() == "SkelRoot":
@@ -3969,7 +3994,7 @@ def main() -> int:
             "recovery_active_frames": 0,
             "target_low_motion_incident": False,
             "target_low_motion_frames": 0,
-            "target_motion_distance": 0.0,
+            "command_queue_seen_nonempty": False,
             "last_incident_robot_pos": None,
             "last_incident_target_pos": None,
             "oracle_action": np.zeros(3, dtype=np.float64),
@@ -4116,34 +4141,27 @@ def main() -> int:
             _prev_inc_target = pursuit_state["last_incident_target_pos"]
             _target_step = (float(np.linalg.norm(target_pos[:2] - _prev_inc_target))
                             if _prev_inc_target is not None else float("inf"))
-            if math.isfinite(_target_step):
-                pursuit_state["target_motion_distance"] += _target_step
             pursuit_state["target_low_motion_frames"] = (
                 pursuit_state["target_low_motion_frames"] + 1
                 if _target_step <= 0.001 else 0
             )
-            _tracking_at_stop = (
-                ARGS.datagen_too_close_distance <= dist_to_target
-                <= ARGS.tracking_dist_max
+
+            _queue_available, _remaining_commands = _read_command_queue(
+                target_prim_path
             )
-            _completed_observed_walk = (
-                pursuit_state["target_motion_distance"] >= 1.0
-                and _tracking_at_stop
-                and tracking_steps / max(step + 1, 1) >= ARGS.min_tracking_rate
-            )
+            if _remaining_commands:
+                pursuit_state["command_queue_seen_nonempty"] = True
             if (
-                pursuit_state["target_low_motion_frames"] >= max(
-                    1, int(round(1.0 / _incident_dt))
-                )
-                and _completed_observed_walk
+                _queue_available
+                and pursuit_state["command_queue_seen_nonempty"]
+                and not _remaining_commands
             ):
                 _tgt_done = True
                 _tgt_done_step = step
                 done_reason = "char_done"
                 print(
                     f"[EP{ep_id}] step={step} EPISODE END: char_done "
-                    f"(observed walk completed then stationary for >=1.0s, "
-                    f"walk={pursuit_state['target_motion_distance']:.3f}m, "
+                    f"(scriptData command queue exhausted, "
                     f"final dist={dist_to_target:.2f}m)"
                 )
                 break
@@ -4178,7 +4196,6 @@ def main() -> int:
                           f"(low-motion endpoint check: "
                           f"final_goto_dist={_final_target_dist:.3f}m, "
                           f"tolerance={_final_goto_tolerance:.3f}m, "
-                          f"observed_walk={pursuit_state['target_motion_distance']:.3f}m, "
                           f"final dist={dist_to_target:.2f}m)")
                 else:
                     pursuit_state["target_low_motion_incident"] = True
