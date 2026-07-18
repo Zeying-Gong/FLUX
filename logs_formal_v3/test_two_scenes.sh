@@ -25,7 +25,8 @@ RUN_NAME="two_scenes_test_${ROBOT_TYPE}_${CAMERA_TYPE}_${RUN_TIMESTAMP}"
 HOST_RUN_DIR="$REPO_DIR/logs_formal_v3/test_runs/$RUN_NAME"
 CONTAINER_RUN_DIR="/workspace/FLUX/logs_formal_v3/test_runs/$RUN_NAME"
 
-SCENES=("0001_839920" "0039_839888")
+SCENE_IDS="${SCENE_IDS:-0001_839920 0002_839955}"
+read -r -a SCENES <<< "$SCENE_IDS"
 
 [ -f "$REPO_DIR/sage_utils/$COLLECTOR" ] || {
   echo "Missing collector: sage_utils/$COLLECTOR" >&2; exit 1
