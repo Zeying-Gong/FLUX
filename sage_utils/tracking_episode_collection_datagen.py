@@ -120,7 +120,7 @@ def parse_args():
     p.add_argument("--max_final_dist", type=float, default=3.0,
                    help="Max final distance to target (default: 3.0)")
     p.add_argument("--allowed_end_reasons", type=str,
-                   default="max_steps,char_done,target_stopped",
+                   default="max_steps,char_done",
                    help="Comma-separated done_reasons that count as success")
     p.add_argument("--min_visible_rate", type=float, default=0.8,
                    help="Min fraction of frames where target is in camera view "
@@ -362,9 +362,10 @@ STUCK_POS_THRESH      = 0.12
 STUCK_YAW_THRESH_DEG  = 10.0
 
 # ── Character-done detection ────────────────────────────────────────
-# Primary: read omni:scripting:commandsDone written by CharacterBehavior when its
-# command queue empties.  Grace period gives the robot time to reach final position.
-DONE_GRACE_STEPS = 30   # extra steps after done flag set (~3 s at 10 Hz control)
+# Read omni:scripting:commandsDone from the patched CharacterBehavior runtime
+# queue. The follower is evaluated at the same step, so no post-completion tail
+# is needed.
+DONE_GRACE_STEPS = 0
 
 # ── Sidestep parameters ─────────────────────────────────────────────
 # When STANDOFF-FAIL fires (no valid standoff position found), the robot tries
@@ -531,7 +532,6 @@ _PED_HIST_LEN = 4
 
 # Oracle target trajectory (populated per episode from episode GoTo commands).
 _TARGET_TRAJ_CACHE: List[List[float]] = []
-_TARGET_FINAL_COMMAND_POS: Optional[np.ndarray] = None
 # Recent target positions used for velocity-based approach detection (fallback).
 _TARGET_POS_HIST:   List[np.ndarray]  = []
 _TARGET_POS_HIST_LEN = 6
@@ -560,10 +560,9 @@ def build_char_traj_cache(episode: dict,
 def build_target_traj_cache(episode: dict, char_paths: Dict[str, str],
                              target_prim_path: str) -> None:
     """Extract oracle GoTo path for the target character (used for proactive evasion)."""
-    global _TARGET_TRAJ_CACHE, _TARGET_POS_HIST, _TARGET_FINAL_COMMAND_POS
+    global _TARGET_TRAJ_CACHE, _TARGET_POS_HIST
     _TARGET_TRAJ_CACHE.clear()
     _TARGET_POS_HIST.clear()
-    _TARGET_FINAL_COMMAND_POS = None
     target_name = next((k for k, v in char_paths.items() if v == target_prim_path), None)
     if target_name is None:
         return
@@ -572,19 +571,8 @@ def build_target_traj_cache(episode: dict, char_paths: Dict[str, str],
     for cmd in commands:
         if cmd.get("cmd") == "GoTo":
             pts.extend(cmd.get("path", []))
-            params = cmd.get("params", [])
-            if len(params) >= 2:
-                try:
-                    _TARGET_FINAL_COMMAND_POS = np.asarray(
-                        [float(params[0]), float(params[1])], dtype=np.float64
-                    )
-                except (TypeError, ValueError):
-                    pass
     _TARGET_TRAJ_CACHE = pts
-    print(
-        f"[Oracle] Target '{target_name}' path: {len(pts)} oracle points loaded, "
-        f"final_command={_TARGET_FINAL_COMMAND_POS}"
-    )
+    print(f"[Oracle] Target '{target_name}' path: {len(pts)} oracle points loaded")
 
 
 def predict_target_future_pos(target_pos: np.ndarray,
@@ -1795,6 +1783,66 @@ def _write_episode_commands(commands_dict: dict):
 
 
 _CMDS_DONE_LAST_VAL: Optional[bool] = None  # tracks last-seen value to suppress repeated logs
+
+
+def _write_behavior_commands_done(behavior, done: bool) -> None:
+    """Publish CharacterBehavior's actual runtime queue completion to USD."""
+    try:
+        stage = omni.usd.get_context().get_stage()
+        prim = stage.GetPrimAtPath(str(behavior.prim_path))
+        if not prim or not prim.IsValid():
+            return
+        skelroot = _find_skelroot(prim)
+        if skelroot is None:
+            skelroot = prim
+        attr = skelroot.GetAttribute("omni:scripting:commandsDone")
+        if not attr or not attr.IsValid():
+            attr = skelroot.CreateAttribute(
+                "omni:scripting:commandsDone", Sdf.ValueTypeNames.Bool
+            )
+        attr.Set(bool(done))
+    except Exception as e:
+        print(f"[commandsDonePatch] write failed: {e}")
+
+
+def patch_character_behavior_commands_done() -> None:
+    """Expose the internal CharacterBehavior command queue completion state."""
+    from omni.anim.people.scripts.character_behavior import CharacterBehavior
+
+    if getattr(CharacterBehavior, "_tracking_done_patch", False):
+        return
+
+    original_renew = CharacterBehavior.renew_character_state
+    original_update = CharacterBehavior.on_update
+
+    def renew_with_done_flag(self):
+        original_renew(self)
+        self._tracking_commands_done_state = False
+        _write_behavior_commands_done(self, False)
+
+    def update_with_done_flag(self, current_time, delta_time):
+        original_update(self, current_time, delta_time)
+        if getattr(self, "_disabled", False) or self.character is None:
+            return
+
+        commands = getattr(self, "commands", None) or []
+        current_command = getattr(self, "current_command", None)
+        loop_commands = getattr(self, "loop_commands", None)
+        loop_count = getattr(self, "loop_commands_count", 1)
+        number_of_loop = getattr(self, "number_of_loop", 0)
+        loop_pending = bool(
+            loop_commands and number_of_loop > loop_count
+        )
+        done = not commands and current_command is None and not loop_pending
+        previous = getattr(self, "_tracking_commands_done_state", None)
+        if previous is None or bool(previous) != bool(done):
+            self._tracking_commands_done_state = bool(done)
+            _write_behavior_commands_done(self, done)
+
+    CharacterBehavior.renew_character_state = renew_with_done_flag
+    CharacterBehavior.on_update = update_with_done_flag
+    CharacterBehavior._tracking_done_patch = True
+    print("[Patch] CharacterBehavior runtime command completion enabled")
 
 def _read_commands_done(char_prim_path: str, step: int = -1) -> bool:
     """Return True when CharacterBehavior has set commandsDone=True on the SkelRoot."""
@@ -3632,6 +3680,8 @@ def setup_episode_full(
 
 
 def main() -> int:
+    patch_character_behavior_commands_done()
+
     # ── Infer scene_id from episode_dir basename when not supplied ──────────
     episode_root = ARGS.episode_dir
     scene_id = ARGS.scene_id
@@ -3971,7 +4021,6 @@ def main() -> int:
             "follower_stuck_frames": 0,
             "recovery_active_frames": 0,
             "target_low_motion_incident": False,
-            "target_stopped_early": False,
             "target_low_motion_frames": 0,
             "last_incident_robot_pos": None,
             "last_incident_target_pos": None,
@@ -4124,72 +4173,6 @@ def main() -> int:
                 if _target_step <= 0.001 else 0
             )
 
-            _final_command_dist = float("inf")
-            if _TARGET_FINAL_COMMAND_POS is not None:
-                _final_command_dist = float(np.linalg.norm(
-                    target_pos[:2] - _TARGET_FINAL_COMMAND_POS
-                ))
-            _tracking_at_final_command = (
-                ARGS.datagen_too_close_distance <= dist_to_target
-                <= ARGS.tracking_dist_max
-            )
-            if (
-                pursuit_state["target_low_motion_frames"] >= 5
-                and _final_command_dist <= 0.25
-                and _tracking_at_final_command
-            ):
-                _tgt_done = True
-                _tgt_done_step = step
-                done_reason = "char_done"
-                print(
-                    f"[EP{ep_id}] step={step} EPISODE END: char_done "
-                    f"(final GoTo command reached, "
-                    f"endpoint_error={_final_command_dist:.3f}m, "
-                    f"final dist={dist_to_target:.2f}m)"
-                )
-                break
-            if pursuit_state["target_low_motion_frames"] >= max(
-                    1, int(round(3.0 / _incident_dt))):
-                # A character normally remains stationary after its command queue
-                # finishes. Check both the authoritative completion flag and the
-                # final GoTo waypoint because commandsDone is unreliable for some
-                # dynamically rebound CharacterBehavior instances.
-                _final_target_dist = float("inf")
-                if _TARGET_TRAJ_CACHE:
-                    _final_target_xy = np.asarray(
-                        _TARGET_TRAJ_CACHE[-1][:2], dtype=np.float64
-                    )
-                    _final_target_dist = float(np.linalg.norm(
-                        target_pos[:2] - _final_target_xy
-                    ))
-                _final_goto_tolerance = max(
-                    0.25, float(ARGS.datagen_target_snap)
-                )
-                _at_final_goto = _final_target_dist <= _final_goto_tolerance
-                _tracking_at_endpoint = (
-                    ARGS.datagen_too_close_distance <= dist_to_target
-                    <= ARGS.tracking_dist_max
-                )
-                if (_read_commands_done(target_prim_path, step)
-                        or (_at_final_goto and _tracking_at_endpoint)):
-                    _tgt_done = True
-                    _tgt_done_step = step
-                    done_reason = "char_done"
-                    print(f"[EP{ep_id}] step={step} EPISODE END: char_done "
-                          f"(low-motion endpoint check: "
-                          f"final_goto_dist={_final_target_dist:.3f}m, "
-                          f"tolerance={_final_goto_tolerance:.3f}m, "
-                          f"final dist={dist_to_target:.2f}m)")
-                else:
-                    pursuit_state["target_stopped_early"] = True
-                    done_reason = "target_stopped"
-                    print(f"[EP{ep_id}] step={step} target stopped: "
-                          f"low motion for >=3.0s before final GoTo; "
-                          f"final_goto_dist={_final_target_dist:.3f}m, "
-                          f"tolerance={_final_goto_tolerance:.3f}m; "
-                          f"ending neutrally because follower quality is independent "
-                          f"of pedestrian command completion")
-                break
             pursuit_state["last_incident_robot_pos"] = robot_pos[:2].copy()
             pursuit_state["last_incident_target_pos"] = target_pos[:2].copy()
 
@@ -5317,7 +5300,6 @@ def main() -> int:
             "last_recovery_reason":  pursuit_state["last_recovery_reason"],
             "follower_stuck_incident": int(pursuit_state["follower_stuck_incident"]),
             "target_low_motion_incident": int(pursuit_state["target_low_motion_incident"]),
-            "target_stopped_early": int(pursuit_state["target_stopped_early"]),
             "episode_length":        episode_length,
             "tracking_rate":         tracking_rate,
             "collision":             collision_count,
