@@ -103,7 +103,9 @@ class FollowerBehavior(BehaviorScript):
         self.snap_slide_hold_threshold = 3
         self._previous_projection_origin = None
         self._projection_cycle_count = 0
-        self.target_pos_history = []   # 用于观察 human 朝 robot 移动
+        self.target_pos_history = []   # Recent observed human trail for path fallback.
+        self.target_pos_history_limit = 300
+        self._consecutive_path_failures = 0
         self._prev_target_motion_pos = None
         self.human_in_frame = False
         self.human_center_x = 0.5
@@ -580,7 +582,7 @@ class FollowerBehavior(BehaviorScript):
         tracking_distance = dist_to_human
         self._last_tracking_distance = tracking_distance
         self.target_pos_history.append(target_pos.copy())
-        if len(self.target_pos_history) > 5:
+        if len(self.target_pos_history) > self.target_pos_history_limit:
             self.target_pos_history.pop(0)
 
         # follower 前向向量（Isaac Sim XY 平面）
@@ -1481,12 +1483,53 @@ class FollowerBehavior(BehaviorScript):
         ))
         return bbox_weight * vis_angle + (1.0 - bbox_weight) * human_cross
 
+    def _historical_trail_waypoint(self, follower_pos):
+        """Pick a recent human position ahead as a narrow-passage breadcrumb."""
+        if self.navmesh is None or len(self.target_pos_history) < 4:
+            return None
+        follower_pos = np.asarray(follower_pos, dtype=np.float32)
+        min_distance = max(0.35, float(self.my_radius) * 2.0)
+        for max_distance in (1.25, 2.0):
+            for point in reversed(self.target_pos_history[:-2]):
+                point = np.asarray(point, dtype=np.float32)
+                distance = float(np.linalg.norm(point[:2] - follower_pos[:2]))
+                if distance < min_distance or distance > max_distance:
+                    continue
+                projected = self._project_to_navmesh(
+                    point, agent_radius=self.my_radius
+                )
+                if projected is None:
+                    continue
+                snap = float(np.linalg.norm(projected[:2] - point[:2]))
+                if snap > float(self.max_navmesh_snap):
+                    continue
+                projected = np.asarray(projected, dtype=np.float32)
+                projected[2] = follower_pos[2]
+                return projected
+        return None
+
     def _compute_habitat_nav_command(
         self, follower_pos, follower_yaw, target_pos, to_human_2d, dist_to_human
     ):
         """Habitat oracle to_navmesh_waypoint mapped to Isaac body velocities."""
         next_waypoint = self._get_next_waypoint(follower_pos, target_pos, dist_to_human)
         path_points = self.cached_path if self.cached_path else None
+        if self._consecutive_path_failures >= 3:
+            trail_waypoint = self._historical_trail_waypoint(follower_pos)
+            if trail_waypoint is not None:
+                next_waypoint = trail_waypoint
+                path_points = None
+                self._current_nav_waypoint = trail_waypoint.copy()
+                self._log_event(
+                    "historical_trail_fallback",
+                    (
+                        f"path failed {self._consecutive_path_failures} times; "
+                        f"following observed human trail point "
+                        f"({trail_waypoint[0]:.2f},{trail_waypoint[1]:.2f})"
+                    ),
+                    cooldown=0.5,
+                    level="warn",
+                )
         if next_waypoint is None:
             if self.navmesh is not None:
                 # A global path can temporarily fail at a narrow corner or when
@@ -3007,6 +3050,7 @@ class FollowerBehavior(BehaviorScript):
 
         new_path = self._compute_follow_path(follower_pos, target_pos) or []
         if new_path and len(new_path) >= 2:
+            self._consecutive_path_failures = 0
             self.cached_path = new_path
             self.cached_waypoint_idx = self._initial_waypoint_idx_for_path(
                 follower_pos,
@@ -3024,6 +3068,7 @@ class FollowerBehavior(BehaviorScript):
                 cooldown=0.5,
             )
         elif self.cached_path and len(self.cached_path) >= 2:
+            self._consecutive_path_failures += 1
             self._path_query_failed = True
             self._log_event(
                 "replan_keep_cache",
@@ -3032,6 +3077,7 @@ class FollowerBehavior(BehaviorScript):
                 level="warn",
             )
         else:
+            self._consecutive_path_failures += 1
             self._path_query_failed = True
             self.cached_path = []
             self.last_target_pos = target_pos.copy()

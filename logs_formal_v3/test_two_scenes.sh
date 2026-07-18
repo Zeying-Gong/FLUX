@@ -12,7 +12,10 @@ ROBOT_TYPE="${ROBOT_TYPE:-go2}"
 CAMERA_TYPE="${CAMERA_TYPE:-zed}"
 CHARACTER_SPEED="${CHARACTER_SPEED:-0.5}"
 RENDER_WARMUP_FRAMES="${RENDER_WARMUP_FRAMES:-180}"
-DATAGEN_PLANNING_RADIUS="${DATAGEN_PLANNING_RADIUS:-0.20}"
+if [ -z "${ROBOT_RADIUS_2D:-}" ]; then
+  [ "$ROBOT_TYPE" = "dingo" ] && ROBOT_RADIUS_2D="0.15" || ROBOT_RADIUS_2D="0.20"
+fi
+DATAGEN_PLANNING_RADIUS="${DATAGEN_PLANNING_RADIUS:-$ROBOT_RADIUS_2D}"
 DATAGEN_NAVMESH_SNAP="${DATAGEN_NAVMESH_SNAP:-0.25}"
 MAX_CONSECUTIVE_SNAP_REJECTED="${MAX_CONSECUTIVE_SNAP_REJECTED:-20}"
 SAGE3D_DIR="${SAGE3D_DIR:-/mnt/ssd1/zeyingg/SAGE-3D_Official}"
@@ -41,6 +44,7 @@ mkdir -p "$HOST_RUN_DIR" \
   echo "collector=$COLLECTOR"
   echo "robot_type=$ROBOT_TYPE"
   echo "camera_type=$CAMERA_TYPE"
+  echo "robot_radius_2d=$ROBOT_RADIUS_2D"
   echo "character_speed=$CHARACTER_SPEED"
   echo "datagen_planning_radius=$DATAGEN_PLANNING_RADIUS"
   echo "datagen_navmesh_snap=$DATAGEN_NAVMESH_SNAP"
@@ -88,6 +92,7 @@ for SCENE_ID in "${SCENES[@]}"; do
       --end_idx 2 \
       --max_steps $MAX_STEPS \
       --character_speed $CHARACTER_SPEED \
+      --robot_radius_2d $ROBOT_RADIUS_2D \
       --datagen_planning_radius $DATAGEN_PLANNING_RADIUS \
       --datagen_navmesh_snap $DATAGEN_NAVMESH_SNAP \
       --max_consecutive_snap_rejected $MAX_CONSECUTIVE_SNAP_REJECTED \
