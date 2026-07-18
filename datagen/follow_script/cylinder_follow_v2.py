@@ -1671,13 +1671,17 @@ class FollowerBehavior(BehaviorScript):
             robot_forward_2d,
             dir_human,
         )
-        if self._nav_dominant:
-            if self.motion_type == "omnidirectional":
-                # Omni translation can follow the safe path while the body and
-                # camera continue facing the target, including after visual loss.
-                yaw_error = visual_yaw_error
-            else:
-                yaw_error = nav_cross
+        if self.motion_type == "differential":
+            # A differential base must point along its translation route. If
+            # visual target centering is blended into body yaw at a corner,
+            # the speed gate waits for alignment with the NavMesh waypoint
+            # while yaw keeps steering back toward the pedestrian. That
+            # conflicting pair of objectives produces an in-place spin.
+            yaw_error = nav_cross
+        elif self._nav_dominant:
+            # Omni translation can follow the safe path while the body and
+            # camera continue facing the target, including after visual loss.
+            yaw_error = visual_yaw_error
         else:
             yaw_error = (
                 (1.0 - self.visual_confidence) * nav_cross
