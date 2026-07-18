@@ -7,8 +7,12 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 GPU_ID="${GPU_ID:-0}"
 MAX_STEPS="${MAX_STEPS:-300}"
 SAVE_VIDEO="${SAVE_VIDEO:-1}"
+COLLECTOR="${COLLECTOR:-tracking_episode_collection_datagen.py}"
 CHARACTER_SPEED="${CHARACTER_SPEED:-0.5}"
 RENDER_WARMUP_FRAMES="${RENDER_WARMUP_FRAMES:-180}"
+DATAGEN_PLANNING_RADIUS="${DATAGEN_PLANNING_RADIUS:-0.15}"
+DATAGEN_NAVMESH_SNAP="${DATAGEN_NAVMESH_SNAP:-0.35}"
+MAX_CONSECUTIVE_SNAP_REJECTED="${MAX_CONSECUTIVE_SNAP_REJECTED:-40}"
 SAGE3D_DIR="${SAGE3D_DIR:-/mnt/ssd1/zeyingg/SAGE-3D_Official}"
 ISAAC_CACHE_DIR="${ISAAC_CACHE_DIR:-$HOME/.cache/flux-isaac-sim}"
 RUN_TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
@@ -18,8 +22,8 @@ CONTAINER_RUN_DIR="/workspace/FLUX/logs_formal_v3/test_runs/$RUN_NAME"
 
 SCENES=("0001_839920" "0039_839888")
 
-[ -f "$REPO_DIR/sage_utils/tracking_episode_collection_datagen.py" ] || {
-  echo "Missing datagen collector." >&2; exit 1
+[ -f "$REPO_DIR/sage_utils/$COLLECTOR" ] || {
+  echo "Missing collector: sage_utils/$COLLECTOR" >&2; exit 1
 }
 
 mkdir -p "$HOST_RUN_DIR" \
@@ -32,7 +36,11 @@ mkdir -p "$HOST_RUN_DIR" \
   echo "gpu_id=$GPU_ID"
   echo "max_steps=$MAX_STEPS"
   echo "save_video=$SAVE_VIDEO"
+  echo "collector=$COLLECTOR"
   echo "character_speed=$CHARACTER_SPEED"
+  echo "datagen_planning_radius=$DATAGEN_PLANNING_RADIUS"
+  echo "datagen_navmesh_snap=$DATAGEN_NAVMESH_SNAP"
+  echo "max_consecutive_snap_rejected=$MAX_CONSECUTIVE_SNAP_REJECTED"
   echo "repo_dir=$REPO_DIR"
   echo "sage3d_dir=$SAGE3D_DIR"
   echo "git_commit=$(git -C "$REPO_DIR" rev-parse HEAD)"
@@ -68,7 +76,7 @@ for SCENE_ID in "${SCENES[@]}"; do
     -w /workspace \
     quay.io/zeyinggong/flux:v2_deploy \
     -c "/isaac-sim/python.sh \
-      /workspace/FLUX/sage_utils/tracking_episode_collection_datagen.py \
+      /workspace/FLUX/sage_utils/$COLLECTOR \
       --episode_dir /workspace/SAGE-3D_Official/SAGE-3D_data/v3_tracking_episodes/$SCENE_ID \
       --robot_type go2 \
       --camera_type zed \
@@ -76,6 +84,9 @@ for SCENE_ID in "${SCENES[@]}"; do
       --end_idx 2 \
       --max_steps $MAX_STEPS \
       --character_speed $CHARACTER_SPEED \
+      --datagen_planning_radius $DATAGEN_PLANNING_RADIUS \
+      --datagen_navmesh_snap $DATAGEN_NAVMESH_SNAP \
+      --max_consecutive_snap_rejected $MAX_CONSECUTIVE_SNAP_REJECTED \
       --save_images \
       --image_save_dir $CONTAINER_RUN_DIR/$SCENE_ID \
       --output_metrics $CONTAINER_RUN_DIR/$SCENE_ID/metrics.csv \
