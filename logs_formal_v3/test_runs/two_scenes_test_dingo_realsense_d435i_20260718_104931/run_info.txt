@@ -1,0 +1,21 @@
+run_name=two_scenes_test_dingo_realsense_d435i_20260718_104931
+scenes=0001_839920 0002_839955
+gpu_id=0
+max_steps=300
+save_video=1
+collector=tracking_episode_collection_camera_only.py
+follower_script=/workspace/FLUX/datagen/follow_script/cylinder_follow_tracking.py
+robot_type=dingo
+camera_type=realsense_d435i
+robot_radius_2d=0.15
+character_speed=0.5
+datagen_planning_radius=0.15
+datagen_navmesh_snap=0.25
+max_consecutive_snap_rejected=20
+repo_dir=/mnt/nvme1/zeyingg/FLUX
+sage3d_dir=/mnt/ssd1/zeyingg/SAGE-3D_Official
+git_commit=3e5d4ca4b8b0428a682d892ba425e8d314377e31
+started_at=2026-07-18T10:49:31+08:00
+OK: scene 0001_839920 done
+OK: scene 0002_839955 done
+finished_at=2026-07-18T10:57:57+08:00
