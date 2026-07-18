@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "status": "rejected",
+  "episode_id": 1,
+  "rejection_reasons": [
+    "tracking_rate"
+  ],
+  "metrics": {
+    "episode_id": 1,
+    "success": 0,
+    "had_recovery": 0,
+    "recovery_count": 0,
+    "recovery_frames": 0,
+    "last_recovery_reason": "",
+    "follower_stuck_incident": 0,
+    "target_low_motion_incident": 0,
+    "episode_length": 288,
+    "tracking_rate": 0.7743055555555556,
+    "collision": 0,
+    "snap_rejected_frames": 0,
+    "snap_rejected_rate": 0.0,
+    "projection_cycle_count": 0,
+    "robot_path_length": 3.4905879497528076,
+    "max_robot_step": 0.07594943791627884,
+    "initial_dist": 1.4345281152966523,
+    "final_dist": 1.0236032961382349,
+    "avg_dist": 1.1749164931358185,
+    "avg_heading_error_deg": 33.57036435291986,
+    "done_reason": "char_done"
+  },
+  "filter_config": {
+    "min_tracking_rate": 0.8,
+    "min_visible_rate": 0.8,
+    "max_collisions": 0,
+    "allow_recovery": true,
+    "max_final_dist": 3.0,
+    "allowed_end_reasons": "max_steps,char_done"
+  },
+  "robot": {
+    "type": "dingo",
+    "footprint_radius": 0.15,
+    "planning_radius": 0.15,
+    "base_z": 0.1,
+    "ground_z": 0.0,
+    "hidden": true
+  }
+}

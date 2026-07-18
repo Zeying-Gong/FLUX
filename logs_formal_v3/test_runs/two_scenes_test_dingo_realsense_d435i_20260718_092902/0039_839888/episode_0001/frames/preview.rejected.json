@@ -1,0 +1,88 @@
+{
+  "episode_id": 1,
+  "num_steps": 288,
+  "task_description": "Track a woman wearing olive top, lime pants, white shoes",
+  "fields_in_npz": [
+    "step",
+    "timestamp",
+    "robot_pos_x",
+    "robot_pos_y",
+    "robot_pos_z",
+    "robot_yaw",
+    "target_pos_x",
+    "target_pos_y",
+    "target_pos_z",
+    "target_rel_x",
+    "target_rel_y",
+    "target_rel_z",
+    "target_dist",
+    "target_bearing_deg",
+    "target_elevation_deg",
+    "target_uv_u",
+    "target_uv_v",
+    "target_bbox_x1",
+    "target_bbox_y1",
+    "target_bbox_x2",
+    "target_bbox_y2",
+    "target_visible",
+    "action_forward",
+    "action_lateral",
+    "action_yaw",
+    "mode",
+    "dist_to_target",
+    "heading_error_deg",
+    "contact_force",
+    "ped_min_dist",
+    "observation.state",
+    "action",
+    "task_description",
+    "goal_uv",
+    "goal_bbox",
+    "goal_rel_xyz",
+    "robot_trajectory",
+    "target_trajectory"
+  ],
+  "observation.state_columns": [
+    "robot_x",
+    "robot_y",
+    "robot_z",
+    "robot_yaw",
+    "target_rel_x",
+    "target_rel_y",
+    "target_rel_z",
+    "target_dist",
+    "target_bearing_deg"
+  ],
+  "action_columns": [
+    "linear_vel",
+    "angular_vel"
+  ],
+  "target_uv_first": [
+    318.58995634801494,
+    332.1295296562395
+  ],
+  "target_uv_last": [
+    352.7795257828483,
+    391.38266200148644
+  ],
+  "target_bbox_first": [
+    206,
+    0,
+    414,
+    395
+  ],
+  "tracking_rate": 1.0,
+  "avg_heading_error_deg": 33.57036435291986,
+  "initial_dist_m": 1.4351542082228153,
+  "final_dist_m": 1.0284764156704804,
+  "robot_start_pos": [
+    1.8142826557159424,
+    -0.28095901012420654,
+    0.042387355118989944
+  ],
+  "target_start_pos": [
+    2.0448074340820312,
+    -1.6968436241149902,
+    8.362454062549318e-10
+  ]
+}
