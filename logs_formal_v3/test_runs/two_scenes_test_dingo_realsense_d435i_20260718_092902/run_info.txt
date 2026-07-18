@@ -1,0 +1,20 @@
+run_name=two_scenes_test_dingo_realsense_d435i_20260718_092902
+scenes=0001_839920 0039_839888
+gpu_id=0
+max_steps=300
+save_video=1
+collector=tracking_episode_collection_datagen.py
+robot_type=dingo
+camera_type=realsense_d435i
+robot_radius_2d=0.15
+character_speed=0.5
+datagen_planning_radius=0.15
+datagen_navmesh_snap=0.25
+max_consecutive_snap_rejected=20
+repo_dir=/mnt/nvme1/zeyingg/FLUX
+sage3d_dir=/mnt/ssd1/zeyingg/SAGE-3D_Official
+git_commit=01681a1fcf14b37251dae2febf7492ab4dc9acfb
+started_at=2026-07-18T09:29:02+08:00
+OK: scene 0001_839920 done
+WARN: scene 0039_839888 exited with code 141
+finished_at=2026-07-18T09:33:08+08:00
