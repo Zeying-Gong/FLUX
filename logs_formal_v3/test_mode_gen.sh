@@ -22,7 +22,7 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # ── Config ───────────────────────────────────────────────────────────
 GPU_IDS="${GPU_IDS:-0}"
-MAX_STEPS="${MAX_STEPS:-600}"
+MAX_STEPS="${MAX_STEPS:-300}"
 SAVE_VIDEO="${SAVE_VIDEO:-1}"
 COLLECTOR="${COLLECTOR:-tracking_episode_collection_camera_only.py}"
 FOLLOWER_SCRIPT="${FOLLOWER_SCRIPT:-/workspace/FLUX/datagen/follow_script/cylinder_follow_tracking.py}"
@@ -46,9 +46,10 @@ read -r -a CAMERAS <<< "$CAMERA_TYPES"
 read -r -a GPU_ARR <<< "$GPU_IDS"
 
 RUN_TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
-RUN_NAME="mode_test_${RUN_TIMESTAMP}"
-HOST_RUN_DIR="$REPO_DIR/logs_formal_v3/test_runs/$RUN_NAME"
-CONTAINER_RUN_DIR="/workspace/FLUX/logs_formal_v3/test_runs/$RUN_NAME"
+RUN_SUFFIX="${RUN_SUFFIX:-}"
+RUN_NAME="formal_${RUN_SUFFIX}"
+HOST_RUN_DIR="$REPO_DIR/logs_formal_v3/formal_runs/$RUN_NAME"
+CONTAINER_RUN_DIR="/workspace/FLUX/logs_formal_v3/formal_runs/$RUN_NAME"
 
 EPISODES_V3="$SAGE3D_DIR/SAGE-3D_data/v3_tracking_episodes"  # existing dataset
 
@@ -203,6 +204,24 @@ for _sid in $SCENE_IDS; do
       _GPU="${GPU_ARR[0]}"
       _LOG_DIR="$HOST_RUN_DIR/logs/${_mode}/${_sid}/${RT}_${CT}"
       mkdir -p "$_LOG_DIR"
+
+      # ── Resume: skip this combo if every episode it would generate
+      #    already has an _ACCEPTED or _REJECTED marker from a prior
+      #    run.  Re-running a rejected episode would almost certainly
+      #    reject again, so we don't waste GPU time on it. ──
+      _all_done=1
+      for ((_i=0; _i<_n_eps; _i++)); do
+        _ep_dir="$HOST_RUN_DIR/${_mode}/${_sid}/${_i}/${RT}_${CT}"
+        if [ ! -f "$_ep_dir/_ACCEPTED" ] && [ ! -f "$_ep_dir/_REJECTED" ]; then
+          _all_done=0
+          break
+        fi
+      done
+      if [ "$_all_done" -eq 1 ]; then
+        echo "  [${_mode}/${_sid}] ${RT}_${CT}: already done (resume skip)"
+        echo "SKIP(resume): mode=$_mode scene=$_sid combo=${RT}_${CT} already processed" >> "$HOST_RUN_DIR/run_info.txt"
+        continue
+      fi
 
       _HOST_UID=$(id -u)
       _HOST_GID=$(id -g)
