@@ -135,7 +135,16 @@ def parse_args():
                         "stays below this threshold after --early_abort_min_steps "
                         "(default 0.0 = disabled)")
     p.add_argument("--max_consecutive_snap_rejected", type=int, default=20,
-                   help="Abort after this many consecutive NavMesh motion rejections")
+                    help="Abort after this many consecutive NavMesh motion rejections")
+    p.add_argument("--early_abort_snap_reject_rate", type=float, default=0.0,
+                    help="If >0, abort episode early when the cumulative fraction of "
+                         "NavMesh snap-rejected frames exceeds this threshold after "
+                         "--early_abort_min_steps (default 0.0 = disabled). Catches "
+                         "episodes that are stuck against geometry (high tracking rate "
+                         "but no forward progress) earlier than the consecutive counter.")
+    p.add_argument("--early_abort_snap_reject_max_steps", type=int, default=600,
+                    help="Max episode length over which the cumulative snap-reject "
+                         "fraction is evaluated; ignored if <= early_abort_min_steps")
     p.add_argument("--max_consecutive_robot_in_obstacle", type=int, default=5,
                    help="Abort after this many consecutive occupancy-grid obstacle detections")
     p.add_argument("--character_speed", type=float, default=0.5,
@@ -2883,9 +2892,9 @@ def save_rgb_depth(cam: IsaacCamera, step_idx: int, save_dir: str, episode_id: i
         if depth is None:
             print(f"[WARN] step={step_idx} depth is None, saving RGB only")
             depth = np.zeros((CAM_H, CAM_W), dtype=np.float32)
-        episode_dir = os.path.join(save_dir, f"episode_{episode_id:04d}")
-        rgb_dir     = os.path.join(episode_dir, "rgb")
-        depth_dir = os.path.join(episode_dir, "depth")
+        _ep_dir = save_dir  # save_dir already is the mode-based episode dir
+        rgb_dir     = os.path.join(_ep_dir, "rgb")
+        depth_dir = os.path.join(_ep_dir, "depth")
         os.makedirs(rgb_dir,      exist_ok=True)
         os.makedirs(depth_dir, exist_ok=True)
         # RGB
@@ -2894,9 +2903,20 @@ def save_rgb_depth(cam: IsaacCamera, step_idx: int, save_dir: str, episode_id: i
         depth_mm = (depth * 1000.0).clip(0, 65535).astype(np.uint16)
         Image.fromarray(depth_mm, mode="I;16").save(
             os.path.join(depth_dir, f"{step_idx:05d}.png"))
-        # Bbox crop: only on first frame (visual navigation target)
+        # Save target crop as track_object.jpg directly (first frame only)
         if target_bbox is not None and is_first_episode_frame:
-            save_bbox_crop(rgb, target_bbox, step_idx, save_dir, episode_id)
+            try:
+                from PIL import Image
+                x1, y1, x2, y2 = target_bbox
+                x1 = max(0, int(round(x1)))
+                y1 = max(0, int(round(y1)))
+                x2 = min(CAM_W - 1, int(round(x2)))
+                y2 = min(CAM_H - 1, int(round(y2)))
+                if x2 > x1 and y2 > y1:
+                    crop = rgb[y1:y2, x1:x2]
+                    Image.fromarray(crop).save(os.path.join(_ep_dir, "track_object.jpg"))
+            except Exception as e:
+                print(f"[BBoxCrop] WARN: {e}")
         return rgb
     except Exception as e:
         print(f"[WARN] Image save failed: {e}")
@@ -3030,8 +3050,7 @@ def save_occ_debug(
         draw.rectangle([0, 0, len(label) * 6 + 4, 13], fill=(0, 0, 0))
         draw.text((2, 1), label, fill=(255, 255, 80))
 
-        episode_dir = os.path.join(save_dir, f"episode_{episode_id:04d}")
-        occ_dir = os.path.join(episode_dir, "debug_occ")
+        occ_dir = os.path.join(save_dir, "debug_occ")
         os.makedirs(occ_dir, exist_ok=True)
         img.save(os.path.join(occ_dir, f"{step_idx:05d}.png"))
     except Exception as e:
@@ -3154,6 +3173,7 @@ _EP_DATA_FIELDS = [
     "mode",
     "dist_to_target", "heading_error_deg",
     "contact_force", "ped_min_dist",
+    "other_humans_pos",
 ]
 
 
@@ -3165,7 +3185,8 @@ def record_step(ep_data: dict, step: int, robot_pos, robot_yaw,
                 target_pos, target_visible,
                 forward, lateral, yaw_action, mode,
                 dist, heading_err, contact_force, ped_min,
-                target_uv=None, target_bbox=None):
+                target_uv=None, target_bbox=None,
+                other_humans_pos=None):
     ep_data["step"].append(step)
     ep_data["timestamp"].append(step * ARGS.physics_dt * ARGS.decimation)
     # Robot pose
@@ -3224,142 +3245,243 @@ def record_step(ep_data: dict, step: int, robot_pos, robot_yaw,
     # Collision / pedestrian
     ep_data["contact_force"].append(float(contact_force))
     ep_data["ped_min_dist"].append(float(ped_min))
+    # Other humans world positions (list of [x,y,z] per step, max 7)
+    ep_data["other_humans_pos"].append(
+        list(other_humans_pos) if other_humans_pos is not None else []
+    )
 
 
 def save_episode_npz(ep_data: dict, ep_id: int, save_dir: str,
                       episode_dict: Optional[dict] = None):
     if not ep_data or len(ep_data["step"]) == 0:
         return
-    out_dir = os.path.join(save_dir, f"episode_{ep_id:04d}", "frames")
-    os.makedirs(out_dir, exist_ok=True)
-    # Convert lists to arrays
-    arrays = {k: np.array(v) for k, v in ep_data.items()}
-    # LeRobot-compatible combined fields
-    arrays["observation.state"] = np.stack([
-        arrays["robot_pos_x"], arrays["robot_pos_y"], arrays["robot_pos_z"],
-        arrays["robot_yaw"],
-        arrays["target_rel_x"], arrays["target_rel_y"], arrays["target_rel_z"],
-        arrays["target_dist"], arrays["target_bearing_deg"],
-    ], axis=-1)
-    arrays["action"] = np.stack([
-        arrays["action_forward"], arrays["action_lateral"], arrays["action_yaw"],
-    ], axis=-1)
-    # ── Task description: "Track a {gender} wearing {color} {clothing}, ..." ─
-    task_desc = ""
-    if episode_dict is not None:
-        appearance = episode_dict.get("appearance", {})
-        by_char = appearance.get("by_character", {})
-        for cname, cinfo in by_char.items():
-            asset = cinfo.get("asset", "")
-            gender = "person"
-            if asset.startswith("F_"):
-                gender = "woman"
-            elif asset.startswith("M_"):
-                gender = "man"
-            parts = cinfo.get("parts", {})
-            clothing_items = []
-            color_map = {}
-            for pname, pinfo in parts.items():
-                cat = pinfo.get("category", "")
-                color_word = pinfo.get("color_word", "")
-                clothing_items.append((cat, color_word))
-            # Group by category, prefer specific items
-            top_items = [c for c in clothing_items if c[0] == "top"]
-            bottom_items = [c for c in clothing_items if c[0] == "bottom"]
-            shoe_items = [c for c in clothing_items if c[0] == "shoes"]
-            hat_items = [c for c in clothing_items if c[0] == "hat"]
-            desc_parts = []
-            if hat_items:
-                desc_parts.append(f"{hat_items[0][1]} hat")
-            if top_items:
-                desc_parts.append(f"{top_items[0][1]} top")
-            if bottom_items:
-                desc_parts.append(f"{bottom_items[0][1]} pants")
-            if shoe_items:
-                desc_parts.append(f"{shoe_items[0][1]} shoes")
-            task_desc = f"Track a {gender} wearing " + ", ".join(desc_parts)
-    arrays["task_description"] = np.frombuffer(task_desc.encode("utf-8"), dtype=np.uint8)
-
-    # ── Goal (first-frame only, for one-shot target specification) ─────
-    T = len(arrays['step'])
-    arrays["goal_uv"] = np.array([arrays["target_uv_u"][0],
-                                   arrays["target_uv_v"][0]], dtype=np.float64)
-    arrays["goal_bbox"] = np.array([arrays["target_bbox_x1"][0],
-                                     arrays["target_bbox_y1"][0],
-                                     arrays["target_bbox_x2"][0],
-                                     arrays["target_bbox_y2"][0]], dtype=np.float64)
-    arrays["goal_rel_xyz"] = np.array([arrays["target_rel_x"][0],
-                                        arrays["target_rel_y"][0],
-                                        arrays["target_rel_z"][0]], dtype=np.float64)
-
-    # ── Robot + target trajectories ────────────────────────────────────
-    arrays["robot_trajectory"] = np.stack([
-        arrays["robot_pos_x"], arrays["robot_pos_y"], arrays["robot_pos_z"],
-    ], axis=-1)
-    arrays["target_trajectory"] = np.stack([
-        arrays["target_pos_x"], arrays["target_pos_y"], arrays["target_pos_z"],
-    ], axis=-1)
-
-    npz_path = os.path.join(out_dir, "frame_data.npz")
-    np.savez_compressed(npz_path, **arrays)
-    print(f"[Data] Saved {len(arrays['step'])} frames to {npz_path}")
-
-    # ── JSON preview for quick inspection ──────────────────────────────
-    preview = {
-        "episode_id": ep_id,
-        "num_steps": int(T),
-        "task_description": task_desc,
-        "fields_in_npz": list(arrays.keys()),
-        "observation.state_columns": [
-            "robot_x", "robot_y", "robot_z", "robot_yaw",
-            "target_rel_x", "target_rel_y", "target_rel_z",
-            "target_dist", "target_bearing_deg"
-        ],
-        "action_columns": ["linear_vel", "angular_vel"],
-        "target_uv_first": [float(arrays["target_uv_u"][0]), float(arrays["target_uv_v"][0])],
-        "target_uv_last": [float(arrays["target_uv_u"][-1]), float(arrays["target_uv_v"][-1])],
-        "target_bbox_first": [int(arrays["target_bbox_x1"][0]), int(arrays["target_bbox_y1"][0]),
-                              int(arrays["target_bbox_x2"][0]), int(arrays["target_bbox_y2"][0])],
-        "tracking_rate": float(np.mean(arrays["target_visible"])),
-        "avg_heading_error_deg": float(np.mean(arrays["heading_error_deg"])),
-        "initial_dist_m": float(arrays["target_dist"][0]),
-        "final_dist_m": float(arrays["target_dist"][-1]),
-        "robot_start_pos": [float(arrays["robot_pos_x"][0]), float(arrays["robot_pos_y"][0]), float(arrays["robot_pos_z"][0])],
-        "target_start_pos": [float(arrays["target_pos_x"][0]), float(arrays["target_pos_y"][0]), float(arrays["target_pos_z"][0])],
-    }
-    # Add pedestrian path waypoints from episode JSON
-    if episode_dict is not None:
-        commands = episode_dict.get("characters", {}).get("commands", {})
-        ped_paths = {}
-        for cname, cmds in commands.items():
-            if cname == "Character":  # target character, skip (already tracked)
-                continue
-            paths = []
-            for cmd in cmds:
-                if cmd.get("cmd") == "GoTo":
-                    paths.append(cmd.get("path", []))
-            if paths:
-                ped_paths[cname] = paths
-        if ped_paths:
-            preview["pedestrian_waypoints"] = ped_paths
-    preview_path = os.path.join(out_dir, "preview.json")
-    with open(preview_path, "w") as f:
-        json.dump(preview, f, indent=2)
-
-    # Save camera info sidecar (for LeRobot compat)
+    # save_dir is the mode-based episode directory (e.g. .../stt/scene/0/combo)
+    # Save camera info sidecar
     _save_camera_info(save_dir, ep_id)
-    # Save task description as sidecar text (one per episode)
-    if task_desc:
-        task_path = os.path.join(os.path.dirname(out_dir), f"task_description_ep{ep_id:04d}.txt")
-        with open(task_path, "w") as f:
-            f.write(task_desc + "\n")
+
+
+def _build_collab_task_desc(episode_dict: Optional[dict], mode: str = "dt") -> str:
+    """Build task description matching the tracking mode.
+
+    mode='stt': simple "Follow the {gender}."
+    mode='dt':  detailed "Pursue the {gender} wearing {color} top, ..."
+    mode='at':  ambiguous "Follow the first person you see."
+    """
+    if episode_dict is None:
+        return ""
+    appearance = episode_dict.get("appearance", {}) or {}
+    by_char = appearance.get("by_character", {})
+    if not by_char:
+        return ""
+
+    import random as _random
+    _rng = _random.Random()
+
+    target_key = "Character" if "Character" in by_char else list(by_char.keys())[0]
+    target_info = by_char[target_key]
+    asset = target_info.get("asset", "")
+    gender = "person"
+    if asset.startswith("F_"):
+        gender = "woman"
+    elif asset.startswith("M_"):
+        gender = "man"
+
+    if mode == "stt":
+        templates = [
+            f"Follow the {gender}.",
+            "Follow the person.",
+            f"Follow the {gender} in front of you.",
+        ]
+        return _rng.choice(templates)
+
+    if mode == "at":
+        templates = [
+            "Follow the first person you see.",
+            "Pursue the first individual in your path.",
+            "Stay behind the first person you observe.",
+            "Follow the person you see first.",
+        ]
+        people_count = len(by_char)
+        if people_count >= 3:
+            templates.extend([
+                "Follow the first person you see. Ignore everyone else.",
+                "Track the first person you see. The others are distractions.",
+            ])
+        return _rng.choice(templates)
+
+    # DT (default)
+    parts = target_info.get("parts", {})
+    clothing_items = []
+    for pname, pinfo in parts.items():
+        cat = pinfo.get("category", "")
+        color_word = pinfo.get("color_word", "")
+        clothing_items.append((cat, color_word))
+    top_items = [c for c in clothing_items if c[0] == "top"]
+    bottom_items = [c for c in clothing_items if c[0] == "bottom"]
+    shoe_items = [c for c in clothing_items if c[0] == "shoes"]
+    hat_items = [c for c in clothing_items if c[0] == "hat"]
+    desc_parts = []
+    if hat_items:
+        desc_parts.append(f"{hat_items[0][1]} hat")
+    if top_items:
+        desc_parts.append(f"{top_items[0][1]} top")
+    if bottom_items:
+        desc_parts.append(f"{bottom_items[0][1]} pants")
+    if shoe_items:
+        desc_parts.append(f"{shoe_items[0][1]} shoes")
+    if desc_parts:
+        return f"Pursue the {gender} wearing " + ", ".join(desc_parts) + "."
+    else:
+        templates = [
+            f"Pursue the {gender} in front of you.",
+            f"Follow the {gender}.",
+        ]
+        return _rng.choice(templates)
+
+
+def save_collab_format(ep_data: dict, ep_id: int, save_dir: str,
+                       episode_dict: Optional[dict] = None,
+                       task_desc: str = "",
+                       metrics: Optional[dict] = None,
+                       mode: str = "dt"):
+    """Save collaborator-format files alongside existing data.
+
+    Creates (without overwriting existing):
+      {ep_num}.json         — episode summary  (finish, status, success, instruction, …)
+      {ep_num}_info.json    — per-step telemetry (matching collaborator schema)
+      track_object.jpg      — target crop (copied from target_crops/00000.png)
+
+    Args:
+        mode: tracking mode — "stt", "dt", or "at".  Used to generate the
+              appropriate instruction text.
+    """
+    ep_dir = save_dir  # save_dir is already the mode-based episode dir
+    ep_num = ep_id
+    os.makedirs(ep_dir, exist_ok=True)
+
+    # ── Episode summary JSON ───────────────────────────────────────────
+    success_val = 1.0
+    following_rate = 0.0
+    following_step = 0
+    total_step = len(ep_data.get("step", []))
+    collision_val = 0.0
+    if metrics is not None:
+        success_val = float(metrics.get("success", 1))
+        following_rate = float(metrics.get("tracking_rate", 0.0))
+        total_step = int(metrics.get("episode_length", total_step))
+        # following_step approximates: tracking_rate * total_step
+        following_step = int(round(following_rate * total_step))
+        collision_val = float(metrics.get("collision", 0))
+
+    summary_path = os.path.join(ep_dir, f"{ep_num}.json")
+    if not os.path.exists(summary_path):
+        instruction = task_desc if task_desc else _build_collab_task_desc(episode_dict, mode=mode)
+        # Read ori_episode_id from episode_dict (patched in temp JSON)
+        _oid = ep_id
+        if episode_dict is not None:
+            _oid = episode_dict.get("ori_episode_id", ep_id)
+        summary = {
+            "finish": True,
+            "status": "Normal",
+            "success": success_val,
+            "following_rate": following_rate,
+            "following_step": following_step,
+            "total_step": total_step,
+            "collision": collision_val,
+            "episode_id": ep_id,
+            "ori_episode_id": _oid,
+            "mode": mode,
+            "instruction": instruction,
+        }
+        with open(summary_path, "w") as f:
+            json.dump(summary, f, indent=2)
+        print(f"[Collab] EP{ep_id}: saved {summary_path}")
+
+    # ── Per-step info JSON ─────────────────────────────────────────────
+    info_path = os.path.join(ep_dir, f"{ep_num}_info.json")
+    if not os.path.exists(info_path):
+        n = len(ep_data.get("step", []))
+        source_fps = 1.0 / (ARGS.physics_dt * ARGS.decimation) if hasattr(ARGS, 'physics_dt') else 40.0
+        dt = ARGS.physics_dt * ARGS.decimation if hasattr(ARGS, 'physics_dt') else 0.025
+
+        entries = []
+        for i in range(n):
+            step_num = int(ep_data["step"][i])
+            # Robot positions (current and previous)
+            rpos = [
+                float(ep_data.get("robot_pos_x", [0.0])[i]),
+                float(ep_data.get("robot_pos_y", [0.0])[i]),
+                float(ep_data.get("robot_pos_z", [0.0])[i]),
+            ]
+            rpos_pre = [
+                float(ep_data.get("robot_pos_x", [0.0])[max(0, i - 1)]),
+                float(ep_data.get("robot_pos_y", [0.0])[max(0, i - 1)]),
+                float(ep_data.get("robot_pos_z", [0.0])[max(0, i - 1)]),
+            ] if i > 0 else rpos[:]
+
+            visible = float(ep_data.get("target_visible", [0])[i])
+            fwd = float(ep_data.get("action_forward", [0.0])[i])
+            lat = float(ep_data.get("action_lateral", [0.0])[i])
+            yaw_a = float(ep_data.get("action_yaw", [0.0])[i])
+
+            # Other humans positions (padded to 7 with sentinels)
+            _raw_others = ep_data.get("other_humans_pos", [])
+            _others = _raw_others[i] if i < len(_raw_others) else []
+            while len(_others) < 7:
+                _others.append([-98.0, -98.0, -98.0])
+            _others = _others[:7]
+
+            entry = {
+                "step": step_num,
+                "source_fps": source_fps,
+                "dt": dt,
+                "dis_to_human": float(ep_data.get("target_dist", [0.0])[i]),
+                "facing": 1.0 if visible > 0 else 0.0,
+                "base_velocity": [fwd, lat, 0.0],
+                "base_velocity_cmd": [fwd, lat, 0.0],
+                "slide": False,
+                "navmesh_collision": False,
+                "collision": bool(
+                    float(ep_data.get("contact_force", [0.0])[i]) >= 400.0
+                ),
+                "robot_pos_pre": rpos_pre,
+                "robot_yaw_pre": float(ep_data.get("robot_yaw", [0.0])[max(0, i - 1)]),
+                "robot_pos": rpos,
+                "robot_yaw": float(ep_data.get("robot_yaw", [0.0])[i]),
+                "target_pos": [
+                    float(ep_data.get("target_pos_x", [0.0])[i]),
+                    float(ep_data.get("target_pos_y", [0.0])[i]),
+                    float(ep_data.get("target_pos_z", [0.0])[i]),
+                ],
+                "other_humans_pos": _others,
+            }
+            entries.append(entry)
+
+        with open(info_path, "w") as f:
+            json.dump(entries, f, indent=2)
+        print(f"[Collab] EP{ep_id}: saved {info_path} ({n} steps)")
+
+    # ── track_object.jpg (from target_crops/00000.png) ─────────────────
+    track_jpg = os.path.join(ep_dir, "track_object.jpg")
+    if not os.path.exists(track_jpg):
+        crop_dir = os.path.join(ep_dir, "target_crops")
+        crop_files = sorted(glob.glob(os.path.join(crop_dir, "*.png")))
+        if crop_files:
+            try:
+                from PIL import Image
+                img = Image.open(crop_files[0])
+                img.save(track_jpg, "JPEG", quality=95)
+                print(f"[Collab] EP{ep_id}: saved {track_jpg}")
+            except Exception as e:
+                print(f"[Collab] EP{ep_id}: track_object.jpg WARN: {e}")
 
 
 def _save_camera_info(save_dir: str, ep_id: int):
-    """Write camera_info.json for this episode (intrinsics + extrinsics)."""
+    """Write camera_info.json for this episode (intrinsics + extrinsics).
+    save_dir is the mode-based episode directory (no episode_{id} suffix added)."""
     import json
-    ep_dir = os.path.join(save_dir, f"episode_{ep_id:04d}")
-    os.makedirs(ep_dir, exist_ok=True)
+    os.makedirs(save_dir, exist_ok=True)
+    ep_dir = save_dir
     info = {
         "camera": {
             "model": "pinhole",
@@ -3407,6 +3529,7 @@ def save_bbox_crop(rgb: np.ndarray, bbox: Tuple[float, float, float, float],
 
 
 def save_episode_video(save_dir: str, episode_id: int):
+    """Write RGB + depth videos. save_dir is the mode-based episode directory."""
     fps = 1.0 / (ARGS.physics_dt * ARGS.decimation)
     try:
         import imageio.v2 as imageio
@@ -3414,7 +3537,7 @@ def save_episode_video(save_dir: str, episode_id: int):
         print("[Video] imageio not available, skipping videos")
         return
 
-    ep_dir = os.path.join(save_dir, f"episode_{episode_id:04d}")
+    ep_dir = save_dir
 
     # RGB video
     rgb_dir = os.path.join(ep_dir, "rgb")
@@ -3558,10 +3681,11 @@ def _episode_completed(ep_id: int) -> bool:
 
 
 def _write_quality_result(ep_id: int, accepted: bool, metrics: dict,
-                          rejection_reasons: List[str]) -> None:
-    episode_dir = os.path.join(ARGS.image_save_dir, f"episode_{ep_id:04d}")
-    frames_dir = os.path.join(episode_dir, "frames")
-    os.makedirs(frames_dir, exist_ok=True)
+                          rejection_reasons: List[str],
+                          save_dir_override: Optional[str] = None) -> None:
+    episode_dir = save_dir_override if save_dir_override is not None \
+        else os.path.join(ARGS.image_save_dir, f"episode_{ep_id:04d}")
+    os.makedirs(episode_dir, exist_ok=True)
     status = "accepted" if accepted else "rejected"
     quality = {
         "schema_version": 1,
@@ -4045,6 +4169,7 @@ def main() -> int:
             "visible": True, "contact_force": 0.0, "ped_min": float("inf"),
             "dist": 0.0, "heading_err": 0.0,
             "target_uv": None, "target_bbox": None,
+            "other_humans_pos": [],
         }
         _REC_UPDATE_EVERY = max(1, ARGS.save_image_every)
         _is_ep_first_frame = True
@@ -4054,6 +4179,16 @@ def main() -> int:
             "steps_left": 0,
             "direction": 1.0,   # +1 right, -1 left
         }
+
+        # ── Compute mode-based output path for this episode ──────────
+        _ep_mode = episode.get("mode", "dt") if isinstance(episode, dict) else "dt"
+        _scene_id = episode.get("scene_id", os.path.basename(os.path.normpath(ARGS.episode_dir)))
+        _robot_camera = f"{ARGS.robot_type}_{ARGS.camera_type}"
+        _ep_base = os.path.join(ARGS.image_save_dir, _ep_mode, _scene_id, str(ep_id), _robot_camera)
+        os.makedirs(_ep_base, exist_ok=True)
+        # Temporarily redirect image_save_dir so save_rgb_depth uses mode-based path
+        _orig_save_dir = ARGS.image_save_dir
+        ARGS.image_save_dir = _ep_base
 
         while step < ARGS.max_steps:
             # ── Record previous step's data ──────────────────────────────
@@ -4065,7 +4200,8 @@ def main() -> int:
                             _rec["yaw_action"], _rec["mode"],
                             _rec["dist"], _rec["heading_err"],
                             _rec["contact_force"], _rec["ped_min"],
-                            _rec["target_uv"], _rec["target_bbox"])
+                            _rec["target_uv"], _rec["target_bbox"],
+                            _rec["other_humans_pos"])
 
             # After step 0 completes, disable first-frame-only flags
             if step == 1:
@@ -4217,10 +4353,14 @@ def main() -> int:
             _ped_min_step = float("inf")
             _ped_nearest_name = ""
             _ped_detail_parts: List[str] = []
+            # Collect other humans positions for _info.json (max 7, sentinel -98 for empty slots)
+            _other_positions: List[List[float]] = []
             for _pn, _pp_path in char_paths.items():
                 if _pp_path == target_prim_path:
                     continue
                 _pp_pos, _ = get_character_pose(_pp_path)
+                if len(_other_positions) < 7:
+                    _other_positions.append([float(_pp_pos[0]), float(_pp_pos[1]), float(_pp_pos[2])])
                 _pd = float(np.linalg.norm(_pp_pos[:2] - robot_pos[:2]))
                 # Angle relative to robot heading (negative = right, positive = left)
                 _pdx = float(_pp_pos[0] - robot_pos[0])
@@ -4239,6 +4379,11 @@ def main() -> int:
             if _ped_min_step < float("inf"):
                 ep_min_ped_dist = min(ep_min_ped_dist, _ped_min_step)
             _rec["ped_min"] = _ped_min_step
+            # Pad other_humans_pos to 7 slots with sentinel -98 (matching collaborator)
+            _SENTINEL_EMPTY = -98.0
+            while len(_other_positions) < 7:
+                _other_positions.append([_SENTINEL_EMPTY, _SENTINEL_EMPTY, _SENTINEL_EMPTY])
+            _rec["other_humans_pos"] = _other_positions[:7]
             _non_target_collision_dist = float(ARGS.robot_radius_2d) + 0.30
             if _ped_min_step < _non_target_collision_dist:
                 print(f"[EP{ep_id}] step={step} PEDESTRIAN COLLISION "
@@ -4392,6 +4537,21 @@ def main() -> int:
                     f"[EP{ep_id}] step={step} emergency stop: "
                     f"snap rejected for "
                     f"{pursuit_state['consecutive_snap_rejected']} consecutive steps"
+                )
+                step += 1
+                break
+
+            if (ARGS.early_abort_snap_reject_rate > 0
+                    and step >= ARGS.early_abort_min_steps
+                    and step <= ARGS.early_abort_snap_reject_max_steps
+                    and pursuit_state["snap_rejected_frames"] / (step + 1)
+                    >= ARGS.early_abort_snap_reject_rate):
+                done_reason = "navmesh_collision"
+                print(
+                    f"[EP{ep_id}] step={step} early abort: cumulative snap-reject "
+                    f"rate={pursuit_state['snap_rejected_frames'] / (step + 1):.3f} "
+                    f">= {ARGS.early_abort_snap_reject_rate} "
+                    f"({pursuit_state['snap_rejected_frames']}/{step + 1} frames)"
                 )
                 step += 1
                 break
@@ -5240,7 +5400,8 @@ def main() -> int:
                         _rec["yaw_action"], _rec["mode"],
                         _rec["dist"], _rec["heading_err"],
                         _rec["contact_force"], _rec["ped_min"],
-                        _rec["target_uv"], _rec["target_bbox"])
+                        _rec["target_uv"], _rec["target_bbox"],
+                        _rec["other_humans_pos"])
 
         # ── Compute metrics first (used by both filter and logging) ─────
         episode_length = step
@@ -5314,10 +5475,17 @@ def main() -> int:
             "avg_heading_error_deg": float(np.mean(heading_errors)) if heading_errors else 0.0,
             "done_reason":           done_reason,
         }
+        # Restore original image_save_dir (step loop overrode it)
+        ARGS.image_save_dir = _orig_save_dir
+
         save_episode_npz(
-            ep_data, ep_id, ARGS.image_save_dir, episode_dict=episode
+            ep_data, ep_id, _ep_base, episode_dict=episode
         )
-        _write_quality_result(ep_id, ep_ok, metrics, rejection_reasons)
+        save_collab_format(
+            ep_data, ep_id, _ep_base,
+            episode_dict=episode, metrics=metrics, mode=_ep_mode,
+        )
+        _write_quality_result(ep_id, ep_ok, metrics, rejection_reasons, save_dir_override=_ep_base)
         print(f"[Data] EP{ep_id} {'ACCEPTED' if ep_ok else 'REJECTED'} "
               f"(tracking_rate={tracking_rate:.3f}, visible_rate={visible_rate:.3f}, "
               f"collisions={collision_count}, recovery={had_recovery}, "
@@ -5330,7 +5498,7 @@ def main() -> int:
               f"ep_min_ped_dist={ep_min_ped_dist:.3f}m")
 
         if ARGS.save_video:
-            save_episode_video(ARGS.image_save_dir, ep_id)
+            save_episode_video(_ep_base, ep_id)
 
         remove_datagen_follower_oracle()
 
