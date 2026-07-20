@@ -26,7 +26,7 @@ MAX_STEPS="${MAX_STEPS:-300}"
 SAVE_VIDEO="${SAVE_VIDEO:-1}"
 COLLECTOR="${COLLECTOR:-tracking_episode_collection_camera_only.py}"
 FOLLOWER_SCRIPT="${FOLLOWER_SCRIPT:-/workspace/FLUX/datagen/follow_script/cylinder_follow_tracking.py}"
-CHARACTER_SPEED="${CHARACTER_SPEED:-0.5}"
+CHARACTER_SPEED="${CHARACTER_SPEED:-0.8}"  
 DATAGEN_NAVMESH_SNAP="${DATAGEN_NAVMESH_SNAP:-0.25}"
 MAX_CONSECUTIVE_SNAP_REJECTED="${MAX_CONSECUTIVE_SNAP_REJECTED:-20}"
 EARLY_ABORT_SNAP_REJECT_RATE="${EARLY_ABORT_SNAP_REJECT_RATE:-0.5}"
@@ -233,7 +233,7 @@ for _sid in $SCENE_IDS; do
         --name "flux_${RUN_NAME}_${_mode}_${_sid}_${RT}_${CT}" \
         -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y \
         -e SAVE_VIDEO="$SAVE_VIDEO" \
-        --entrypoint bash --runtime=nvidia --gpus "device=$_GPU" --network=host \
+        --entrypoint bash --gpus "device=$_GPU" --network=host \
         -v "$REPO_DIR:/workspace/FLUX" \
         -v "$REPO_DIR/sage_utils/patched_base_command.py:/isaac-sim/extscache/omni.anim.people-0.7.9+107.3.3/omni/anim/people/scripts/commands/base_command.py" \
         -v "$SAGE3D_DIR:/workspace/SAGE-3D_Official" \
