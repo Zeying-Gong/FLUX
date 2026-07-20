@@ -1,51 +1,5 @@
-.vscode/
-*.ply
-__pycache__
-*.pth
-*.ckpt
-*.pt
-*.mp4
-*.jpg
-assets/scenes/Materials/*
-assets/scenes/SkyTexture/*
-assets/scenes/embodiedscan/*
-# 排除 assets 中的 scenes
-assets/n1_eval_scenes/
-assets/scenes/
-
-# 排除 IsaacLab（嵌套git仓库）
-IsaacLab/
-baselines/flux_wo_rl/
-# 排除评估结果目录
-pointgoal_*/
-imagegoal_*/
-startgoal_*/
-nogoal_*/
-
-# 排除测试图片
-frame_test.png
-
-# 排除权重
-checkpoints/
-metrics/
-logs/
-workspace.code-workspace
-docker-compose.override.yaml
-# 还不确定的文件
-v2_generate_social_nav_dataset_from_usd.py
-v2_generate_social_nav_dataset.py
-train_grpo.py
-temp/
-FLUX/baselines/ssw
-ssw
-
-# 排除大型数据目录
-assets/isaacsim_assets/
-sage_utils/sage3d_human_episodes/
-
-# 排除生成的预览图片目录
-sage_utils/clothing_previews/
-sage_utils/palette_previews/
-sage_utils/recolor_check/
-sage_utils/debug_vln_vis/
-*.png
+# FLUX 数据采集产物（不入库，按 scene 重新生成）
+logs_formal_v3/formal_runs/formal__*/
+logs_formal_v3/formal_runs/formal_g*/
+logs_formal_v3/formal_runs/launch_logs/
+logs_formal_v3/test_runs/

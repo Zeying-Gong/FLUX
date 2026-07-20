@@ -27,6 +27,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CACHE_DIR="$REPO_DIR/sage_utils/episode_caches"
 
+# ── Cleanup on Ctrl+C ──────────────────────────────────────────
+_RUN_PID=$$
+cleanup() {
+    echo ""
+    echo "[run_distributed] Caught SIGINT — shutting down all jobs and containers..."
+    kill -- -$_RUN_PID 2>/dev/null
+    docker rm -f $(docker ps --filter name=flux_ -q) 2>/dev/null
+    echo "[run_distributed] All stopped."
+    exit 130
+}
+trap cleanup SIGINT SIGTERM
+
 # ── Config (env-overridable) ──────────────────────────────────────
 SCENE_START="${SCENE_START:-0}"
 SCENE_END="${SCENE_END:-2}"
@@ -66,30 +78,56 @@ for s in "${SCENES[@]}"; do
   idx=$((idx+1))
 done
 
+LAUNCH_DIR="$SCRIPT_DIR/formal_runs/launch_logs"
+mkdir -p "$LAUNCH_DIR"
+RUN_LOG="$LAUNCH_DIR/run_$(date '+%Y%m%d_%H%M%S').log"
 echo "GPUs: ${GPUS[*]}  (round-robin, ${#SCENES[@]} scenes)"
 
-# ── Launch one background job per (gpu, scene) slot ───────────────
+# master summary of the scene split, persisted to RUN_LOG
+{
+  echo "=== run_distributed launch $(date) ==="
+  echo "SCENE_START=$SCENE_START SCENE_END=$END (of $TOTAL_SCENES)"
+  echo "GPUs: ${GPUS[*]}"
+  echo "ROBOT_TYPES=$ROBOT_TYPES CAMERA_TYPES=$CAMERA_TYPES"
+  echo "TRACKING_MODE=$TRACKING_MODE MAX_EPISODES=$MAX_EPISODES MAX_STEPS=$MAX_STEPS"
+  for ((g=0; g<N_GPU; g++)); do
+    echo "  gpu${GPUS[$g]} scenes: ${GPU_SCENES[$g]}"
+  done
+} | tee -a "$RUN_LOG"
+
+# ── Launch ONE serial subshell per GPU ───────────────────────────
+# Each GPU runs a single subshell that processes its assigned scenes
+# ONE AT A TIME (waits for each test_mode_gen.sh to finish before
+# starting the next).  This keeps exactly one Isaac Sim process
+# per GPU, never overloading a card.
 JOBS=0
+echo "Launch logs dir: $LAUNCH_DIR"
+echo "This run's master log: $RUN_LOG"
 for ((g=0; g<N_GPU; g++)); do
   gpu=${GPUS[$g]}
   read -r -a SLOTS <<< "${GPU_SCENES[$g]}"
-  for scene in "${SLOTS[@]}"; do
-    [ -z "$scene" ] && continue
-    RUN_SUFFIX="g${gpu}_${scene}"
-    LOG="$SCRIPT_DIR/launch_g${gpu}_${scene}.log"
-    echo "  launch gpu=$gpu scene=$scene -> $LOG"
-    SCENE_IDS="$scene" GPU_IDS="$gpu" \
-    ROBOT_TYPES="$ROBOT_TYPES" CAMERA_TYPES="$CAMERA_TYPES" \
-    TRACKING_MODE="$TRACKING_MODE" MAX_EPISODES="$MAX_EPISODES" \
-    MAX_STEPS="$MAX_STEPS" RUN_SUFFIX="$RUN_SUFFIX" \
-      bash "$SCRIPT_DIR/test_mode_gen.sh" > "$LOG" 2>&1 &
-    JOBS=$((JOBS+1))
-  done
+  LOG="$LAUNCH_DIR/launch_gpu${gpu}.log"
+  echo "  launch gpu=$gpu (serial over ${#SLOTS[@]} scenes) -> $LOG"
+  (
+    for scene in "${SLOTS[@]}"; do
+      [ -z "$scene" ] && continue
+      short_scene="${scene:0:10}"
+      RUN_NAME="${short_scene}"
+      echo "[gpu$gpu] $(date '+%H:%M:%S') start scene=$scene" >> "$LOG"
+      SCENE_IDS="$scene" GPU_IDS="$gpu" \
+      ROBOT_TYPES="$ROBOT_TYPES" CAMERA_TYPES="$CAMERA_TYPES" \
+      TRACKING_MODE="$TRACKING_MODE" MAX_EPISODES="$MAX_EPISODES" \
+      MAX_STEPS="$MAX_STEPS" RUN_NAME="$RUN_NAME" \
+        bash "$SCRIPT_DIR/test_mode_gen.sh" >> "$LOG" 2>&1
+      echo "[gpu$gpu] $(date '+%H:%M:%S') done  scene=$scene (exit=$?)" >> "$LOG"
+    done
+    echo "[gpu$gpu] all scenes finished." >> "$LOG"
+  ) &
+  JOBS=$((JOBS+1))
 done
 
-echo "Launched $JOBS background jobs across $N_GPU GPU(s)."
-echo "Each scene runs serially over its combos/modes/episodes on its GPU."
-echo "Tail any launch log, e.g.:  tail -f $SCRIPT_DIR/launch_g${GPUS[0]}_${SCENES[0]}.log"
+echo "Launched $JOBS GPU-serial jobs (1 Isaac process per GPU)."
+echo "Tail a GPU log, e.g.:  tail -f $SCRIPT_DIR/launch_gpu${GPUS[0]}.log"
 
 # ── Wait for all ───────────────────────────────────────────────────
 wait

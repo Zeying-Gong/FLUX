@@ -45,9 +45,7 @@ read -r -a CAMERAS <<< "$CAMERA_TYPES"
 
 read -r -a GPU_ARR <<< "$GPU_IDS"
 
-RUN_TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
-RUN_SUFFIX="${RUN_SUFFIX:-}"
-RUN_NAME="formal_${RUN_SUFFIX}"
+RUN_NAME="${RUN_NAME:-}"
 HOST_RUN_DIR="$REPO_DIR/logs_formal_v3/formal_runs/$RUN_NAME"
 CONTAINER_RUN_DIR="/workspace/FLUX/logs_formal_v3/formal_runs/$RUN_NAME"
 
@@ -202,7 +200,7 @@ for _sid in $SCENE_IDS; do
       RT="${COMBO%%:*}"
       CT="${COMBO#*:}"
       _GPU="${GPU_ARR[0]}"
-      _LOG_DIR="$HOST_RUN_DIR/logs/${_mode}/${_sid}/${RT}_${CT}"
+      _LOG_DIR="$HOST_RUN_DIR/logs/${_mode}/${RT}_${CT}"
       mkdir -p "$_LOG_DIR"
 
       # ── Resume: skip this combo if every episode it would generate
@@ -211,7 +209,7 @@ for _sid in $SCENE_IDS; do
       #    reject again, so we don't waste GPU time on it. ──
       _all_done=1
       for ((_i=0; _i<_n_eps; _i++)); do
-        _ep_dir="$HOST_RUN_DIR/${_mode}/${_sid}/${_i}/${RT}_${CT}"
+        _ep_dir="$HOST_RUN_DIR/${_mode}/${_i}/${RT}_${CT}"
         if [ ! -f "$_ep_dir/_ACCEPTED" ] && [ ! -f "$_ep_dir/_REJECTED" ]; then
           _all_done=0
           break
@@ -277,7 +275,7 @@ for _sid in $SCENE_IDS; do
 
       # ── Incremental render: build mp4 for this episode as soon as its
       #    png frames are written + chowned back to the host user. ──
-      _EP_DIR="$HOST_RUN_DIR/${_mode}/${_sid}/0/${RT}_${CT}"
+      _EP_DIR="$HOST_RUN_DIR/${_mode}/0/${RT}_${CT}"
       if [ -d "$_EP_DIR/rgb" ] || [ -d "$_EP_DIR/depth" ]; then
         python3 "$REPO_DIR/sage_utils/_render_videos.py" \
           --episode_dir "$_EP_DIR" --fps 20.0 \
@@ -289,7 +287,7 @@ for _sid in $SCENE_IDS; do
       #    _REJECTED marker is moved under rejected/ so it can't be
       #    mistaken for valid training data. ──
       if [ -f "$_EP_DIR/_REJECTED" ]; then
-        _REJ_DIR="$HOST_RUN_DIR/rejected/${_mode}/${_sid}/0/${RT}_${CT}"
+        _REJ_DIR="$HOST_RUN_DIR/rejected/${_mode}/0/${RT}_${CT}"
         mkdir -p "$(dirname "$_REJ_DIR")"
         mv "$_EP_DIR" "$_REJ_DIR"
         echo "  REJECTED: $_EP_DIR -> $_REJ_DIR"

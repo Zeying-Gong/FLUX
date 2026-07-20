@@ -3720,6 +3720,7 @@ def _write_quality_result(ep_id: int, accepted: bool, metrics: dict,
     with open(os.path.join(episode_dir, f"_{status.upper()}"), "w", encoding="utf-8") as f:
         f.write("\n")
 
+    frames_dir = os.path.join(episode_dir, "frames")
     accepted_npz = os.path.join(frames_dir, "frame_data.npz")
     rejected_npz = os.path.join(frames_dir, "frame_data.rejected.npz")
     accepted_preview = os.path.join(frames_dir, "preview.json")
@@ -4182,9 +4183,8 @@ def main() -> int:
 
         # ── Compute mode-based output path for this episode ──────────
         _ep_mode = episode.get("mode", "dt") if isinstance(episode, dict) else "dt"
-        _scene_id = episode.get("scene_id", os.path.basename(os.path.normpath(ARGS.episode_dir)))
         _robot_camera = f"{ARGS.robot_type}_{ARGS.camera_type}"
-        _ep_base = os.path.join(ARGS.image_save_dir, _ep_mode, _scene_id, str(ep_id), _robot_camera)
+        _ep_base = os.path.join(ARGS.image_save_dir, _ep_mode, str(ep_id), _robot_camera)
         os.makedirs(_ep_base, exist_ok=True)
         # Temporarily redirect image_save_dir so save_rgb_depth uses mode-based path
         _orig_save_dir = ARGS.image_save_dir
