@@ -22,10 +22,13 @@ parser.add_argument("--num_envs", type=int, default=1, help="Number of parallel 
 parser.add_argument("--num_episodes", type=int, default=100, help="Number of evaluation episodes")
 parser.add_argument("--speed", type=float, default=0.5, help="Desired linear speed (m/s)")
 parser.add_argument("--port", type=int, default=9999, help="NavDP server port")
+parser.add_argument("--max_steps", type=int, default=0, help="Stop after N simulation steps (0 means episode-controlled)")
+AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
-CUSTOM_APP_PATH = "/workspace/IsaacLab/apps/isaacsim_4_5/isaaclab.python.dyn.kit"
-app_launcher = AppLauncher(headless=True, enable_cameras=True, experience=CUSTOM_APP_PATH)
+args_cli.headless = True
+args_cli.enable_cameras = True
+app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
 import omni
@@ -151,6 +154,7 @@ scene_config.contact_sensor = DINGO_ContactCfg
 
 env_config = DingoImageNavCfg()
 env_config.scene = scene_config
+env_config.sim.device = args_cli.device
 env_config.events.reset_pose.params = {
     "init_point_path": init_path,
     'height_offset': 0.1,
@@ -164,10 +168,17 @@ env = RslRlVecEnvWrapper(env)
 adjust_usd_scale(scale=args_cli.scene_scale)
 _, infos = env.reset()
 
+def step_env(action):
+    result = env.step(action)
+    if len(result) == 5:
+        next_obs, rewards, terminated, truncated, extras = result
+        return next_obs, rewards, torch.logical_or(terminated, truncated), extras
+    return result
+
 PREHEAT_STEPS = 10
 for _ in range(PREHEAT_STEPS):
-    action = torch.zeros((args_cli.num_envs, 2), device="cuda:0")
-    obs, rewards, dones, infos = env.step(action)
+    action = torch.zeros((args_cli.num_envs, 2), device=env.unwrapped.device)
+    obs, rewards, dones, infos = step_env(action)
 
 camera_intrinsic = env.unwrapped.scene.sensors['camera_sensor'].data.intrinsic_matrices[0]
 
@@ -196,6 +207,7 @@ euclidean = np.sqrt(np.square(infos['observations']['goal_pose'].cpu().numpy()[:
 fps_writer = [imageio.get_writer(save_dir + "fps_%d.mp4" % i, fps=10) for i in range(scene_config.num_envs)]
 
 trajectory_length = np.zeros((scene_config.num_envs))
+model_step_index = 0
 
 while simulation_app.is_running():
     with torch.inference_mode():
@@ -251,7 +263,7 @@ while simulation_app.is_running():
                 opt_u_controls, opt_x_states = mpc.solve(x0[i, :3])
                 print(f"MPC solve time: {time.time() - t0:.3f}s")
                 v, w = opt_u_controls[1, 0], opt_u_controls[1, 1]
-                action = torch.tensor([v, w], device="cuda:0")
+                action = torch.tensor([v, w], device=env.unwrapped.device)
                 action_cpu = action.cpu().numpy()
                 joint_velocities = controller.forward(action_cpu).joint_velocities
                 action_list.append(joint_velocities)
@@ -276,12 +288,12 @@ while simulation_app.is_running():
                 except Exception:
                     pass
 
-            action = torch.as_tensor(np.stack(action_list, axis=0), device="cuda:0")
-            obs, rewards, dones, infos = env.step(action)
+            action = torch.as_tensor(np.stack(action_list, axis=0), device=env.unwrapped.device)
+            obs, rewards, dones, infos = step_env(action)
             trajectory_length += (infos['observations']['policy'][:, 0] * env.unwrapped.step_dt).cpu().numpy()
         else:
-            action = torch.zeros((args_cli.num_envs, 2), device="cuda:0")
-            obs, rewards, dones, infos = env.step(action)
+            action = torch.zeros((args_cli.num_envs, 2), device=env.unwrapped.device)
+            obs, rewards, dones, infos = step_env(action)
             print("Trajectory not ready; zero action")
 
         for i in range(args_cli.num_envs):
@@ -302,3 +314,14 @@ while simulation_app.is_running():
 
         if episode_num > args_cli.num_episodes:
             break
+
+        model_step_index += 1
+        if args_cli.max_steps > 0 and model_step_index >= args_cli.max_steps:
+            print(f"[INFO] Reached --max_steps={args_cli.max_steps}")
+            break
+
+stop_event.set()
+for writer in fps_writer:
+    writer.close()
+env.close()
+simulation_app.close()

@@ -4,7 +4,10 @@ import numpy as np
 import csv
 import cv2
 import torch
-import open3d as o3d
+try:
+    import open3d as o3d
+except ImportError:
+    o3d = None
 from typing import Optional, List, Tuple
 from dataclasses import dataclass
 
@@ -55,6 +58,8 @@ def draw_box_with_text(image, x, y, width, height, text,
     return image
 
 def cpu_pointcloud_from_array(points,colors):
+    if o3d is None:
+        raise RuntimeError("Open3D is required for point-cloud utilities")
     pointcloud = o3d.geometry.PointCloud()
     pointcloud.points = o3d.utility.Vector3dVector(points)
     pointcloud.colors = o3d.utility.Vector3dVector(colors)

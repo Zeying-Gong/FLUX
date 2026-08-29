@@ -47,10 +47,26 @@ parser.add_argument(
     "--port", type=int, default=9999,
     help="NavDP server port",
 )
+parser.add_argument(
+    "--builtin_pointgoal_steps", type=int, default=0,
+    help="Run a checkpoint-free reactive PointGoal smoke test for N simulation steps",
+)
+parser.add_argument(
+    "--builtin_video", type=str, default="pointgoal_builtin.mp4",
+    help="Output video for --builtin_pointgoal_steps",
+)
+parser.add_argument(
+    "--max_steps", type=int, default=0,
+    help="Stop model evaluation after N simulation steps (0 means episode-controlled)",
+)
+AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
-CUSTOM_APP_PATH = "/workspace/IsaacLab/apps/isaacsim_4_5/isaaclab.python.dyn.kit"
-app_launcher = AppLauncher(headless=True, enable_cameras=True, experience=CUSTOM_APP_PATH)
+# Isaac Sim 5.0: let the installed IsaacLab select its matching experience.
+# In particular, do not reuse the old isaacsim_4_5 custom .kit path.
+args_cli.headless = True
+args_cli.enable_cameras = True
+app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
 # Imports after AppLauncher (Isaac Lab requirement)
@@ -62,7 +78,6 @@ import imageio
 import os
 import csv
 import torch
-import open3d as o3d
 from scipy.spatial.transform import Rotation as R
 from pxr import Usd, Sdf
 from isaaclab.envs import ManagerBasedRLEnv
@@ -78,7 +93,10 @@ from configs.scenes import *
 from configs.tasks import *
 from utils_tasks.client_utils import navigator_reset, pointgoal_step
 from utils_tasks.visualization_utils import VisualizationManager
-from utils_tasks.tracking_utils import MPC_Controller
+if args_cli.builtin_pointgoal_steps <= 0:
+    from utils_tasks.tracking_utils import MPC_Controller
+else:
+    MPC_Controller = None
 
 planning_input = PlanningInput()
 planning_output = PlanningOutput()
@@ -185,6 +203,7 @@ scene_config.contact_sensor = DINGO_ContactCfg
 
 env_config = DingoPointNavCfg()
 env_config.scene = scene_config
+env_config.sim.device = args_cli.device
 env_config.events.reset_pose.params = {
     "init_point_path": init_path,
     'height_offset': 0.1,
@@ -197,10 +216,59 @@ env = RslRlVecEnvWrapper(env)
 adjust_usd_scale(scale=args_cli.scene_scale)
 obs, infos = env.reset()
 
+def step_env(action):
+    """Normalize Gymnasium's 5-tuple and the older wrapper's 4-tuple."""
+    result = env.step(action)
+    if len(result) == 5:
+        next_obs, rewards, terminated, truncated, extras = result
+        dones = torch.logical_or(terminated, truncated)
+        return next_obs, rewards, dones, extras
+    return result
+
+
 PREHEAT_STEPS = 10
 for _ in range(PREHEAT_STEPS):
-    action = torch.zeros((args_cli.num_envs, 2), device="cuda:0")
-    obs, rewards, dones, infos = env.step(action)
+    action = torch.zeros((args_cli.num_envs, 2), device=env.unwrapped.device)
+    obs, rewards, dones, infos = step_env(action)
+
+
+if args_cli.builtin_pointgoal_steps > 0:
+    controller = DifferentialController(
+        name="builtin_pointgoal_control",
+        wheel_radius=DINGO_WHEEL_RADIUS,
+        wheel_base=DINGO_WHEEL_BASE,
+    )
+    writer = imageio.get_writer(args_cli.builtin_video, fps=10)
+    print(f"[INFO] Running built-in PointGoal smoke test: {args_cli.builtin_video}")
+    for step_index in range(args_cli.builtin_pointgoal_steps):
+        goals = infos["observations"]["goal_pose"].cpu().numpy()[:, :2]
+        images = infos["observations"]["rgb"].cpu().numpy()[:, :, :, :3]
+        distance = np.linalg.norm(goals, axis=1)
+        heading = np.arctan2(goals[:, 1], goals[:, 0])
+        commands = []
+        for env_index in range(args_cli.num_envs):
+            linear = 0.0 if distance[env_index] < 1.0 else min(args_cli.speed, 0.35)
+            angular = float(np.clip(1.5 * heading[env_index], -0.7, 0.7))
+            wheel = controller.forward(np.array([linear, angular])).joint_velocities
+            commands.append(wheel)
+
+        frame = images[0].copy()
+        frame = draw_box_with_text(
+            frame, 0, 0, 520, 50,
+            f"builtin PointGoal  distance={distance[0]:.2f}m heading={heading[0]:.2f}rad",
+        )
+        writer.append_data(frame)
+        action = torch.as_tensor(np.stack(commands), device=env.unwrapped.device)
+        obs, rewards, dones, infos = step_env(action)
+        if bool(dones[0]):
+            print(f"[INFO] Episode ended at step {step_index + 1}")
+            break
+
+    writer.close()
+    env.close()
+    simulation_app.close()
+    print(f"BUILTIN_POINTGOAL_DONE video={args_cli.builtin_video}")
+    raise SystemExit(0)
 
 camera_intrinsic = env.unwrapped.scene.sensors['camera_sensor'].data.intrinsic_matrices[0]
 
@@ -243,6 +311,7 @@ fps_writer = [
 ]
 
 trajectory_length = np.zeros((scene_config.num_envs))
+model_step_index = 0
 
 while simulation_app.is_running():
     with torch.inference_mode():
@@ -305,7 +374,7 @@ while simulation_app.is_running():
 
                 v, w = opt_u_controls[1, 0], opt_u_controls[1, 1]
 
-                action = torch.tensor([v, w], device="cuda:0")
+                action = torch.tensor([v, w], device=env.unwrapped.device)
                 action_cpu = action.cpu().numpy()
                 joint_velocities = controller.forward(action_cpu).joint_velocities
                 action_list.append(joint_velocities)
@@ -326,14 +395,14 @@ while simulation_app.is_running():
                             cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
                 fps_writer[i].append_data(vis_image)
 
-            action = torch.as_tensor(np.stack(action_list, axis=0), device="cuda:0")
-            obs, rewards, dones, infos = env.step(action)
+            action = torch.as_tensor(np.stack(action_list, axis=0), device=env.unwrapped.device)
+            obs, rewards, dones, infos = step_env(action)
 
             trajectory_length += (infos['observations']['policy'][:, 0] * env.unwrapped.step_dt).cpu().numpy()
 
         else:
-            action = torch.zeros((args_cli.num_envs, 2), device="cuda:0")
-            obs, rewards, dones, infos = env.step(action)
+            action = torch.zeros((args_cli.num_envs, 2), device=env.unwrapped.device)
+            obs, rewards, dones, infos = step_env(action)
             print("Trajectory not ready; zero action")
 
         for i in range(args_cli.num_envs):
@@ -363,3 +432,15 @@ while simulation_app.is_running():
 
         if episode_num > args_cli.num_episodes:
             break
+
+        model_step_index += 1
+        if args_cli.max_steps > 0 and model_step_index >= args_cli.max_steps:
+            print(f"[INFO] Reached --max_steps={args_cli.max_steps}")
+            break
+
+stop_event.set()
+for writer in fps_writer:
+    writer.close()
+env.close()
+simulation_app.close()
+print(f"MODEL_POINTGOAL_DONE steps={model_step_index} save_dir={save_dir}")

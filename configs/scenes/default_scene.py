@@ -1,6 +1,14 @@
 from isaaclab.utils import configclass
 from isaaclab.terrains import TerrainImporterCfg
-from isaaclab.scene import InteractiveSceneCfg, DynamicSceneCfg
+from isaaclab.scene import InteractiveSceneCfg
+
+try:
+    from isaaclab.scene import DynamicSceneCfg
+except ImportError:
+    # IsaacLab for Isaac Sim 5.0 removed this FLUX-specific/legacy base.
+    # Static PointGoal only needs InteractiveSceneCfg; keep dynamic configs
+    # importable so they do not break the shared scenes package at import time.
+    DynamicSceneCfg = InteractiveSceneCfg
 from isaaclab.assets import ArticulationCfg,AssetBaseCfg
 from isaaclab.sensors import ContactSensorCfg, CameraCfg, RayCasterCfg
 from dataclasses import MISSING
@@ -32,7 +40,7 @@ class PointNavSceneCfg(InteractiveSceneCfg):
     contact_sensor: ContactSensorCfg = MISSING
     camera_sensor: CameraCfg = MISSING
     goal: AssetBaseCfg = MISSING
-    
+
 @configclass
 class ImageNavSceneCfg(InteractiveSceneCfg):
     terrain: TerrainImporterCfg = MISSING
@@ -151,11 +159,3 @@ class DynExploreSceneCfg(DynamicSceneCfg):
     
 
 
-        
-    
-    
-    
-    
-    
-    
-    

@@ -3,7 +3,6 @@ import random
 import torch
 import trimesh
 import numpy as np
-import open3d as o3d
 import matplotlib.pyplot as plt
 from collections import deque
 from dataclasses import MISSING
@@ -82,13 +81,13 @@ def stuck_terminal_check(env: ManagerBasedEnv,
     if not hasattr(env, '_recent_positions'):
         env._recent_positions = deque(maxlen=window_size)
     robot_asset = env.scene[robot_asset_cfg.name]
-    pos = robot_asset.data.root_pos_w[0, :2].cpu().numpy()  # 只看x, y
+    pos = robot_asset.data.root_pos_w[:, :2].detach().clone()
     env._recent_positions.append(pos)
     if len(env._recent_positions) < window_size:
-        return False 
-    current = env._recent_positions[-1]
-    max_dist = max(np.linalg.norm(current - np.array(p)) for p in list(env._recent_positions)[:-1])
-    return bool(max_dist < threshold)
+        return torch.zeros(pos.shape[0], dtype=torch.bool, device=pos.device)
+    history = torch.stack(list(env._recent_positions), dim=0)
+    max_dist = torch.linalg.vector_norm(history[:-1] - history[-1:], dim=-1).amax(dim=0)
+    return max_dist < threshold
 
 def arrival_terminal_check(env: ManagerBasedEnv,
                            robot_asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):

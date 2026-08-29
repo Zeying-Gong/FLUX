@@ -68,7 +68,7 @@ def _build_policy():
         cfm_num_steps=args.cfm_steps,
     )
     import torch
-    ckpt = torch.load(args.checkpoint, map_location=args.device)
+    ckpt = torch.load(args.checkpoint, map_location=args.device, weights_only=True)
     if isinstance(ckpt, dict) and "state_dict" in ckpt:
         ckpt = ckpt["state_dict"]
     incompatible = _policy.load_state_dict(ckpt, strict=False)

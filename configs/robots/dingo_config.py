@@ -1,13 +1,16 @@
 import isaaclab.sim as sim_utils
+from pathlib import Path
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.sensors import ContactSensorCfg, patterns, CameraCfg, RayCasterCfg, OffsetCfg
 
+FLUX_ROOT = Path(__file__).resolve().parents[2]
+
 DINGO_CFG = ArticulationCfg(
     prim_path = "{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
-        usd_path="/workspace/FLUX/assets/robots/dingo.usd",
+        usd_path=str(FLUX_ROOT / "assets" / "robots" / "dingo.usd"),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(enabled_self_collisions=False),
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
