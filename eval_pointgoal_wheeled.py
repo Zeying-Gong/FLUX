@@ -430,7 +430,7 @@ while simulation_app.is_running():
                 fps_writer[i] = imageio.get_writer(save_dir + "fps_%d.mp4" % episode_num, fps=10)
                 trajectory_length[i] = 0.0
 
-        if episode_num > args_cli.num_episodes:
+        if episode_num >= args_cli.num_episodes:
             break
 
         model_step_index += 1
