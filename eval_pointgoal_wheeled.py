@@ -59,6 +59,8 @@ parser.add_argument(
     "--max_steps", type=int, default=0,
     help="Stop model evaluation after N simulation steps (0 means episode-controlled)",
 )
+parser.add_argument("--disable_fabric", action="store_true",
+                    help="Disable Fabric scene updates for large composed USD scenes")
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
@@ -209,6 +211,7 @@ scene_config.contact_sensor = DINGO_ContactCfg
 env_config = DingoPointNavCfg()
 env_config.scene = scene_config
 env_config.sim.device = args_cli.device
+env_config.sim.use_fabric = not args_cli.disable_fabric
 env_config.events.reset_pose.params = {
     "init_point_path": init_path,
     'height_offset': 0.1,

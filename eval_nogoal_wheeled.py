@@ -23,6 +23,8 @@ parser.add_argument("--num_episodes", type=int, default=100, help="Number of eva
 parser.add_argument("--speed", type=float, default=0.5, help="Desired linear speed (m/s)")
 parser.add_argument("--port", type=int, default=9999, help="NavDP server port")
 parser.add_argument("--max_steps", type=int, default=0, help="Stop after N simulation steps (0 means episode-controlled)")
+parser.add_argument("--disable_fabric", action="store_true",
+                    help="Disable Fabric scene updates for large composed USD scenes")
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
@@ -190,6 +192,7 @@ scene_config.metric_sensor = DINGO_MetricCameraCfg
 env_config = DingoExplorationCfg()
 env_config.scene = scene_config
 env_config.sim.device = args_cli.device
+env_config.sim.use_fabric = not args_cli.disable_fabric
 env_config.events.reset_pose.params = {
     "init_point_path": init_path,
     'height_offset': 0.1,
