@@ -134,7 +134,12 @@ def planning_thread(env, camera_intrinsic):
         time.sleep(0.1)
 
 
-scene_list = sorted(os.listdir(args_cli.scene_dir))
+scene_list = sorted(
+    name for name in os.listdir(args_cli.scene_dir)
+    if os.path.isdir(os.path.join(args_cli.scene_dir, name))
+    and any(".usd" in entry and "noMDL" not in entry
+            for entry in os.listdir(os.path.join(args_cli.scene_dir, name)))
+)
 scene_list.sort()
 
 scene_name = scene_list[args_cli.scene_index]
