@@ -30,13 +30,16 @@ class PlanningOutput:
 
 def find_usd_path(dir,task='pointgoal'):
     paths = os.listdir(dir)
-    usd_path = ""
+    usd_candidates = []
     init_path = ""
     for p in paths:
         if ".usd" in p and 'noMDL' not in p:
-            usd_path = os.path.join(dir,p)
+            usd_candidates.append(p)
         if ".npy" in p and task in p:
             init_path = os.path.join(dir,p)
+    preferred = sorted(p for p in usd_candidates if p.endswith("_isaac5.usda"))
+    candidates = preferred or sorted(usd_candidates)
+    usd_path = os.path.join(dir, candidates[0]) if candidates else ""
     return usd_path,init_path
 
 def write_metrics(metrics, path="exploration.csv"):
