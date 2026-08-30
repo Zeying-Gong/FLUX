@@ -165,7 +165,7 @@ def planning_thread(env, camera_intrinsic):
         time.sleep(0.1)
 
 
-scene_list = os.listdir(args_cli.scene_dir)
+scene_list = sorted(os.listdir(args_cli.scene_dir))
 scene_list.sort()
 
 scene_name = scene_list[args_cli.scene_index]
