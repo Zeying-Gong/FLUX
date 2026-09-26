@@ -1,7 +1,6 @@
 """
 flux/server.py
 
-推理服务器 —— 与 NavDP 接口完全一致，
 加载 RL 微调后的权重（flux/policy_network.py 的 CFM_RL_Policy）。
 
 用法：

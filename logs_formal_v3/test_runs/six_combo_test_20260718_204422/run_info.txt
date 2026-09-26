@@ -1,0 +1,21 @@
+run_name=six_combo_test_20260718_204422
+scenes=0001_839920
+robots=go2
+cameras=zed
+n_episodes=1
+gpu_id=0
+max_steps=600
+save_video=1
+collector=tracking_episode_collection_camera_only.py
+follower_script=/workspace/FLUX/datagen/follow_script/cylinder_follow_tracking.py
+character_speed=0.5
+datagen_navmesh_snap=0.25
+max_consecutive_snap_rejected=20
+early_abort_snap_reject_rate=0.5
+early_abort_snap_reject_max_steps=600
+repo_dir=/mnt/ssd1/zeyingg/FLUX
+sage3d_dir=/mnt/ssd1/zeyingg/SAGE-3D_Official
+git_commit=
+started_at=2026-07-18T20:44:22+08:00
+OK: robot=go2 camera=zed scene=0001_839920 done
+finished_at=2026-07-18T20:54:57+08:00

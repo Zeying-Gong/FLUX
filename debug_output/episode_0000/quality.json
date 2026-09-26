@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "status": "rejected",
+  "episode_id": 0,
+  "rejection_reasons": [
+    "tracking_rate",
+    "final_distance",
+    "end_reason"
+  ],
+  "metrics": {
+    "episode_id": 0,
+    "success": 0,
+    "had_recovery": 0,
+    "recovery_count": 0,
+    "recovery_frames": 0,
+    "last_recovery_reason": "",
+    "follower_stuck_incident": 0,
+    "target_low_motion_incident": 0,
+    "episode_length": 132,
+    "tracking_rate": 0.7196969696969697,
+    "collision": 0,
+    "snap_rejected_frames": 20,
+    "snap_rejected_rate": 0.15151515151515152,
+    "projection_cycle_count": 0,
+    "robot_path_length": 5.548314571380615,
+    "max_robot_step": 0.08769072592258453,
+    "initial_dist": 1.0624856385264492,
+    "final_dist": 3.0942244363265248,
+    "avg_dist": 2.3492214844948864,
+    "avg_heading_error_deg": 10.658756604267086,
+    "done_reason": "navmesh_collision"
+  },
+  "filter_config": {
+    "min_tracking_rate": 0.8,
+    "min_visible_rate": 0.8,
+    "max_collisions": 0,
+    "allow_recovery": false,
+    "max_final_dist": 3.0,
+    "allowed_end_reasons": "max_steps,char_done"
+  },
+  "robot": {
+    "type": "go2",
+    "footprint_radius": 0.2,
+    "planning_radius": 0.2,
+    "base_z": 0.4,
+    "ground_z": 0.0,
+    "hidden": true
+  }
+}

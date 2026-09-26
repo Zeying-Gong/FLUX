@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /mnt/nvme1/zeyingg/FLUX diff --stat HEAD)"
+    ]
+  }
+}

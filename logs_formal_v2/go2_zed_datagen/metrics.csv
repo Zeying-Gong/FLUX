@@ -1,0 +1,2 @@
+episode_id,success,had_recovery,episode_length,tracking_rate,collision,initial_dist,final_dist,avg_dist,avg_heading_error_deg,done_reason
+0,0,1,290,0.5137931034482759,0,1.0572659928400772,0.507974643476533,1.8507189023379094,15.255628377394768,proximity_collision

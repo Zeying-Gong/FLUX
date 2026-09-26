@@ -3,7 +3,7 @@ from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="A script to run a car control simulation")
 parser.add_argument(
-    "--scene_dir", type=str, default="/workspace/FLUX/assets/n1_eval_scenes/cluttered_easy")
+    "--scene_dir", type=str, default="/workspace/FLUX/assets/scenes/cluttered_easy")
 parser.add_argument(
     "--scene_index", type=int, default=0)
 parser.add_argument(
@@ -13,7 +13,7 @@ parser.add_argument(
 parser.add_argument(
     "--num_episodes", type=int, default=100)
 parser.add_argument(
-    "--port", type=int, default=9999)
+    "--port", type=int, default=8888)
 args_cli = parser.parse_args()
 CUSTOM_APP_PATH = "/workspace/isaaclab/apps/isaaclab.python.rendering_dyn.kit" 
 

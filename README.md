@@ -51,30 +51,28 @@ We propose **FLUX**, the first **FL**ow-based **U**nified policy for **X**-platf
 
 ### 🛠️ Environment and setup (Docker, recommended)
 
-We recommend using the **Docker image** for FLUX together with the Isaac Lab stack. You **do not** need a separate conda environment on the host; dependencies are preinstalled in the image. Mount this repo and [IsaacLab](https://github.com/Zeying-Gong/IsaacLab) into the container and work under `/workspace`.
+We recommend using the **Docker image** for FLUX. You **do not** need a separate conda environment on the host; dependencies are preinstalled in the image. Mount this repo into the container and work under `/workspace`.
 
 #### Pull the image
 
 ```bash
-docker pull quay.io/zeyinggong/flux:v0
+docker pull quay.io/zeyinggong/flux:v1
 ```
 
-**Image:** `quay.io/zeyinggong/flux:v0`
+**Image:** `quay.io/zeyinggong/flux:v1`
 
 #### Clone the repositories
 
 ```bash
-git clone https://github.com/Zeying-Gong/FLUX.git
+git clone https://github.com/hkustgz-linker/FLUX.git
 ```
-
-(Also clone **[IsaacLab](https://github.com/Zeying-Gong/IsaacLab)** so the mount paths below match.)
 
 #### Start the container
 
-Replace the host paths in the command with your local clones of FLUX and IsaacLab (**do not** copy the placeholder paths verbatim).
+Replace the host path in the command with your local clone of FLUX (**do not** copy the placeholder path verbatim).
 
 ```bash
-docker run --name flux_v0 \
+docker run --name flux_v1 \
     -e "ACCEPT_EULA=Y" \
     -e "PRIVACY_CONSENT=Y" \
     -e "DISPLAY=${DISPLAY}" \
@@ -84,23 +82,25 @@ docker run --name flux_v0 \
     --privileged \
     -v /tmp/.X11-unix:/tmp/.X11-unix \
     -v /path/to/FLUX:/workspace/FLUX \
-    -v /path/to/IsaacLab:/workspace/IsaacLab \
     -w /workspace \
-    -it quay.io/zeyinggong/flux:v0
+    -it quay.io/zeyinggong/flux:v1
 ```
 
-- `/path/to/FLUX` — local clone of [Zeying-Gong/FLUX](https://github.com/Zeying-Gong/FLUX).
-- `/path/to/IsaacLab` — local clone of [IsaacLab](https://github.com/Zeying-Gong/IsaacLab).
+- `/path/to/FLUX` — local clone of [hkustgz-linker/FLUX](https://github.com/hkustgz-linker/FLUX).
 
 Inside the container, run subsequent Python commands from the **FLUX repo root** (e.g. `cd /workspace/FLUX` first).
 
 ### Datasets and scene assets
 
-Place evaluation **USD scenes and related assets** under **[IsaacLab](https://github.com/Zeying-Gong/IsaacLab)** at `assets/scenes/` — on the host this is your cloned IsaacLab tree; inside the container that is **`/workspace/IsaacLab/assets/scenes/`**. Episode configs and notes are documented in the IsaacLab repo.
+Place evaluation **USD scenes and related assets** under the FLUX repo at `assets/scenes/` — inside the container that is **`/workspace/FLUX/assets/scenes/`**.
+
+### Robot asset note (Dingo ground “white fog” fix)
+
+We fixed an issue in `FLUX/assets/robots/dingo.usd` that could make the ground look like it has **white fog**. Use `FLUX/assets/robots/dingo_fixed.usd` instead.
 
 #### 🌆 Static scene assets (prepare scene asset)
 
-Download scene assets from Hugging Face **[InternScene-N1](https://huggingface.co/datasets/InternRobotics/Scene-N1/tree/main/n1_eval_scenes)**, extract, and arrange them as below relative to the **IsaacLab repo root** under `assets/scenes/`:
+Download scene assets from Hugging Face **[InternScene-N1](https://huggingface.co/datasets/InternRobotics/Scene-N1/tree/main/n1_eval_scenes)**, extract, and arrange them as below relative to the **FLUX repo root** under `assets/scenes/`:
 
 ```text
 FLUX/assets/n1_eval_scenes
@@ -198,6 +198,56 @@ FLUX/assets/dynbench
     └── Warehouse_multiple_shelves/
 ```
 
+### 🗂️ Dataset Generation Pipeline (`sage_utils/`)
+
+The `sage_utils/` directory provides a **fully offline, CPU-parallel data pipeline** for generating episode JSON files used in social navigation and person-tracking benchmarks.  These scripts do **not** require Isaac Sim to run, enabling fast and scalable dataset creation.
+
+#### Episode Generation — Social Navigation
+
+| Script | Description |
+|--------|-------------|
+| `sage_utils/generate_episode_fast.py` | Single-scene episode generator (pure Python). Samples robot start/goal pairs and pedestrian placements with PSDF avoidance and navigable-island allocation. |
+| `sage_utils/batch_episode_fast.py` | CPU-parallel batch scheduler. Distributes episode generation across scenes using `ProcessPoolExecutor`; supports `--resume` and configurable `--workers`. |
+
+```bash
+# Generate 100 episodes across all scenes (16 workers, auto-resume)
+python sage_utils/batch_episode_fast.py \
+    --sem_dir /path/to/semantic_maps \
+    --output_dir /path/to/episodes \
+    --total_episodes 100 --max_people 10 \
+    --resume --workers 16
+```
+
+#### Episode Generation — Person Tracking
+
+| Script | Description |
+|--------|-------------|
+| `sage_utils/generate_episode_fast_tracking.py` | Tracking episode generator. Assigns a target pedestrian with a waypoint chain for the robot to follow. `--easy_mode` relaxes placement constraints (distance, LOS, island) for small or difficult scenes and adds seed-retry. |
+| `sage_utils/generate_episode_fast_tracking_hard.py` | Stricter variant for challenging tracking scenarios (no easy-mode relaxation). |
+| `sage_utils/batch_episode_fast_tracking.py` | Parallel batch scheduler for tracking episodes. Supports `--easy_mode` and `--scene_ids` for selective re-generation of failed scenes. |
+
+```bash
+# Generate 100 tracking episodes with easy-mode fallback
+python sage_utils/batch_episode_fast_tracking.py \
+    --sem_dir /path/to/semantic_maps \
+    --output_dir /path/to/tracking_episodes \
+    --total_episodes 100 --max_people 10 \
+    --easy_mode --resume --workers 16
+```
+
+#### Character Appearance Assignment
+
+`sage_utils/clothing_appearance.py` assigns each pedestrian in an episode a unique clothing asset and per-body-part color drawn from a 16-color CSS palette.  The target pedestrian is always recolored; distractor pedestrians have a 20 % chance of keeping the default appearance.  Colors within an episode are guaranteed to be visually distinct (no confusion-group overlap), enabling unambiguous language-grounded tracking instructions (e.g. *"follow the person in a red top and blue trousers"*).
+
+#### Utility Modules
+
+| Script | Description |
+|--------|-------------|
+| `sage_utils/occupancy_utils.py` | Builds a 2-D occupancy grid from the collision mesh via PhysX raycasts. Independent of NavMesh internal APIs. |
+| `sage_utils/navmesh_utils.py` | NavMesh bake helpers with delta-layer caching — subsequent bakes complete in < 1 s by hitting Isaac Sim's internal cache. |
+| `generate_pedestrian_trajectories.py` | Offline pedestrian trajectory generation using NavMesh bake (requires Isaac Sim in headless mode). |
+| `sage_utils/test_dataset_pipeline.py` | Interactive test: loads a USDA scene and a pre-generated episode JSON to verify character appearance and trajectories inside the simulator. |
+
 ### 📥 Pre-trained weights
 
 At the **FLUX repo root** (your host clone; inside the container: `/workspace/FLUX`), create a folder **`checkpoints`** and download **`flux_v1.ckpt`** into it.
@@ -224,7 +274,7 @@ cd /workspace/FLUX
 python baselines/flux/server.py --port 9999 --checkpoint checkpoints/flux_v1.ckpt
 ```
 
-In another terminal in the same container (or `docker exec -it flux_v0 bash`), verify with the test script:
+In another terminal in the same container (or `docker exec -it flux_v1 bash`), verify with the test script:
 
 ```bash
 cd /workspace/FLUX
@@ -265,7 +315,7 @@ For other baselines, see the [NavDP](https://github.com/InternRobotics/NavDP) re
 ```bash
 cd /workspace/FLUX
 
-# ---------- Static (assets under IsaacLab assets/scenes/n1_eval_scenes, or synced FLUX/assets/n1_eval_scenes) ----------
+# ---------- Static (assets under FLUX/assets/n1_eval_scenes) ----------
 # Point goal · cluttered
 python eval_pointgoal_wheeled.py --port 9999 \
   --scene_dir /workspace/FLUX/assets/n1_eval_scenes/cluttered_easy \

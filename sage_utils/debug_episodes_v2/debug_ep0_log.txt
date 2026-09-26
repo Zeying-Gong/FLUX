@@ -1,0 +1,13 @@
+=== ROBOT SAMPLING: Level 1 (strict) ===
+  [L1 OK attempt=20] geo=5.2m dist_euclid=4.5m island=0 area=10.7m² capacity=2
+=== PEDESTRIAN SAMPLING: 3 peds, island_plan=[0, 0, 1] ===
+--- ped0: target_island=0 same_island=True ---
+  ped0 swapped wpt[0]↔wpt[-1]: last dist 0.6m→4.7m from robot_goal
+  [ped0 OK attempt=21] island=0 dist_to_robot=3.2m chain_len=3
+--- ped1: target_island=0 same_island=True ---
+  ped1 main loop FAIL reasons: {'too_close_start': 76, 'wrong_island': 112, 'too_close_other_ped': 12}
+  ped1 fallback: must_same_island=True
+  [ped1 FALLBACK OK attempt=3] island=0 chain_len=3
+--- ped2: target_island=1 same_island=False ---
+  [ped2 OK attempt=2] island=1 bg_ped chain_len=3
+=== DONE: 3/3 peds placed, 0.74s ===

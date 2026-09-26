@@ -14,7 +14,7 @@ SOCIAL_SPACE = 3.6       # 1.2-3.6m: 社交空间
 PSC_THRESHOLD = 0.5      # 参考定义中PSC的阈值（0.5m）
 SC_DEFAULT_THRESHOLD = 1.2 # 通用SC阈值（可自定义，如0.8m/1.0m）
 
-def get_people_positions(env):
+def get_people_positions():
     """获取所有行人的实时世界坐标位置
     
     Returns:

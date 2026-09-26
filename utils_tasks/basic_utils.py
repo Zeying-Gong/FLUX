@@ -25,16 +25,27 @@ class PlanningOutput:
     is_planning: bool = False
     planning_error: Optional[str] = None
 
-def find_usd_path(dir,task='pointgoal'):
+# def find_usd_path(dir,task='pointgoal'):
+#     paths = os.listdir(dir)
+#     usd_path = ""
+#     init_path = ""
+#     for p in paths:
+#         if ".usd" in p and 'noMDL' not in p:
+#             usd_path = os.path.join(dir,p)
+#         if ".npy" in p and task in p:
+#             init_path = os.path.join(dir,p)
+#     return usd_path,init_path
+
+def find_usd_path(dir, task='pointgoal'):
     paths = os.listdir(dir)
     usd_path = ""
     init_path = ""
     for p in paths:
-        if ".usd" in p and 'noMDL' not in p:
-            usd_path = os.path.join(dir,p)
+        if (p.endswith('.usd') or p.endswith('.usda') or p.endswith('.usdc')) and 'noMDL' not in p:
+            usd_path = os.path.join(dir, p)
         if ".npy" in p and task in p:
-            init_path = os.path.join(dir,p)
-    return usd_path,init_path
+            init_path = os.path.join(dir, p)
+    return usd_path, init_path
 
 def write_metrics(metrics, path="exploration.csv"):
     with open(path, mode="w", newline="") as csv_file:
