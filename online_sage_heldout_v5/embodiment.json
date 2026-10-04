@@ -1,0 +1,46 @@
+{
+  "name": "isaacsim_dynamic_spot",
+  "source_repo": "/data/nas_ray/home/zeying.gong/algorithm/repos/TrackVLA",
+  "camera": {
+    "width": 640,
+    "height": 480,
+    "hfov_deg": 90,
+    "forward_offset_m": 0.24,
+    "left_offset_m": 0,
+    "height_m": 0.72,
+    "root_height_m": 0.48,
+    "mount_translation_body_m": [
+      0.24,
+      0,
+      0.24
+    ]
+  },
+  "body": {
+    "usd": "/data/nas_ray/md-ai-kit/md_ai_kit.bot/isaacsim_assets/5.0/Isaac/Robots/BostonDynamics/spot/spot.usd",
+    "physics_dt": 0.002,
+    "policy_decimation": 10,
+    "policy": "Isaac/Samples/Policies/Spot_Policies/spot_policy.pt",
+    "control": "official SpotFlatTerrainPolicy; position targets with physical joint drives",
+    "navmesh": "audit only; no root projection or pose writes during rollout"
+  },
+  "action": {
+    "waypoint_limits": [
+      0.375,
+      0.25,
+      0.15707963267948966
+    ],
+    "habitat_ctrl_freq": 40,
+    "habitat_speed_scales": [
+      15,
+      10,
+      6.28
+    ],
+    "episode_control_dt": 0.25,
+    "semantics": "Match Habitat action displacement per observation; keep SAGE episode clock and native human speed. Not literal 15 m/s."
+  },
+  "limitations": [
+    "Official flat-terrain locomotion policy, not calibrated to real robot.",
+    "Dynamic base changes camera height and orientation; nominal mount/intrinsics retained.",
+    "Native NavMesh audited; original triangle-mesh contacts resolve actual robot collisions."
+  ]
+}

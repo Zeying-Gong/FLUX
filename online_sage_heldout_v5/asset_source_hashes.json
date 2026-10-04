@@ -1,0 +1,8 @@
+{
+  "/data/nas_ray/md-ai-kit/md_ai_kit.bot/isaacsim_assets/5.0/Isaac/Robots/BostonDynamics/spot/spot.usd": "dbe17178d8507aa31a82e8f8582606c2da5694ea8d2e24c77e50f1ff149689cb",
+  "/data/nas_ray/md-ai-kit/md_ai_kit.bot/isaacsim_assets/5.0/Isaac/Samples/Policies/Spot_Policies/spot_policy.pt": "d95d675e8b080d5c84a2a2779d165ff7ecd3e34d24b233c083242e615a3d589a",
+  "/data/nas_ray/md-ai-kit/md_ai_kit.bot/isaacsim_assets/5.0/Isaac/Samples/Policies/Spot_Policies/spot_env.yaml": "397440818604ca7cf0cb79c6012325f2bba292029ad0c2d5df5fd64b531d2dbc",
+  "/opt/miniforge/envs/isaacray/lib/python3.11/site-packages/isaacsim/exts/isaacsim.robot.policy.examples/isaacsim/robot/policy/examples/robots/spot.py": "fc0877e5b7b24f1878ee87add5f86713dbbb60e52523ca631c96c789b7a1bd95",
+  "/opt/miniforge/envs/isaacray/lib/python3.11/site-packages/isaacsim/exts/isaacsim.robot.policy.examples/isaacsim/robot/policy/examples/controllers/policy_controller.py": "5faed0925a5bc280dccdb57c2dfb469d569f0be283f997b937429b02c1e3dc88",
+  "/opt/miniforge/envs/isaacray/lib/python3.11/site-packages/isaacsim/exts/isaacsim.robot.policy.examples/isaacsim/robot/policy/examples/controllers/config_loader.py": "46c179484dc83341bdabf239f1ee4bfc55b2432a276818ca927dacfcaee55cd7"
+}

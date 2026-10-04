@@ -1,0 +1,40 @@
+{
+  "isaac_sim": "5.0",
+  "shapely": "2.1.2",
+  "external_extension_directories": [
+    "omni.isaac.asset_browser-1.0.6",
+    "omni.isaac.assets_check-0.3.13+107.3.1",
+    "omni.isaac.cloner-1.0.7+107.3.1",
+    "omni.isaac.core-4.0.7+107.3.1",
+    "omni.isaac.core_nodes-2.0.6+107.3.1",
+    "omni.isaac.cortex-1.0.5+107.3.1",
+    "omni.isaac.cortex.sample_behaviors-2.0.5+107.3.1",
+    "omni.isaac.dynamic_control-2.0.7+107.3.1.lx64.r.cp311",
+    "omni.isaac.franka-1.0.7+107.3.1",
+    "omni.isaac.kit-2.0.6+107.3.1",
+    "omni.isaac.lula-4.0.6+107.3.1.lx64",
+    "omni.isaac.lula_test_widget-1.0.6+107.3.1",
+    "omni.isaac.manipulators-3.0.7+107.3.1",
+    "omni.isaac.menu-1.0.6+107.3.1",
+    "omni.isaac.motion_generation-8.0.7+107.3.1",
+    "omni.isaac.nucleus-1.0.6+107.3.1",
+    "omni.isaac.quadruped-3.0.7+107.3.1",
+    "omni.isaac.range_sensor-4.0.6+107.3.1",
+    "omni.isaac.sensor-13.0.7+107.3.1",
+    "omni.isaac.surface_gripper-2.0.6+107.3.1",
+    "omni.isaac.universal_robots-1.0.6+107.3.1",
+    "omni.isaac.utils-2.0.6+107.3.1",
+    "omni.isaac.version-2.0.7+107.3.1",
+    "omni.isaac.wheeled_robots-3.0.7+107.3.1",
+    "omni.isaac.window.about-2.0.7+107.3.1",
+    "omni.kit.property.isaac-1.0.6+107.3.1",
+    "omni.replicator.isaac-2.0.8+107.3.1",
+    "omni.usd.schema.isaac-3.0.5+107.3.1"
+  ],
+  "required_extensions": [
+    "isaacsim.replicator.agent.core 0.7.19",
+    "omni.anim.people 0.7.7",
+    "isaacsim.robot.policy.examples 4.1.11"
+  ],
+  "note": "External NVIDIA assets/extensions and LightNav weights are not redistributed."
+}

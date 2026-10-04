@@ -1,0 +1,7 @@
+artifacts/
+runtime_deps
+runtime_exts
+__pycache__/
+!results/online.mp4
+!results/preview.jpg
+!results/online_navigation_map.png

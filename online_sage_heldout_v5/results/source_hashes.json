@@ -1,0 +1,20 @@
+{
+  "run_online.py": "26541d3b7dd5956af06a610fc9881994f0ac468100fc0d272413452d9b7b6abb",
+  "case_v4.json": "ecd4a3fc028dcc0d3a83a91ea9430def64feeac856e0db41bab0f17b4f97d4c5",
+  "embodied_control.py": "eebd84886b6106a2d3d00036a6d67e434a895a6ba6d57e0f329a7b37bb49ad8f",
+  "nav_grid.npz": "fe64ebb71dbbef572d2a5432bf9ac2f6282c0c073ae8aef512faa7c0ed4b2210",
+  "policy_server.py": "9c9d717129b8d1f77aef7a7972a048d07cd86c3aa58082297eff0555ce10b64a",
+  "control.py": "6cc9af124a166dc612008b9023f5e92474f25f91c4c1f5a81b45b6d23dc80fc6",
+  "asset_source_hashes.json": "27a4980425b98749c20b372481e3e52f6a0784e70b1253ac506bf9d0330eb967",
+  "online.kit": "9662bc7cc610a109f3be2e2546b8c25712f5376854da50bf3449819591bf7dea",
+  "navigation.py": "16e96b9c7db79b890bef35e506f72905db0166cb6a4eaf1df663d2f3f364bce2",
+  "840115.usda": "6ba5cb5c72fb67028c7aa58d7796baca0fd252a28ecf7d1ab148043ed91b8c74",
+  "online_spot_v5.yaml": "027ff970c8d4ab69184bc7d6a3582b12ce47ed3d8508d7efe829644b6b765972",
+  "embodiment.json": "ca21752efd115a6301524c6ce8d9c547193cd4afa9fa3e9eddeb995e33d795ae",
+  "verify_rollout.py": "844cb5a17de4d966033df3233669088db9a0b60e608acc65294c5c0d35e04773",
+  "native_nav_cache.npz": "5fc51a002243d1b181bdceabfe991bbd14e6011d1d540028a8830318f5af2dc2",
+  "README.md": "633fa1dd36c81c8c0afaa3f0bbe262278bb0a6796459cefdbb89010473d2aeec",
+  "run_suite.py": "b8e730ea866f75d9e84324fda9e3ff49f248f0057ba06ca3f55a37dbfc95b230",
+  "native_nav_cache.json": "656ed88c11a06a44bec205152065419baf405dbd0bec748b16ea9409b7f2a2d5",
+  "analyze_online.py": "07deee80d08422f2133972700e774366cb659bcb5a00e298afe9768d69de5832"
+}

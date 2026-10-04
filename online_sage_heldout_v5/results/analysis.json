@@ -1,0 +1,86 @@
+{
+  "status": "VERIFIED_DYNAMIC_CLOSED_LOOP",
+  "control_steps": 30,
+  "physics_steps": 3750,
+  "video_frames": 225,
+  "video_seconds": 7.5,
+  "distinct_live_observations": 30,
+  "robot_path_m": 4.721828719644906,
+  "final_gap_m": 4.052631855316198,
+  "mean_gap_m": 3.388798558015618,
+  "body_height_range_m": [
+    0.4830418527126312,
+    0.5438090562820435
+  ],
+  "camera_height_range_m": [
+    0.7182830811175727,
+    0.7813470319279849
+  ],
+  "max_body_tilt_deg": 2.310164272624452,
+  "joint_ranges_rad": [
+    0.4682692736387253,
+    0.5181813538074493,
+    0.5063969641923904,
+    0.3401280492544174,
+    0.8592359125614166,
+    0.5773717164993286,
+    0.5212935209274292,
+    0.6791126132011414,
+    0.48520052433013916,
+    0.5670210123062134,
+    0.7372815608978271,
+    0.5438865423202515
+  ],
+  "physical_contact_events": 7777,
+  "total_contact_impulse_ns": 2431.014257349397,
+  "nav_center_outside_samples": 36,
+  "nav_footprint_outside_samples": 153,
+  "fell": false,
+  "target_actual_mean_speed_mps": 0.891897567598808,
+  "video_sha256": "1dac90c5918e25a6891517d382cf0e8afc9d5a55ff58926b3405464919f11675",
+  "limitation": "Single derived heldout episode; official flat-ground locomotion controller; original mesh contacts, no root position projection; not full heldout benchmark.",
+  "contact_pairs": {
+    "/World/OnlineRobot/fl_foot | /World/scene_collision/SM_floorplan": {
+      "events": 1845,
+      "impulse_ns": 567.2091160491109
+    },
+    "/World/OnlineRobot/hr_foot | /World/scene_collision/SM_floorplan": {
+      "events": 1851,
+      "impulse_ns": 604.6052011479624
+    },
+    "/World/OnlineRobot/hl_foot | /World/scene_collision/SM_floorplan": {
+      "events": 1896,
+      "impulse_ns": 643.862393848598
+    },
+    "/World/OnlineRobot/fr_foot | /World/scene_collision/SM_floorplan": {
+      "events": 1881,
+      "impulse_ns": 527.7131969667971
+    },
+    "/World/OnlineRobot/fr_uleg | /World/scene_collision/_H5HCFBVAZWFAPTUK4888888": {
+      "events": 298,
+      "impulse_ns": 87.23639587880785
+    },
+    "/World/OnlineRobot/fr_foot | /World/scene_collision/_H5HCFBVAZWFAPTUK4888888": {
+      "events": 6,
+      "impulse_ns": 0.38795345812104914
+    }
+  },
+  "baseline_v4b": {
+    "job": 60482,
+    "robot_path_m": 3.121406523907192,
+    "final_gap_m": 5.671328430632632,
+    "mean_gap_m": 3.6941886264998556
+  },
+  "initial_pose_after_settling": [
+    -0.12802164256572723,
+    3.1604161262512207,
+    -3.019974867231643
+  ],
+  "mean_inference_ms": 487.09013999129337,
+  "comparison_caveats": [
+    "Different official dynamic Spot mesh and physical controller.",
+    "Body settles before start; actual initial pose recorded.",
+    "Human animation updated at 100Hz instead of 60Hz to match 500Hz physics; measured speed reported.",
+    "NavMesh audit only, with original physical mesh contacts resolving movement."
+  ]
+}

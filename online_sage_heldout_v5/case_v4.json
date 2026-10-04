@@ -1,0 +1,90 @@
+{
+  "schema": "sage_online_derived_v1",
+  "source_episode_uid": "formal_runs_0402_84011:0402_84011/stt/3/g1_zed",
+  "source_scene": "0402_840115",
+  "source_manifest_sha256": "7f0eb984415493c3003927b945457fa92f3299a65b6ba724ae212e7d00cbed61",
+  "scene_id": "840115",
+  "robot_start": [
+    0.027839136123795072,
+    3.2595322608947774,
+    0.0
+  ],
+  "robot_yaw": -2.974862225153655,
+  "target_points": [
+    [
+      -2.522160863876241,
+      3.1595322608947773,
+      0.0
+    ],
+    [
+      -3.9721608638762618,
+      3.209532260894777,
+      0.0
+    ],
+    [
+      -4.322160863876267,
+      3.4595322608947776,
+      0.0
+    ],
+    [
+      -4.672160863876272,
+      4.359532260894778,
+      0.0
+    ],
+    [
+      -5.27216086387628,
+      4.959532260894779,
+      0.0
+    ],
+    [
+      -6.072160863876292,
+      5.8095322608947795,
+      0.0
+    ],
+    [
+      -6.172160863876293,
+      6.10953226089478,
+      0.0
+    ],
+    [
+      -6.722160863876301,
+      6.7595322608947805,
+      0.0
+    ],
+    [
+      -7.022160863876305,
+      6.859532260894781,
+      0.0
+    ],
+    [
+      -7.37216086387631,
+      6.859532260894781,
+      0.0
+    ],
+    [
+      -7.672160863876314,
+      6.709532260894781,
+      0.0
+    ]
+  ],
+  "target_start_source_frame": 59,
+  "initial_gap_m": 2.5519600310350055,
+  "target_speed_mps": [
+    0.9
+  ],
+  "controller_dt": 0.25,
+  "physics_dt": 0.016666666666666666,
+  "robot_max_v": 1.5,
+  "robot_max_w": 0.628,
+  "camera_height_m": 0.72,
+  "instruction": "Follow the woman wearing a purple vest and blue jeans.",
+  "character_asset": "/data/nas_ray/md-ai-kit/md_ai_kit.bot/isaacsim_assets/5.0/Isaac/People/Characters/F_Business_02/F_Business_02.usd",
+  "protocol": "derived heldout scene; PhysX floor-ray navigation proxy; connected clearance-aware target path; native root motion",
+  "validation": "V4_PENDING",
+  "character_forward_axis": "-Y",
+  "speed_mode": "single native walk gait (~0.9-1.0 m/s measured; no forced constant translation)",
+  "character_time_scale": 1.0,
+  "nav_agent_radius": 0.3,
+  "human_path_clearance": 0.5,
+  "embodiment": "trackvla_local_spot"
+}

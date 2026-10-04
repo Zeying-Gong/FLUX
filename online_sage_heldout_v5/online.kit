@@ -1,0 +1,16 @@
+[package]
+title = "Sage Online Person Following"
+version = "0.1.0"
+[dependencies]
+"isaacsim.robot.policy.examples" = {}
+"isaacsim.exp.base" = {}
+"omni.replicator.core" = {}
+"omni.anim.timeline" = {}
+"omni.kit.scripting" = {}
+"isaacsim.replicator.agent.core" = { version = "0.7.19", exact = true }
+"omni.anim.people" = { version = "0.7.7", exact = true }
+[settings]
+app.player.useFixedTimeStepping = true
+app.exts.mkdirExtFolders = false
+[app.exts]
+folders = ["/opt/miniforge/envs/isaacray/lib/python3.11/site-packages/isaacsim/exts", "/opt/miniforge/envs/isaacray/lib/python3.11/site-packages/isaacsim/extscache", "/opt/miniforge/envs/isaacray/lib/python3.11/site-packages/isaacsim/apps"]

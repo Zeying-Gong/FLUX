@@ -1,0 +1,19 @@
+cluster: baidu_4090
+image: x5-builder:cuda12.8-isaac5.0.0-v2.test1
+num_gpus: 2
+log_folder: sage_lightnav_online
+
+tasks:
+  - name: sage_heldout_lightnav_online_spot_v5
+    type: shell
+    workload_backend: k8s
+    num_gpus: 2
+    timeout: 4200
+    cmd: |
+      set -euo pipefail
+      ROOT=/data/nas_ray/home/zeying.gong/algorithm/repos/FLUX-sage3d/online_sage_heldout_v5
+      OUTPUT_ROOT=/data/nas_ray/project/md-ak/users/zeying.gong/job_${MD_AK_JOB_ID}/task_${MD_AK_TASK_ID}/sage_lightnav_online_spot_v5
+      export NVIDIA_DRIVER_CAPABILITIES=all
+      export PYTHONNOUSERSITE=1
+      cd "$ROOT"
+      /data/nas_ray/home/zeying.gong/algorithm/envs/lightnav/bin/python -u "$ROOT/run_suite.py" "$OUTPUT_ROOT"
