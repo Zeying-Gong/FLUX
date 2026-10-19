@@ -389,7 +389,3 @@ If you find our work helpful, please cite:
 # 👏 Acknowledgement
 
 We thank the authors of [NavDP](https://github.com/InternRobotics/NavDP) for their excellent open-source codebase.
-
-### SAGE-3D online Spot baseline
-
-[Dynamic Spot + LightNav online episode](online_sage_heldout_v5/README.md): code, configuration, video, measured dynamics and limitations. One derived heldout episode, not a full heldout benchmark.

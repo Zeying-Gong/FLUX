@@ -1,0 +1,14 @@
+{
+  "finish": true,
+  "status": "Normal",
+  "success": 1.0,
+  "following_rate": 0.9833333333333333,
+  "following_step": 590,
+  "total_step": 600,
+  "collision": 0.0,
+  "episode_id": 15,
+  "ori_episode_id": 15,
+  "mode": "dt",
+  "instruction": "Pursue the person wearing olive hat, purple top, purple pants.",
+  "character_speed": 0.5
+}

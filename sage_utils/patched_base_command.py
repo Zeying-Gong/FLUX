@@ -6,15 +6,58 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 from __future__ import annotations
+import os
 from typing import Any
+import carb
 from omni.metropolis.utils.carb_util import CarbUtil
 from omni.metropolis.utils.simulation_util import SimulationUtil
-from omni.anim.people.settings import CommandID, MetadataTag
+from omni.anim.people.settings import CommandID, MetadataTag, PeopleSettings
 
 from ..utils import Utils
 from omni.anim.people.settings import CommandID, TaskStatus
 from ..navigation_manager import NavigationManager
 from .command_format_helper import CommandFormatHelper
+
+
+def _env_flag(name: str, default: bool) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+_ASYMMETRIC_AVOIDANCE_ENABLED = _env_flag(
+    "FLUX_ASYMMETRIC_PED_AVOIDANCE", True
+)
+_PRIORITY_CHARACTER = os.environ.get(
+    "FLUX_PED_PRIORITY_CHARACTER", "Character"
+).strip()
+
+
+def _update_path_with_asymmetric_avoidance(
+    navigation_manager: NavigationManager, character_name: str
+) -> None:
+    """Run built-in avoidance for yielding characters only.
+
+    The dynamic-avoidance setting is global, while character behavior updates
+    are serialized on Kit's main thread. Toggling it around one navigation
+    update breaks the symmetric deadlock: the priority character follows its
+    route and every other character plans around the positions it observes.
+    """
+    if not _ASYMMETRIC_AVOIDANCE_ENABLED:
+        navigation_manager.update_path()
+        return
+
+    settings = carb.settings.get_settings()
+    setting_path = PeopleSettings.DYNAMIC_AVOIDANCE_ENABLED
+    previous = settings.get(setting_path)
+    settings.set(setting_path, character_name != _PRIORITY_CHARACTER)
+    try:
+        navigation_manager.update_path()
+    finally:
+        # apply_navmesh_settings() initializes this to False. Keep that safe
+        # baseline if an older Isaac build reports no previous value.
+        settings.set(setting_path, False if previous is None else previous)
 
 
 class Command(CommandFormatHelper):
@@ -190,7 +233,9 @@ class Command(CommandFormatHelper):
             agent_name=self.character_name, data_name=MetadataTag.AgentActionTag, data_value="Walking"
         )
         self.character.set_variable("Action", "Walk")
-        self.navigation_manager.update_path()
+        _update_path_with_asymmetric_avoidance(
+            self.navigation_manager, self.character_name
+        )
         self.character.set_variable("PathPoints", self.navigation_manager.get_path_points())
 
         # Blends walking animation when starting or stopping.
