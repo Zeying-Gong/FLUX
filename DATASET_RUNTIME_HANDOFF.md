@@ -2,7 +2,7 @@
 
 本分支 `dataset-runtime-20261019` 用于另一台机器运行新数据集 STT/DT 工具，源于 m5 的 FLUX `8393c17d96565162804e4a5c0d9df13242244634`。
 
-公开 `main` 缺少当前所需的 `sage_utils/`，公开 `sage3d` 虽有该目录，但两个关键文件的内容与 m5 不同。m5 的8393c17当时不能从GitHub取到。本分支从公开sage3d建立，覆盖 **1389份来自m5的原始文本源码/配置**，包括sage_utils及其episode_caches，逐文件SHA在 `M5_SOURCE_MANIFEST.json`。其它既有上游文件保留；不覆盖公共main/dev。当前Git提交是本次源码快照的新提交，不应要求 `git rev-parse HEAD` 等于原m5提交8393c17。
+公开 `main` 缺少当前所需的 `sage_utils/`，公开 `sage3d` 虽有该目录，但两个关键文件的内容与 m5 不同。m5 的8393c17当时不能从GitHub取到。本分支从公开sage3d建立，覆盖 **1389份来自m5的原始文本源码/配置**，包括sage_utils及其episode_caches，逐文件SHA在 `M5_SOURCE_MANIFEST.json`。其它既有上游文件保留，少量原始开发小报告按来源保留而不改其内容；不覆盖公共main/dev。当前Git提交是本次源码快照的新提交，不应要求 `git rev-parse HEAD` 等于原m5提交8393c17。
 
 ## 获取与校验
 
@@ -21,7 +21,7 @@ python3 verify_dataset_runtime.py
 
 新数据集oracle、审计、配方与当前主交接仍在 [TrackWAM/new_dataset](https://github.com/Zeying-Gong/TrackWAM/tree/main/new_dataset)。将其machine配置中的flux_root设为本分支目录。该工具中原有critical-file SHA校验可直接对上本分支。
 
-本次没有上传大型场景资产、模型权重、运行日志、视频、原始评测证据、凭据或m5私有配置。`assets/` 沿用公开基线已有内容；公开Git本来不包含的完整人形/机器人/场景资产仍需按项目下载说明或目标机器现有资产准备，不能把源码SHA通过当成完整资产或仿真通过。Sage3D场景由协作者自行准备；本分支的episode_caches只是源任务分类缓存，不是已通过oracle的episode。
+本次没有上传大型场景资产、模型权重、运行日志、视频、本次STT/DT批量评测raw、凭据或m5私有配置。`assets/` 沿用公开基线已有内容；公开Git本来不包含的完整人形/机器人/场景资产仍需按项目下载说明或目标机器现有资产准备，不能把源码SHA通过当成完整资产或仿真通过。Sage3D场景由协作者自行准备；本分支的episode_caches只是源任务分类缓存，不是已通过oracle的episode。
 
 ## 镜像说明
 
